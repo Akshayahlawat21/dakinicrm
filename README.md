@@ -75,39 +75,33 @@ dakinicrm/
 
 ---
 
-## 👥 Team Collaboration Guidelines
+## 👥 Team Collaboration Workflow
 
-### 1. Branching Strategy
-- `main`: Production-ready, stable code. Direct pushes are restricted.
-- Feature branches: `feature/<feature-name>` (e.g., `feature/deal-filters`)
-- Bug fix branches: `fix/<issue-description>` (e.g., `fix/lead-modal-state`)
-- Chore / docs: `chore/<description>` or `docs/<description>`
+### For Backend Collaborators:
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Akshayahlawat21/dakinicrm.git
+   cd dakinicrm
+   ```
+2. **Add the backend**:
+   - Create your backend service (e.g. inside a `/server` or `/backend` directory).
+   - Ensure you add any backend-specific ignores (like `.env`, `node_modules`, `venv`) to `.gitignore`.
+3. **Verify it works**:
+   - Test both frontend and backend integration locally.
+4. **Push directly to the repository**:
+   ```bash
+   git add .
+   git commit -m "Add backend service and API integration"
+   git push origin main
+   ```
 
-### 2. Development Workflow
-1. Pull the latest changes from `main`:
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-2. Create and switch to your feature branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Test your changes locally and verify the production build passes:
-   ```bash
-   npm run build
-   ```
-4. Commit your changes using descriptive commit messages:
-   ```bash
-   git commit -m "feat: add deal filtering by stage and owner"
-   ```
-5. Push to GitHub and open a Pull Request (PR) against `main`.
-
-### 3. Pull Request Checklist
-- [ ] Code builds without errors (`npm run build`).
-- [ ] UI is responsive across desktop and laptop breakpoints.
-- [ ] No extraneous console logs, debugging artifacts, or sensitive keys committed.
-- [ ] PR description explains the motivation, changes introduced, and testing steps.
+### For Anyone Pulling the Latest Code:
+```bash
+git pull origin main
+npm install
+# Install backend dependencies (e.g., cd server && npm install)
+npm run dev
+```
 
 ---
 

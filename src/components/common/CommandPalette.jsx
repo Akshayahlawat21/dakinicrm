@@ -27,16 +27,40 @@ export default function CommandPalette() {
 
   const [query, setQuery] = useState('');
 
-  if (!isCommandPaletteOpen) return null;
+  // Keyboard shortcut listener for ESC to close palette
+  React.useEffect(() => {
+    if (!isCommandPaletteOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsCommandPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCommandPaletteOpen, setIsCommandPaletteOpen]);
 
   const results = useMemo(() => {
+    if (!isCommandPaletteOpen) return [];
+
+    const safeLeads = Array.isArray(leads) ? leads : [];
+    const safeDeals = Array.isArray(deals) ? deals : [];
+    const safeAccounts = Array.isArray(accounts) ? accounts : [];
+
     if (!query.trim()) {
       return [
         { type: 'action', title: 'Open Active Pipeline Kanban', icon: Handshake, action: () => navigateTo('deals') },
-        { type: 'action', title: 'View All Leads (248)', icon: UserCheck, action: () => navigateTo('leads') },
+        { type: 'action', title: `View All Leads (${safeLeads.length})`, icon: UserCheck, action: () => navigateTo('leads') },
         { type: 'action', title: 'Open Dakini AI Copilot', icon: Sparkles, action: () => setIsAgentDockOpen(true) },
         { type: 'action', title: 'Accounts Directory', icon: Building2, action: () => navigateTo('accounts') },
-        { type: 'lead', title: 'Aarav Patel (Aarav Patel Enterprises)', sub: 'Lead Score 128', icon: UserCheck, action: () => navigateTo('lead-detail', leads[0]) }
+        ...(safeLeads[0]
+          ? [{
+              type: 'lead',
+              title: `${safeLeads[0].name} (${safeLeads[0].company || 'Lead'})`,
+              sub: `Lead Score ${safeLeads[0].score || 75}`,
+              icon: UserCheck,
+              action: () => navigateTo('lead-detail', safeLeads[0])
+            }]
+          : [])
       ];
     }
 
@@ -44,12 +68,14 @@ export default function CommandPalette() {
     const items = [];
 
     // Leads matches
-    leads.forEach((l) => {
-      if (l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)) {
+    safeLeads.forEach((l) => {
+      const name = l?.name || '';
+      const company = l?.company || '';
+      if (name.toLowerCase().includes(q) || company.toLowerCase().includes(q)) {
         items.push({
           type: 'lead',
-          title: l.name,
-          sub: `${l.company} • Score ${l.score}`,
+          title: name,
+          sub: `${company} • Score ${l?.score || 0}`,
           icon: UserCheck,
           action: () => navigateTo('lead-detail', l)
         });
@@ -57,12 +83,15 @@ export default function CommandPalette() {
     });
 
     // Deals matches
-    deals.forEach((d) => {
-      if (d.name.toLowerCase().includes(q) || d.company.toLowerCase().includes(q)) {
+    safeDeals.forEach((d) => {
+      const name = d?.name || '';
+      const company = d?.company || '';
+      if (name.toLowerCase().includes(q) || company.toLowerCase().includes(q)) {
+        const valStr = d?.value != null ? Number(d.value).toLocaleString() : '0';
         items.push({
           type: 'deal',
-          title: d.name,
-          sub: `$${d.value.toLocaleString()} • ${d.stage}`,
+          title: name,
+          sub: `$${valStr} • ${d?.stage || 'Pipeline'}`,
           icon: Handshake,
           action: () => navigateTo('deals')
         });
@@ -70,12 +99,14 @@ export default function CommandPalette() {
     });
 
     // Accounts matches
-    accounts.forEach((a) => {
-      if (a.name.toLowerCase().includes(q) || a.industry.toLowerCase().includes(q)) {
+    safeAccounts.forEach((a) => {
+      const name = a?.name || '';
+      const industry = a?.industry || '';
+      if (name.toLowerCase().includes(q) || industry.toLowerCase().includes(q)) {
         items.push({
           type: 'account',
-          title: a.name,
-          sub: `${a.industry} • ${a.status}`,
+          title: name,
+          sub: `${industry} • ${a?.status || 'Active'}`,
           icon: Building2,
           action: () => navigateTo('accounts')
         });
@@ -95,7 +126,9 @@ export default function CommandPalette() {
     });
 
     return items;
-  }, [query, leads, deals, accounts]);
+  }, [isCommandPaletteOpen, query, leads, deals, accounts, navigateTo, setIsAgentDockOpen, sendAgentMessage]);
+
+  if (!isCommandPaletteOpen) return null;
 
   return (
     <div className="modal-backdrop" onClick={() => setIsCommandPaletteOpen(false)}>

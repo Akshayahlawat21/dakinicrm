@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
   Plus,
@@ -22,6 +22,8 @@ import {
 export default function LeadsPage() {
   const {
     leads,
+    setLeads,
+    deleteLeads,
     navigateTo,
     setSelectedLead,
     setLeadToConvert,
@@ -37,6 +39,108 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [importNotification, setImportNotification] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        let newLeadsToAdd = [];
+
+        if (file.name.endsWith('.json')) {
+          const parsed = JSON.parse(text);
+          const rawItems = Array.isArray(parsed) ? parsed : (parsed.leads || [parsed]);
+          newLeadsToAdd = rawItems.map((item, idx) => ({
+            id: `lead-import-${Date.now()}-${idx}`,
+            name: item.name || 'Imported Lead',
+            company: item.company || 'Unknown Company',
+            title: item.title || 'Prospect',
+            status: item.status || 'New',
+            score: Number(item.score) || 75,
+            email: item.email || `lead${idx}@imported.com`,
+            phone: item.phone || '+91 98000 00000',
+            owner: item.owner || 'Elena Rostova',
+            industry: item.industry || 'Enterprise Technology',
+            lastContact: 'Just now',
+            scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
+            timeline: [
+              {
+                id: `t-${Date.now()}-${idx}`,
+                type: 'system',
+                title: 'Lead imported',
+                description: `Imported from file ${file.name}`,
+                time: 'Just now'
+              }
+            ]
+          }));
+        } else {
+          // CSV / Text parsing
+          const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+          if (lines.length > 0) {
+            const firstLine = lines[0].toLowerCase();
+            const hasHeader = firstLine.includes('name') || firstLine.includes('company');
+            const dataLines = hasHeader ? lines.slice(1) : lines;
+
+            newLeadsToAdd = dataLines.map((line, idx) => {
+              const cols = line.split(/[,;\t]/).map((c) => c.replace(/^["']|["']$/g, '').trim());
+              return {
+                id: `lead-csv-${Date.now()}-${idx}`,
+                name: cols[0] || `Imported Lead ${idx + 1}`,
+                company: cols[1] || 'Imported Corp',
+                title: cols[2] || 'Decision Maker',
+                status: cols[3] || 'New',
+                score: Number(cols[4]) || 80,
+                email: cols[5] || `lead${idx}@imported.com`,
+                phone: cols[6] || '+91 98000 00000',
+                owner: 'Elena Rostova',
+                industry: 'Enterprise Technology',
+                lastContact: 'Just now',
+                scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
+                timeline: [
+                  {
+                    id: `t-${Date.now()}-${idx}`,
+                    type: 'system',
+                    title: 'Lead imported',
+                    description: `Imported from ${file.name}`,
+                    time: 'Just now'
+                  }
+                ]
+              };
+            });
+          }
+        }
+
+        if (newLeadsToAdd.length > 0) {
+          setLeads((prev) => [...newLeadsToAdd, ...prev]);
+          setImportNotification(`Successfully imported ${newLeadsToAdd.length} leads from ${file.name}`);
+          setTimeout(() => setImportNotification(null), 4000);
+        } else {
+          setImportNotification('File contained no valid records to import.');
+          setTimeout(() => setImportNotification(null), 3000);
+        }
+      } catch (err) {
+        setImportNotification(`Import error: ${err.message}`);
+        setTimeout(() => setImportNotification(null), 4000);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedLeadIds.length === 0) return;
+    deleteLeads(selectedLeadIds);
+    setSelectedLeadIds([]);
+  };
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
@@ -139,7 +243,15 @@ export default function LeadsPage() {
             </button>
           </div>
 
-          <button className="btn btn-secondary btn-sm">
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".csv,.json,.txt"
+            onChange={handleFileUpload}
+          />
+
+          <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV or JSON file">
             <Upload size={14} />
             <span>Import</span>
           </button>
@@ -221,6 +333,34 @@ export default function LeadsPage() {
         )}
       </div>
 
+      {/* Import Notification Toast */}
+      {importNotification && (
+        <div
+          style={{
+            padding: '0.65rem 1rem',
+            background: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            borderRadius: 8,
+            color: '#065f46',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <span>✓ {importNotification}</span>
+          <button
+            onClick={() => setImportNotification(null)}
+            style={{ background: 'none', border: 'none', color: '#065f46', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Bulk Action Bar (When rows selected) */}
       {selectedLeadIds.length > 0 && (
         <div style={{
@@ -252,10 +392,20 @@ export default function LeadsPage() {
             </button>
             <button
               className="btn btn-sm"
-              style={{ background: '#dc2626', color: '#fff' }}
-              onClick={() => setSelectedLeadIds([])}
+              style={{ background: '#dc2626', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}
+              onClick={handleDeleteSelected}
+              title="Delete selected leads"
             >
-              Clear
+              <Trash2 size={13} />
+              <span>Delete ({selectedLeadIds.length})</span>
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer' }}
+              onClick={() => setSelectedLeadIds([])}
+              title="Clear selection checkboxes"
+            >
+              Clear Selection
             </button>
           </div>
         </div>

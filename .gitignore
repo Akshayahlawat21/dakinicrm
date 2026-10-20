@@ -34,3 +34,14 @@ Thumbs.db
 # Temporary files
 .cache/
 .eslintcache
+
+# Python & Gateway
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.pytest_cache/

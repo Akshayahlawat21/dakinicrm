@@ -7,6 +7,16 @@ export default defineConfig({
   server: {
     port: 3000,
     open: false,
-    host: true
+    host: true,
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/health': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
   }
 });

@@ -108,6 +108,8 @@
   margin-bottom: 2px;
   position: relative;
   text-align: left;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 .nav-item:hover {
   background: var(--surface-hover);

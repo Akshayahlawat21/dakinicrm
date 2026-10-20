@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useCRM } from '../context/CRMContext';
 import {
   User,
   Users,
@@ -8,10 +9,12 @@ import {
   CreditCard,
   ShieldCheck,
   Check,
-  Save
+  Save,
+  LogOut
 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { currentUser, logout } = useCRM();
   const [activeSection, setActiveSection] = useState('profile');
   const [savedNotice, setSavedNotice] = useState(false);
 
@@ -95,13 +98,23 @@ export default function SettingsPage() {
                   <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
                     First Name
                   </label>
-                  <input type="text" className="input-field" defaultValue="Elena" />
+                  <input
+                    type="text"
+                    className="input-field"
+                    key={`fn-${currentUser?.name || 'Elena'}`}
+                    defaultValue={currentUser?.name ? currentUser.name.split(' ')[0] : 'Elena'}
+                  />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
                     Last Name
                   </label>
-                  <input type="text" className="input-field" defaultValue="Rostova" />
+                  <input
+                    type="text"
+                    className="input-field"
+                    key={`ln-${currentUser?.name || 'Rostova'}`}
+                    defaultValue={currentUser?.name ? currentUser.name.split(' ').slice(1).join(' ') || 'User' : 'Rostova'}
+                  />
                 </div>
               </div>
 
@@ -109,17 +122,38 @@ export default function SettingsPage() {
                 <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
                   Email Address
                 </label>
-                <input type="email" className="input-field" defaultValue="elena.rostova@dakini.ai" />
+                <input
+                  type="email"
+                  className="input-field"
+                  key={`em-${currentUser?.email || 'elena.rostova@dakini.ai'}`}
+                  defaultValue={currentUser?.email || 'elena.rostova@dakini.ai'}
+                />
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
                   Sales Role & Quota Assignment
                 </label>
-                <input type="text" className="input-field" defaultValue="Sales Director — Enterprise APAC ($75,000 Quota)" readOnly style={{ background: '#f8fafc' }} />
+                <input
+                  type="text"
+                  className="input-field"
+                  key={`role-${currentUser?.role || 'Sales Director'}`}
+                  defaultValue={`${currentUser?.role || 'Sales Director'} — Enterprise APAC ($75,000 Quota)`}
+                  readOnly
+                  style={{ background: '#f8fafc' }}
+                />
               </div>
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                  onClick={logout}
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out of Workspace</span>
+                </button>
                 <button type="submit" className="btn btn-primary">
                   <Save size={16} />
                   <span>Save Changes</span>

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   initialLeads,
   initialAccounts,
@@ -11,12 +12,22 @@ import {
   aiAgentsConfig,
   automationsList
 } from '../data/mockData';
+import gatewayApi, { getStoredToken, setStoredToken } from '../services/api';
 
 const CRMContext = createContext();
 
 export function CRMProvider({ children }) {
-  // Navigation & View State
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Navigation & View State derived from current URL
+  const currentTab = useMemo(() => {
+    const segment = location.pathname.replace(/^\//, '').split('/')[0];
+    if (!segment || segment === 'dashboard') return 'dashboard';
+    if (location.pathname.startsWith('/leads/') || segment === 'lead-detail') return 'lead-detail';
+    return segment;
+  }, [location.pathname]);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAgentDockOpen, setIsAgentDockOpen] = useState(false);
   const [quickPreviewLead, setQuickPreviewLead] = useState(null);
@@ -53,20 +64,131 @@ export function CRMProvider({ children }) {
   ]);
   const [agentThinking, setAgentThinking] = useState(false);
 
-  // Hash-based navigation listener
-  useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash.replace('#/', '').replace('#', '');
-      if (hash) {
-        if (hash === 'lead-detail') {
-          setSelectedLead(initialLeads[0]);
-        }
-        setCurrentTab(hash);
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const isSignedOut = localStorage.getItem('dakini_signed_out') === 'true';
+      if (isSignedOut) return null;
+      const stored = localStorage.getItem('dakini_user_profile');
+      if (stored) return JSON.parse(stored);
+      if (getStoredToken()) {
+        return {
+          id: "usr_elena",
+          name: "Elena Rostova",
+          email: "elena.rostova@dakini.ai",
+          role: "Sales Director",
+          tenant_id: "tenant_enterprise_01"
+        };
       }
+      return null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const isSignedOut = localStorage.getItem('dakini_signed_out') === 'true';
+      if (isSignedOut) return false;
+      return !!getStoredToken();
+    } catch {
+      return false;
+    }
+  });
+
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+
+  const login = async (email, password, tenantId = 'tenant_enterprise_01') => {
+    try {
+      localStorage.removeItem('dakini_signed_out');
+    } catch (err) {
+      console.warn(err);
+    }
+    const res = await gatewayApi.login(email, password, tenantId);
+    if (res.success && res.data?.user) {
+      setCurrentUser(res.data.user);
+      setIsAuthenticated(true);
+      setIsSignInModalOpen(false);
+      return { success: true, user: res.data.user };
+    } else if (!res.success && !gatewayStatus.connected) {
+      // Offline / standalone fallback
+      const fallbackUser = {
+        id: `usr_${email.split('@')[0]}`,
+        name: email.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase()),
+        email,
+        role: email.toLowerCase().includes('admin') ? 'System Admin' : 'Sales Director',
+        tenant_id: tenantId || "tenant_enterprise_01"
+      };
+      setStoredToken(`mock_offline_token_${Date.now()}`, fallbackUser);
+      setCurrentUser(fallbackUser);
+      setIsAuthenticated(true);
+      setIsSignInModalOpen(false);
+      return { success: true, user: fallbackUser };
+    }
+    return res;
+  };
+
+  const logout = () => {
+    try {
+      localStorage.setItem('dakini_signed_out', 'true');
+    } catch (err) {
+      console.warn(err);
+    }
+    gatewayApi.logout();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    navigate('/login', { replace: true });
+  };
+
+  // Layer 2 Gateway Health & Connection State
+  const [gatewayStatus, setGatewayStatus] = useState({
+    connected: false,
+    checking: true,
+    details: null,
+  });
+
+  // Layer 2 Gateway connection and token initialization
+  useEffect(() => {
+    let isMounted = true;
+    async function initGateway() {
+      try {
+        const health = await gatewayApi.checkHealth();
+        if (health.success && isMounted) {
+          setGatewayStatus({
+            connected: true,
+            checking: false,
+            details: health.data,
+          });
+
+          // Fetch leads from gateway if authenticated
+          if (getStoredToken()) {
+            const leadsResp = await gatewayApi.getLeads();
+            if (
+              leadsResp.success &&
+              Array.isArray(leadsResp.data?.data) &&
+              leadsResp.data.data.length > 0 &&
+              isMounted
+            ) {
+              setLeads((prev) => {
+                const existingIds = new Set(prev.map((l) => l.id));
+                const remoteNew = leadsResp.data.data.filter((l) => !existingIds.has(l.id));
+                return [...remoteNew, ...prev];
+              });
+            }
+          }
+        } else if (isMounted) {
+          setGatewayStatus({ connected: false, checking: false, details: null });
+        }
+      } catch (err) {
+        if (isMounted) {
+          setGatewayStatus({ connected: false, checking: false, details: null });
+        }
+      }
+    }
+    initGateway();
+    return () => {
+      isMounted = false;
     };
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   // Keyboard shortcut listener (Ctrl+K or / for search, C for create, G then L for Leads)
@@ -85,15 +207,27 @@ export function CRMProvider({ children }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Actions
-  const navigateTo = (tab, payload = null) => {
-    setCurrentTab(tab);
-    if (payload && tab === 'lead-detail') {
+  // URL-driven navigation action
+  const navigateTo = (destination, payload = null) => {
+    let path = destination;
+    if (!destination.startsWith('/')) {
+      if (destination === 'lead-detail') {
+        path = payload?.id ? `/leads/${payload.id}` : '/lead-detail';
+      } else {
+        path = `/${destination}`;
+      }
+    }
+    if (payload && (destination === 'lead-detail' || destination.startsWith('/leads') || destination.startsWith('lead-detail'))) {
       setSelectedLead(payload);
     }
+    navigate(path);
   };
 
-  const addLead = (newLead) => {
+  const setCurrentTab = (tab) => {
+    navigateTo(tab);
+  };
+
+  const addLead = async (newLead) => {
     const lead = {
       ...newLead,
       id: `lead-${Date.now()}`,
@@ -112,9 +246,25 @@ export function CRMProvider({ children }) {
       ]
     };
     setLeads([lead, ...leads]);
+
+    // Dispatch to Layer 2 Gateway
+    try {
+      await gatewayApi.createLead(lead);
+    } catch (err) {
+      console.warn('Gateway createLead sync skipped:', err);
+    }
   };
 
-  const addDeal = (newDeal) => {
+  const deleteLeads = (leadIds) => {
+    const idsToDelete = new Set(Array.isArray(leadIds) ? leadIds : [leadIds]);
+    setLeads((prev) => prev.filter((l) => !idsToDelete.has(l.id)));
+  };
+
+  const deleteLead = (leadId) => {
+    deleteLeads([leadId]);
+  };
+
+  const addDeal = async (newDeal) => {
     const deal = {
       ...newDeal,
       id: `deal-${Date.now()}`,
@@ -123,6 +273,13 @@ export function CRMProvider({ children }) {
       probability: newDeal.probability || 50
     };
     setDeals([deal, ...deals]);
+
+    // Dispatch to Layer 2 Gateway
+    try {
+      await gatewayApi.createDeal(deal);
+    } catch (err) {
+      console.warn('Gateway createDeal sync skipped:', err);
+    }
   };
 
   const updateDealStage = (dealId, nextStage) => {
@@ -202,7 +359,7 @@ export function CRMProvider({ children }) {
     setIsConvertModalOpen(false);
   };
 
-  const sendAgentMessage = (text) => {
+  const sendAgentMessage = async (text) => {
     if (!text.trim()) return;
     const userMsg = {
       id: `user-${Date.now()}`,
@@ -213,6 +370,27 @@ export function CRMProvider({ children }) {
     setAgentMessages((prev) => [...prev, userMsg]);
     setAgentThinking(true);
 
+    // Call Layer 2 Gateway Copilot Agent endpoint
+    try {
+      const res = await gatewayApi.sendAgentMessage(text);
+      if (res.success && res.data?.reply) {
+        setAgentMessages((prev) => [
+          ...prev,
+          {
+            id: `dakini-${Date.now()}`,
+            sender: res.data.sender || "dakini",
+            text: res.data.reply,
+            time: "Just now"
+          }
+        ]);
+        setAgentThinking(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Gateway AI agent call failed, falling back to local copilot:', err);
+    }
+
+    // Local client fallback
     setTimeout(() => {
       let replyText = "I've reviewed the parameters. Based on past enterprise win rates and ICP signals, I recommend advancing this to executive review and scheduling a follow-up outreach with tailored pricing.";
       const lower = text.toLowerCase();
@@ -268,6 +446,8 @@ export function CRMProvider({ children }) {
         leads,
         setLeads,
         addLead,
+        deleteLeads,
+        deleteLead,
         convertLead,
         accounts,
         addAccount,
@@ -287,7 +467,16 @@ export function CRMProvider({ children }) {
         automations,
         agentMessages,
         agentThinking,
-        sendAgentMessage
+        sendAgentMessage,
+        gatewayStatus,
+        gatewayApi,
+        currentUser,
+        setCurrentUser,
+        isAuthenticated,
+        isSignInModalOpen,
+        setIsSignInModalOpen,
+        login,
+        logout
       }}
     >
       {children}

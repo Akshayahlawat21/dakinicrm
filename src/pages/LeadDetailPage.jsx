@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
+import { initialLeads } from '../data/mockData';
 import {
   ChevronLeft,
   Phone,
@@ -20,7 +22,9 @@ import {
 } from 'lucide-react';
 
 export default function LeadDetailPage() {
+  const { id } = useParams();
   const {
+    leads,
     selectedLead,
     navigateTo,
     setLeadToConvert,
@@ -34,47 +38,7 @@ export default function LeadDetailPage() {
   const [timelineNotes, setTimelineNotes] = useState([]);
   const [copilotInput, setCopilotInput] = useState('');
 
-  const lead = selectedLead || {
-    name: "Aarav Patel",
-    company: "Aarav Patel Enterprises",
-    title: "Logistics, from a website demo",
-    industry: "Logistics",
-    status: "Converted",
-    score: 128,
-    owner: "Marcus Vance",
-    email: "aarav@swiggydelivery.in",
-    phone: "+91 97112 33445",
-    source: "Website Demo",
-    scoreBreakdown: {
-      websiteDemo: 95,
-      emailEngagement: 80,
-      companyFit: 90,
-      sourceQuality: 85
-    },
-    timeline: [
-      {
-        id: "t-1",
-        type: "ai",
-        title: "Dakini: Why this lead scored 128",
-        description: "The website demo request is the strongest signal. Matches core ICP with verified commercial intent.",
-        time: "10 mins ago"
-      },
-      {
-        id: "t-2",
-        type: "status",
-        title: "Lead converted",
-        description: "Account Aarav Patel Enterprises created and linked.",
-        time: "2 hours ago"
-      },
-      {
-        id: "t-3",
-        type: "system",
-        title: "Lead created",
-        description: "Source: Website Demo, assigned to Marcus Vance.",
-        time: "Yesterday"
-      }
-    ]
-  };
+  const lead = (id && leads?.find((l) => l.id === id)) || selectedLead || initialLeads[0];
 
   const handleAddNote = () => {
     if (!quickNote.trim()) return;

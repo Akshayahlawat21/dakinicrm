@@ -32,14 +32,30 @@ export default function DashboardPage() {
     approveItem,
     deals,
     setIsAgentDockOpen,
-    sendAgentMessage
+    sendAgentMessage,
+    gatewayApi,
+    currentUser
   } = useCRM();
 
   const [period, setPeriod] = useState('This week');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    try {
+      if (gatewayApi) {
+        await Promise.allSettled([
+          gatewayApi.checkHealth(),
+          gatewayApi.getLeads(),
+          gatewayApi.getDeals(),
+        ]);
+      }
+    } catch (err) {
+      console.warn('Metrics refresh warning:', err);
+    }
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLastRefreshed(nowTime);
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
@@ -52,14 +68,20 @@ export default function DashboardPage() {
             Saturday, 10 October • Live Sales telemetry
           </div>
           <h1 className="header-greeting-title">
-            Good evening, Elena
+            Good evening, {currentUser?.name?.split(' ')[0] || 'Elena'}
           </h1>
           <p className="header-subtitle">
             Here is your commercial snapshot and AI pipeline acceleration summary.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {lastRefreshed && (
+            <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700, background: '#ecfdf5', padding: '0.3rem 0.6rem', borderRadius: 6, border: '1px solid #a7f3d0' }}>
+              ✓ Synced {lastRefreshed}
+            </span>
+          )}
+
           <select
             className="input-field"
             value={period}
@@ -75,10 +97,12 @@ export default function DashboardPage() {
           <button
             className="btn btn-secondary"
             onClick={handleRefresh}
-            title="Sync live Salesforce CRM metrics"
+            disabled={isRefreshing}
+            title="Sync live CRM metrics and Gateway telemetry"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
           >
             <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
-            <span>Refresh metrics</span>
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh metrics'}</span>
           </button>
         </div>
       </div>

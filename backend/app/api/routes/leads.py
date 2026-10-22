@@ -58,7 +58,7 @@ async def create_lead(
     service = LeadService(session)
     lead = await service.create_lead(
         ctx=ctx,
-        name=body.name,
+        name=body.get_name(),
         company=body.company,
         email=body.email,
         phone=body.phone,

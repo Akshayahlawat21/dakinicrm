@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "gateway": "python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8080 --reload",
     "gateway:test": "pytest gateway/tests -v",
-    "backend": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload",
+    "backend": "python backend/run.py",
     "backend:test": "pytest backend/tests -v"
   },
   "dependencies": {

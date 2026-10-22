@@ -76,13 +76,12 @@ async def create_deal(
         else:
             acc = await acc_service.create_account(ctx, name=body.company or "Default Enterprise")
             account_id = acc.id
-
-    deal_amount = body.amount if body.amount is not None else (body.value if body.value is not None else 0.0)
+    deal_amount = body.get_amount()
 
     deal = await service.create_deal(
         ctx=ctx,
         account_id=account_id,
-        name=body.name,
+        name=body.get_name(),
         amount=deal_amount,
         stage=body.stage or "Qualified",
         currency=body.currency or "USD",
@@ -133,6 +132,7 @@ async def get_deal(
 
 
 @router.patch("/{deal_id}/stage", response_model=StandardResponse[DealResponse])
+@router.put("/{deal_id}/stage", response_model=StandardResponse[DealResponse])
 async def update_deal_stage(
     deal_id: str,
     body: DealStageUpdateRequest,

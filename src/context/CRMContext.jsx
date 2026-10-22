@@ -144,7 +144,7 @@ export function CRMProvider({ children }) {
           owner: d.owner || 'Elena Rostova',
           company: d.company || d.name,
           value: Number(d.value || d.amount || 45000),
-          stage: d.stage || 'Discovery',
+          stage: d.stage || 'Qualified',
         }));
         setDeals(loadedDeals);
       }
@@ -272,6 +272,18 @@ export function CRMProvider({ children }) {
     setCurrentUser(null);
     setIsAuthenticated(false);
     navigate('/login', { replace: true });
+  };
+
+  const updateUserProfile = (updates) => {
+    setCurrentUser((prev) => {
+      const updated = { ...(prev || {}), ...updates };
+      try {
+        localStorage.setItem('dakini_user_profile', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('Could not save user profile:', err);
+      }
+      return updated;
+    });
   };
 
   // Layer 2 Gateway Health & Connection State
@@ -443,7 +455,7 @@ export function CRMProvider({ children }) {
         name: deal.name,
         company: deal.company,
         amount: Number(deal.value || deal.amount || 45000),
-        stage: deal.stage || 'Discovery',
+        stage: deal.stage || 'Qualified',
       });
       if (res.success && res.data?.data) {
         const realId = String(res.data.data.id);
@@ -461,10 +473,16 @@ export function CRMProvider({ children }) {
     return deal;
   };
 
-  const updateDealStage = (dealId, nextStage) => {
+  const updateDealStage = async (dealId, nextStage) => {
     setDeals((prev) =>
       prev.map((d) => (d.id === dealId ? { ...d, stage: nextStage, daysInStage: 0 } : d))
     );
+    try {
+      await gatewayApi.updateDealStage(dealId, nextStage);
+      console.log(`%c[SUPABASE UPDATE] 📈 Deal ${dealId} stage updated to ${nextStage}`, 'color: #3b82f6; font-weight: bold;');
+    } catch (err) {
+      console.warn('Gateway updateDealStage sync skipped:', err);
+    }
   };
 
   const deleteDeal = async (dealId) => {
@@ -841,6 +859,7 @@ export function CRMProvider({ children }) {
         gatewayApi,
         currentUser,
         setCurrentUser,
+        updateUserProfile,
         isAuthenticated,
         isSignInModalOpen,
         setIsSignInModalOpen,

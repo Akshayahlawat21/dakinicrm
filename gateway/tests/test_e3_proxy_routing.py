@@ -27,16 +27,21 @@ async def test_upstream_fallback_when_offline(client: AsyncClient, auth_headers:
 @pytest.mark.asyncio
 async def test_upstream_returns_502_when_mock_disabled(client: AsyncClient, auth_headers: dict):
     """E3: When mock fallback is disabled, unreachable upstream returns 502 BAD_GATEWAY."""
-    # Pass X-Mock-Fallback: false to simulate strict production behavior
-    headers = {
-        **auth_headers,
-        "X-Mock-Fallback": "false",
-    }
-    resp = await client.get("/v1/leads", headers=headers)
-    assert resp.status_code == 502
-    data = resp.json()
-    assert data["error"]["code"] == "BAD_GATEWAY"
-    assert "correlation_id" in data["error"]
+    original_url = settings.UPSTREAM_API_URL
+    try:
+        settings.UPSTREAM_API_URL = "http://127.0.0.1:59999"
+        # Pass X-Mock-Fallback: false to simulate strict production behavior
+        headers = {
+            **auth_headers,
+            "X-Mock-Fallback": "false",
+        }
+        resp = await client.get("/v1/leads", headers=headers)
+        assert resp.status_code == 502
+        data = resp.json()
+        assert data["error"]["code"] == "BAD_GATEWAY"
+        assert "correlation_id" in data["error"]
+    finally:
+        settings.UPSTREAM_API_URL = original_url
 
 
 @pytest.mark.asyncio
@@ -60,9 +65,11 @@ async def test_production_mode_strictly_forbids_mock_fallback(client: AsyncClien
     """
     original_env = settings.ENVIRONMENT
     original_mock = settings.MOCK_UPSTREAM_IF_DOWN
+    original_url = settings.UPSTREAM_API_URL
     try:
         settings.ENVIRONMENT = "production"
         settings.MOCK_UPSTREAM_IF_DOWN = True  # Attempt to enable mock in production
+        settings.UPSTREAM_API_URL = "http://127.0.0.1:59999"
 
         assert settings.can_mock_upstream is False
 
@@ -75,3 +82,4 @@ async def test_production_mode_strictly_forbids_mock_fallback(client: AsyncClien
     finally:
         settings.ENVIRONMENT = original_env
         settings.MOCK_UPSTREAM_IF_DOWN = original_mock
+        settings.UPSTREAM_API_URL = original_url

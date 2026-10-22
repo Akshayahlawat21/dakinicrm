@@ -196,6 +196,13 @@ export const gatewayApi = {
     return gatewayFetch(`/leads/${leadId}`, { method: 'DELETE' });
   },
 
+  async convertLead(leadId, convertData = {}) {
+    return gatewayFetch(`/leads/${leadId}/convert`, {
+      method: 'POST',
+      body: JSON.stringify(convertData),
+    });
+  },
+
   /**
    * E3: Deals resource
    */
@@ -207,6 +214,13 @@ export const gatewayApi = {
     return gatewayFetch('/deals', {
       method: 'POST',
       body: JSON.stringify(dealData),
+    });
+  },
+
+  async updateDealStage(dealId, stage) {
+    return gatewayFetch(`/deals/${dealId}/stage`, {
+      method: 'PATCH',
+      body: JSON.stringify({ stage }),
     });
   },
 

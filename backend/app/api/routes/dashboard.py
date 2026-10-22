@@ -10,6 +10,7 @@ router = APIRouter(tags=["Dashboard & Analytics"])
 
 @router.get("/v1/dashboard")
 @router.get("/v1/dashboard/metrics")
+@router.get("/v1/dashboard/kpis")
 @router.get("/v1/reports")
 async def get_dashboard_kpis(
     ctx: RequestContext = Depends(get_request_context),

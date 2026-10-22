@@ -7,7 +7,9 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 class LeadCreateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    name: str
+    name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     company: Optional[str] = "Enterprise Corp"
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -15,6 +17,12 @@ class LeadCreateRequest(BaseModel):
     source: Optional[str] = "Manual"
     score: Optional[int] = 50
     assigned_to: Optional[str] = None
+
+    def get_name(self) -> str:
+        if self.name and self.name.strip():
+            return self.name.strip()
+        combined = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return combined if combined else "New Lead"
 
 
 class ConvertLeadRequest(BaseModel):

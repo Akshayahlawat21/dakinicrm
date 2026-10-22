@@ -10,6 +10,19 @@ from backend.app.data.repositories.audit_repository import AuditLogRepository
 from backend.app.data.exceptions import RecordNotFoundError
 
 VALID_STAGES = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"]
+STAGE_MAPPING = {
+    "discovery": "Qualified",
+    "qualification": "Qualified",
+    "qualified": "Qualified",
+    "proposal": "Proposal",
+    "negotiation": "Negotiation",
+    "won": "Won",
+    "closed won": "Won",
+    "closed_won": "Won",
+    "lost": "Lost",
+    "closed lost": "Lost",
+    "closed_lost": "Lost",
+}
 
 
 class DealService:
@@ -55,8 +68,10 @@ class DealService:
             raise BadRequestError("Deal name is required")
         if amount < 0:
             raise BadRequestError("Deal amount cannot be negative")
-        if stage not in VALID_STAGES:
+        normalized_stage = STAGE_MAPPING.get(stage.lower().strip() if stage else "", stage)
+        if normalized_stage not in VALID_STAGES:
             raise BadRequestError(f"Stage '{stage}' is invalid. Allowed: {', '.join(VALID_STAGES)}")
+        stage = normalized_stage
 
         deal = Deal(
             organization_id=ctx.tenant_uuid,
@@ -82,8 +97,10 @@ class DealService:
     async def update_stage(
         self, ctx: RequestContext, deal_id: str | uuid.UUID, new_stage: str
     ) -> Deal:
-        if new_stage not in VALID_STAGES:
+        normalized_stage = STAGE_MAPPING.get(new_stage.lower().strip() if new_stage else "", new_stage)
+        if normalized_stage not in VALID_STAGES:
             raise BadRequestError(f"Invalid stage '{new_stage}'. Allowed: {', '.join(VALID_STAGES)}")
+        new_stage = normalized_stage
 
         deal = await self.get_deal(ctx, deal_id)
         old_stage = deal.stage

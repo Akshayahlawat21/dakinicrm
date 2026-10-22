@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
   User,
@@ -14,9 +14,32 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { currentUser, logout } = useCRM();
+  const { currentUser, updateUserProfile, logout } = useCRM();
   const [activeSection, setActiveSection] = useState('profile');
   const [savedNotice, setSavedNotice] = useState(false);
+
+  // Controlled form state for user profile
+  const [firstName, setFirstName] = useState(() => {
+    return currentUser?.name ? currentUser.name.split(' ')[0] : 'Elena';
+  });
+  const [lastName, setLastName] = useState(() => {
+    return currentUser?.name ? currentUser.name.split(' ').slice(1).join(' ') || '' : 'Rostova';
+  });
+  const [email, setEmail] = useState(() => {
+    return currentUser?.email || 'elena.rostova@dakini.ai';
+  });
+
+  // Sync state if currentUser changes
+  useEffect(() => {
+    if (currentUser?.name) {
+      const parts = currentUser.name.trim().split(/\s+/);
+      setFirstName(parts[0] || '');
+      setLastName(parts.slice(1).join(' ') || '');
+    }
+    if (currentUser?.email) {
+      setEmail(currentUser.email);
+    }
+  }, [currentUser]);
 
   const sections = [
     { id: 'profile', label: 'Profile & Credentials', icon: User },
@@ -30,6 +53,13 @@ export default function SettingsPage() {
 
   const handleSave = (e) => {
     e.preventDefault();
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim() || 'Elena Rostova';
+    if (updateUserProfile) {
+      updateUserProfile({
+        name: fullName,
+        email: email.trim()
+      });
+    }
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
   };
@@ -101,8 +131,10 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     className="input-field"
-                    key={`fn-${currentUser?.name || 'Elena'}`}
-                    defaultValue={currentUser?.name ? currentUser.name.split(' ')[0] : 'Elena'}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First Name"
+                    required
                   />
                 </div>
                 <div>
@@ -112,8 +144,9 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     className="input-field"
-                    key={`ln-${currentUser?.name || 'Rostova'}`}
-                    defaultValue={currentUser?.name ? currentUser.name.split(' ').slice(1).join(' ') || 'User' : 'Rostova'}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last Name"
                   />
                 </div>
               </div>
@@ -125,8 +158,10 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   className="input-field"
-                  key={`em-${currentUser?.email || 'elena.rostova@dakini.ai'}`}
-                  defaultValue={currentUser?.email || 'elena.rostova@dakini.ai'}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  required
                 />
               </div>
 

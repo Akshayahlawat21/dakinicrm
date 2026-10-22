@@ -33,8 +33,9 @@ class BaseRepository(Generic[ModelType]):
             return val
         try:
             return uuid.UUID(str(val))
-        except ValueError as exc:
-            raise DataLayerError(f"Invalid UUID string format: '{val}'") from exc
+        except (ValueError, TypeError):
+            # Deterministic namespace UUID for string IDs like 'tenant_enterprise_01'
+            return uuid.uuid5(uuid.NAMESPACE_DNS, str(val))
 
     async def get_by_id_scoped(
         self, record_id: str | uuid.UUID, tenant_id: str | uuid.UUID

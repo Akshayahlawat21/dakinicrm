@@ -5,8 +5,11 @@ from pydantic import BaseModel, ConfigDict
 
 
 class TaskCreateRequest(BaseModel):
-    subject: str
-    assigned_to: str
+    model_config = ConfigDict(extra="ignore")
+
+    subject: Optional[str] = None
+    title: Optional[str] = None
+    assigned_to: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[str] = "medium"
     start_at: Optional[datetime] = None

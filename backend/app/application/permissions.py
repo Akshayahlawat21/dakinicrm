@@ -16,8 +16,10 @@ class PermissionService:
     @staticmethod
     def check_tenant_access(ctx: RequestContext, target_tenant_id: str) -> None:
         """Enforces that the caller cannot access data in another tenant."""
-        if str(ctx.tenant_id) != str(target_tenant_id):
-            raise ForbiddenError("Cross-tenant access is strictly prohibited")
+        target_str = str(target_tenant_id)
+        if str(ctx.tenant_id) == target_str or str(ctx.tenant_uuid) == target_str:
+            return
+        raise ForbiddenError("Cross-tenant access is strictly prohibited")
 
     @staticmethod
     def check_can_manage_user(ctx: RequestContext, target_user: User, new_role: Optional[str] = None) -> None:
@@ -30,9 +32,14 @@ class PermissionService:
         PermissionService.check_tenant_access(ctx, str(target_user.organization_id))
 
         target_role = target_user.role_name.lower().strip()
+        is_self = (
+            str(ctx.user_id) == str(target_user.id)
+            or str(ctx.user_uuid) == str(target_user.id)
+            or str(ctx.user_id) == str(target_user.email)
+        )
 
         # Users cannot change their own role or promote themselves
-        if str(ctx.user_id) == str(target_user.id) and new_role and new_role.lower() != target_role:
+        if is_self and new_role and new_role.lower() != target_role:
             raise ForbiddenError("Users are not permitted to modify their own role")
 
         if ctx.is_owner:
@@ -93,14 +100,19 @@ class PermissionService:
             raise ForbiddenError(f"Managers cannot assign tasks to role '{assignee_role}'")
 
         if ctx.is_salesperson:
+            is_self = (
+                str(ctx.user_id) == str(assignee.id)
+                or str(ctx.user_uuid) == str(assignee.id)
+                or str(ctx.user_id) == str(assignee.email)
+            )
+            if is_self:
+                return
             if assignee_role in ("owner", "admin"):
                 raise ForbiddenError("Salespersons cannot assign tasks to the Owner")
             if assignee_role == "manager":
                 raise ForbiddenError("Salespersons cannot assign tasks to a Manager")
             # Salesperson-to-salesperson assignment forbidden by default
-            if str(ctx.user_id) != str(assignee.id):
-                raise ForbiddenError("Salespersons cannot assign tasks to other salespersons")
-            return
+            raise ForbiddenError("Salespersons cannot assign tasks to other salespersons")
 
         raise ForbiddenError("Caller is not authorized to assign tasks")
 

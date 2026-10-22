@@ -13,7 +13,13 @@ class TenantRepository:
         self.session = session
 
     async def get_by_id(self, org_id: str | uuid.UUID) -> Organization:
-        org_uuid = uuid.UUID(str(org_id)) if not isinstance(org_id, uuid.UUID) else org_id
+        if not isinstance(org_id, uuid.UUID):
+            try:
+                org_uuid = uuid.UUID(str(org_id))
+            except (ValueError, TypeError):
+                org_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(org_id))
+        else:
+            org_uuid = org_id
         stmt = select(Organization).where(Organization.id == org_uuid)
         res = await self.session.execute(stmt)
         org = res.scalar_one_or_none()

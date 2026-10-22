@@ -63,11 +63,24 @@ async def create_deal(
     session: AsyncSession = Depends(get_db_session),
 ):
     service = DealService(session)
+    account_id = body.account_id
+    if not account_id:
+        from backend.app.application.services.account_service import AccountService
+        acc_service = AccountService(session)
+        accounts, _ = await acc_service.list_accounts(ctx, limit=1)
+        if accounts:
+            account_id = accounts[0].id
+        else:
+            acc = await acc_service.create_account(ctx, name=body.company or "Default Enterprise")
+            account_id = acc.id
+
+    deal_amount = body.amount if body.amount is not None else (body.value if body.value is not None else 0.0)
+
     deal = await service.create_deal(
         ctx=ctx,
-        account_id=body.account_id,
+        account_id=account_id,
         name=body.name,
-        amount=body.amount,
+        amount=deal_amount,
         stage=body.stage or "Qualified",
         currency=body.currency or "USD",
         opportunity_id=body.opportunity_id,

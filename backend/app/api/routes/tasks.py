@@ -56,10 +56,12 @@ async def assign_task(
     session: AsyncSession = Depends(get_db_session),
 ):
     service = TaskService(session)
+    task_subject = body.subject or body.title or "Follow up with customer"
+    assignee = body.assigned_to or ctx.user_id
     task = await service.assign_task(
         ctx=ctx,
-        assignee_id=body.assigned_to,
-        subject=body.subject,
+        assignee_id=assignee,
+        subject=task_subject,
         description=body.description,
         priority=body.priority or "medium",
         start_at=body.start_at,

@@ -5,6 +5,7 @@ from backend.app.application.context import RequestContext
 from backend.app.application.permissions import PermissionService
 from backend.app.application.exceptions import BadRequestError, ConflictError, NotFoundError
 from backend.app.data.models.lead import Lead, LeadConversion
+from backend.app.data.models.user import User
 from backend.app.data.models.account import Account
 from backend.app.data.models.contact import Contact
 from backend.app.data.models.deal import Deal
@@ -81,7 +82,16 @@ class LeadService:
             if existing:
                 raise ConflictError(f"A lead with email '{clean_email}' already exists in this organization")
 
-        assign_uuid = uuid.UUID(str(assigned_to)) if assigned_to else ctx.user_uuid
+        assign_uuid = None
+        candidate_id = assigned_to or ctx.user_uuid
+        if candidate_id:
+            try:
+                candidate_uuid = candidate_id if isinstance(candidate_id, uuid.UUID) else uuid.UUID(str(candidate_id))
+                user_exists = await self.session.get(User, candidate_uuid)
+                if user_exists:
+                    assign_uuid = candidate_uuid
+            except (ValueError, TypeError):
+                assign_uuid = None
 
         lead = Lead(
             organization_id=ctx.tenant_uuid,

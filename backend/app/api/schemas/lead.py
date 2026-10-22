@@ -5,9 +5,11 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class LeadCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str
-    company: str
-    email: Optional[EmailStr] = None
+    company: Optional[str] = "Enterprise Corp"
+    email: Optional[str] = None
     phone: Optional[str] = None
     industry: Optional[str] = None
     source: Optional[str] = "Manual"

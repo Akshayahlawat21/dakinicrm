@@ -37,13 +37,33 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
     if not body.email or not body.password:
         raise BadRequestException("Email and password are required")
 
-    # In development / initial integration, provide default enterprise sales user
-    user_id = f"usr_{body.email.split('@')[0]}"
-    roles = ["sales_executive", "admin"] if "admin" in body.email.lower() else ["sales_executive"]
+    # In development / initial integration, map known roles or infer from email
+    email_lower = body.email.lower()
+    USER_UUID_MAP = {
+        "elena.rostova@dakini.ai": "e7e81b6a-d30e-5270-87f1-260879092306",
+        "marcus.vance@dakini.ai": "33333333-3333-3333-3333-333333330002",
+        "dev.singhania@dakini.ai": "33333333-3333-3333-3333-333333330003",
+        "asha.nair@dakini.ai": "33333333-3333-3333-3333-333333330004",
+    }
+    user_id = USER_UUID_MAP.get(email_lower, f"usr_{body.email.split('@')[0]}")
+    if any(k in email_lower for k in ("elena", "owner", "admin", "director")):
+        roles = ["owner", "admin"]
+    elif any(k in email_lower for k in ("marcus", "manager")):
+        roles = ["manager"]
+    else:
+        roles = ["salesperson"]
+
     
+    TENANT_UUID_MAP = {
+        "tenant_enterprise_01": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+        "dakini-enterprise": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+        "default": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+    }
+    resolved_tenant = TENANT_UUID_MAP.get(body.tenant_id, body.tenant_id or "b4b76cde-a5e0-5ffb-9670-2df601cd5eef")
+
     token = create_access_token(
         user_id=user_id,
-        tenant_id=body.tenant_id or "tenant_enterprise_01",
+        tenant_id=resolved_tenant,
         roles=roles,
         email=body.email,
         expires_delta_seconds=86400,
@@ -53,7 +73,8 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         "id": user_id,
         "email": body.email,
         "name": body.email.split("@")[0].replace(".", " ").title(),
-        "tenant_id": body.tenant_id or "tenant_enterprise_01",
+        "tenant_id": resolved_tenant,
+        "role": roles[0],
         "roles": roles,
     }
 

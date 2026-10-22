@@ -5,10 +5,14 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class ContactCreateRequest(BaseModel):
-    account_id: str
-    first_name: str
-    last_name: str
-    email: Optional[EmailStr] = None
+    model_config = ConfigDict(extra="ignore")
+
+    name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    account_id: Optional[str] = None
+    account: Optional[str] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     title: Optional[str] = None
     department: Optional[str] = None

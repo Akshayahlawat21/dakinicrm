@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
+import LoadingSymbol from '../components/common/LoadingSymbol';
 import {
   Plus,
   Filter,
@@ -31,7 +32,8 @@ export default function LeadsPage() {
     setIsQuickCreateOpen,
     setQuickCreateType,
     quickPreviewLead,
-    setQuickPreviewLead
+    setQuickPreviewLead,
+    isLoadingData
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('All');
@@ -411,16 +413,21 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Content Area: Table or Board */}
-      {viewMode === 'list' ? (
-        <div className="crm-table-container">
-          <table className="crm-table">
-            <thead>
-              <tr>
-                <th style={{ width: 40, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0}
+      {/* Loading state indicator */}
+      {isLoadingData && leads.length === 0 ? (
+        <LoadingSymbol message="" />
+      ) : (
+        <>
+          {/* Content Area: Table or Board */}
+          {viewMode === 'list' ? (
+            <div className="crm-table-container">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40, textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0}
                     onChange={toggleSelectAll}
                     style={{ accentColor: '#2563eb', cursor: 'pointer' }}
                   />
@@ -590,6 +597,8 @@ export default function LeadsPage() {
             );
           })}
         </div>
+      )}
+      </>
       )}
 
       {/* Quick Preview Slide-out Panel */}

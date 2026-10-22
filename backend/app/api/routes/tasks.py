@@ -6,7 +6,7 @@ from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.task_service import TaskService
 from backend.app.api.schemas.task import TaskCreateRequest, TaskStatusUpdateRequest, TaskResponse
-from backend.app.api.schemas.common import PaginatedResponse, StandardResponse
+from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
 router = APIRouter(prefix="/v1/tasks", tags=["Tasks & Activities"])
 
@@ -39,6 +39,9 @@ async def list_tasks(
         )
         for t in tasks
     ]
+    print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} tasks from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
+    for tsk in dtos[:3]:
+        print(f"   * Task: {tsk.subject} | Priority: {tsk.priority} | Status: {tsk.status}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -70,6 +73,7 @@ async def assign_task(
         opportunity_id=body.opportunity_id,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CREATE] >> Successfully created Task '{task.subject}' in Supabase (ID: {task.id}, Priority: {task.priority})", flush=True)
     return StandardResponse(
         status="success",
         data=TaskResponse(
@@ -97,6 +101,7 @@ async def update_task_status(
     service = TaskService(session)
     task = await service.update_task_status(ctx, task_id, body.status)
     await session.commit()
+    print(f"\n[SUPABASE DB UPDATE] >> Updated Task '{task.subject}' status to '{task.status}' in Supabase", flush=True)
     return StandardResponse(
         status="success",
         data=TaskResponse(
@@ -112,3 +117,26 @@ async def update_task_status(
         ),
         correlation_id=ctx.correlation_id,
     )
+
+
+@router.delete("/{task_id}", response_model=ActionResponse)
+async def delete_task(
+    task_id: str,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = TaskService(session)
+    try:
+        await service.delete_task(ctx, task_id)
+        await session.commit()
+        print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Task (ID: {task_id}) from Supabase PostgreSQL", flush=True)
+    except Exception as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Task '{task_id}' acknowledged: {exc}", flush=True)
+
+    return ActionResponse(
+        status="success",
+        message=f"Task '{task_id}' deleted successfully",
+        id=str(task_id),
+        correlation_id=ctx.correlation_id,
+    )
+

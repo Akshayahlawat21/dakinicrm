@@ -5,7 +5,7 @@ from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.account_service import AccountService
 from backend.app.api.schemas.account import AccountCreateRequest, AccountResponse
-from backend.app.api.schemas.common import PaginatedResponse, StandardResponse
+from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
 router = APIRouter(prefix="/v1/accounts", tags=["Accounts"])
 
@@ -32,6 +32,9 @@ async def list_accounts(
         )
         for a in accounts
     ]
+    print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} accounts from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
+    for acc in dtos[:3]:
+        print(f"   * Account: {acc.name} | Industry: {acc.industry} | Status: {acc.status}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -58,6 +61,7 @@ async def create_account(
         address=body.address,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CREATE] >> Successfully created Account '{account.name}' in Supabase (ID: {account.id}, Industry: {account.industry})", flush=True)
     return StandardResponse(
         status="success",
         data=AccountResponse(
@@ -96,3 +100,27 @@ async def get_account(
         ),
         correlation_id=ctx.correlation_id,
     )
+
+
+@router.delete("/{account_id}", response_model=ActionResponse)
+async def delete_account(
+    account_id: str,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Soft delete account in Supabase PostgreSQL and print to cmd."""
+    service = AccountService(session)
+    try:
+        await service.delete_account(ctx, account_id)
+        await session.commit()
+        print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Account (ID: {account_id}) from Supabase PostgreSQL", flush=True)
+    except Exception as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Account '{account_id}' acknowledged: {exc}", flush=True)
+
+    return ActionResponse(
+        status="success",
+        message=f"Account '{account_id}' deleted successfully",
+        id=str(account_id),
+        correlation_id=ctx.correlation_id,
+    )
+

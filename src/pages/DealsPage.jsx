@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
+import LoadingSymbol from '../components/common/LoadingSymbol';
 import {
   Handshake,
   Plus,
@@ -11,18 +12,22 @@ import {
   CheckCircle,
   XCircle,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 
 export default function DealsPage() {
   const {
     deals,
     updateDealStage,
+    deleteDeal,
     setIsQuickCreateOpen,
     setQuickCreateType,
     accounts,
-    navigateTo
+    navigateTo,
+    isLoadingData
   } = useCRM();
+
 
   const [selectedDeal, setSelectedDeal] = useState(null);
   const stages = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"];
@@ -83,7 +88,20 @@ export default function DealsPage() {
                 {selectedDeal.name} (${selectedDeal.value.toLocaleString()})
               </h2>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                onClick={() => {
+                  if (window.confirm(`Delete opportunity "${selectedDeal.name}"?`)) {
+                    deleteDeal(selectedDeal.id);
+                    setSelectedDeal(null);
+                  }
+                }}
+                title="Delete Opportunity"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
               <button
                 className="btn btn-primary btn-sm"
                 onClick={() => updateDealStage(selectedDeal.id, 'Won')}
@@ -100,6 +118,7 @@ export default function DealsPage() {
                 Close
               </button>
             </div>
+
           </div>
 
           {/* Salesforce Path Chevrons */}
@@ -127,8 +146,13 @@ export default function DealsPage() {
         </div>
       )}
 
-      {/* Kanban Board */}
-      <div className="deals-kanban-board">
+      {/* Loading state indicator */}
+      {isLoadingData && deals.length === 0 ? (
+        <LoadingSymbol message="" />
+      ) : (
+        <>
+          {/* Kanban Board */}
+          <div className="deals-kanban-board">
         {stages.map((stg) => {
           const stageDeals = deals.filter((d) => d.stage === stg);
           const stageValue = stageDeals.reduce((acc, d) => acc + d.value, 0);
@@ -231,6 +255,8 @@ export default function DealsPage() {
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }

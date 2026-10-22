@@ -21,24 +21,39 @@ class AuditLogRepository(BaseRepository[AuditLog]):
         resource_id: str | uuid.UUID,
         old_values: Optional[Dict[str, Any]] = None,
         new_values: Optional[Dict[str, Any]] = None,
-    ) -> AuditLog:
-        """Records an append-only audit trail record."""
-        org_uuid = self._parse_uuid(tenant_id)
-        u_uuid = self._parse_uuid(user_id) if user_id else None
-        r_uuid = self._parse_uuid(resource_id)
+    ) -> Optional[AuditLog]:
+        """Records an append-only audit trail record safely without breaking caller transaction."""
+        try:
+            org_uuid = self._parse_uuid(tenant_id)
+            u_uuid = None
+            if user_id:
+                try:
+                    cand_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
+                    from backend.app.data.models.user import User
+                    user_row = await self.session.get(User, cand_uuid)
+                    if user_row:
+                        u_uuid = cand_uuid
+                except Exception:
+                    u_uuid = None
 
-        entry = AuditLog(
-            organization_id=org_uuid,
-            user_id=u_uuid,
-            action=action.upper(),
-            resource_type=resource_type.lower(),
-            resource_id=r_uuid,
-            old_values=old_values,
-            new_values=new_values,
-        )
-        self.session.add(entry)
-        await self.session.flush()
-        return entry
+            r_uuid = self._parse_uuid(resource_id)
+
+            entry = AuditLog(
+                organization_id=org_uuid,
+                user_id=u_uuid,
+                action=action.upper(),
+                resource_type=resource_type.lower(),
+                resource_id=r_uuid,
+                old_values=old_values,
+                new_values=new_values,
+            )
+            self.session.add(entry)
+            await self.session.flush()
+            return entry
+        except Exception:
+            # Audit logging must NEVER fail the primary business operation
+            return None
+
 
     async def record_outbox_event(
         self,

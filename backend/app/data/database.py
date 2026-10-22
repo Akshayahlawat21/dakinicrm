@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 from sqlalchemy import event
-from sqlalchemy.pool import QueuePool, NullPool, StaticPool
+import sys
+import asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool, StaticPool
 from backend.app.core.config import settings
 from backend.app.data.exceptions import DatabaseConnectionError
 
@@ -32,12 +37,11 @@ def get_engine_args(database_url: str) -> dict:
             args["poolclass"] = NullPool
             args["connect_args"] = {"check_same_thread": False}
     else:
-        # PostgreSQL / Supabase
-        args["poolclass"] = QueuePool
+        # PostgreSQL / Supabase — use AsyncAdaptedQueuePool for async engines
+        args["poolclass"] = AsyncAdaptedQueuePool
         args["pool_size"] = settings.DB_POOL_SIZE
         args["max_overflow"] = settings.DB_MAX_OVERFLOW
-        args["pool_timeout"] = settings.DB_POOL_TIMEOUT
-        args["pool_recycle"] = settings.DB_POOL_RECYCLE
+        args["pool_recycle"] = 60
         args["pool_pre_ping"] = True
         
         # Statement timeout in connect_args for psycopg
@@ -49,10 +53,36 @@ def get_engine_args(database_url: str) -> dict:
     return args
 
 
+def normalize_database_url(url: str) -> str:
+    """
+    Normalizes database URL to ensure async SQLAlchemy compatibility.
+    Handles Supabase SQLAlchemy strings ('postgresql://' or 'postgresql+psycopg2://')
+    and automatically upgrades them to the async 'postgresql+psycopg://' driver.
+    """
+    if not url:
+        return url
+
+    cleaned = url.strip()
+    if cleaned.startswith("postgresql+psycopg2://"):
+        cleaned = "postgresql+psycopg://" + cleaned[len("postgresql+psycopg2://"):]
+    elif cleaned.startswith("postgresql://"):
+        cleaned = "postgresql+psycopg://" + cleaned[len("postgresql://"):]
+    elif cleaned.startswith("postgres://"):
+        cleaned = "postgresql+psycopg://" + cleaned[len("postgres://"):]
+
+    # Ensure SSL is active when connecting to Supabase cloud
+    if ("supabase.com" in cleaned or "supabase.co" in cleaned) and "sslmode" not in cleaned:
+        separator = "&" if "?" in cleaned else "?"
+        cleaned = f"{cleaned}{separator}sslmode=require"
+
+    return cleaned
+
+
 def init_db(database_url: str | None = None) -> AsyncEngine:
     """Initializes the database engine and session maker."""
     global _engine, _session_factory
-    url = database_url or settings.DATABASE_URL
+    raw_url = database_url or settings.DATABASE_URL
+    url = normalize_database_url(raw_url)
 
     logger.info(f"Initializing database connection: {url.split('@')[-1] if '@' in url else url}")
 
@@ -60,12 +90,14 @@ def init_db(database_url: str | None = None) -> AsyncEngine:
         engine_args = get_engine_args(url)
         _engine = create_async_engine(url, **engine_args)
 
-        # Enable foreign keys for SQLite
+        # Enable foreign keys, WAL mode, and busy timeout for SQLite
         if "sqlite" in url.lower():
             @event.listens_for(_engine.sync_engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=5000")
                 cursor.close()
 
         _session_factory = async_sessionmaker(

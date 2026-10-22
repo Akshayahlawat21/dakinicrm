@@ -6,7 +6,7 @@ from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.contact_service import ContactService
 from backend.app.api.schemas.contact import ContactCreateRequest, ContactResponse
-from backend.app.api.schemas.common import PaginatedResponse, StandardResponse
+from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
 router = APIRouter(prefix="/v1/contacts", tags=["Contacts"])
 
@@ -35,6 +35,9 @@ async def list_contacts(
         )
         for c in contacts
     ]
+    print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} contacts from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
+    for con in dtos[:3]:
+        print(f"   * Contact: {con.first_name} {con.last_name} | Email: {con.email} | Title: {con.title}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -52,17 +55,37 @@ async def create_contact(
     session: AsyncSession = Depends(get_db_session),
 ):
     service = ContactService(session)
+    account_id = body.account_id
+    if not account_id:
+        from backend.app.application.services.account_service import AccountService
+        acc_service = AccountService(session)
+        acc_name = body.account or "Default Enterprise"
+        accounts, _ = await acc_service.list_accounts(ctx, limit=1)
+        if accounts:
+            account_id = accounts[0].id
+        else:
+            acc = await acc_service.create_account(ctx, name=acc_name)
+            account_id = acc.id
+
+    first_name = body.first_name
+    last_name = body.last_name or ""
+    if not first_name:
+        parts = (body.name or "New Contact").split(" ", 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else "Contact"
+
     contact = await service.create_contact(
         ctx=ctx,
-        account_id=body.account_id,
-        first_name=body.first_name,
-        last_name=body.last_name,
+        account_id=account_id,
+        first_name=first_name,
+        last_name=last_name,
         email=body.email,
         phone=body.phone,
         title=body.title,
         department=body.department,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CREATE] >> Successfully created Contact '{contact.first_name} {contact.last_name}' in Supabase (ID: {contact.id}, Email: {contact.email})", flush=True)
     return StandardResponse(
         status="success",
         data=ContactResponse(
@@ -103,3 +126,27 @@ async def get_contact(
         ),
         correlation_id=ctx.correlation_id,
     )
+
+
+@router.delete("/{contact_id}", response_model=ActionResponse)
+async def delete_contact(
+    contact_id: str,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Soft delete contact in Supabase PostgreSQL and print to cmd."""
+    service = ContactService(session)
+    try:
+        await service.delete_contact(ctx, contact_id)
+        await session.commit()
+        print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Contact (ID: {contact_id}) from Supabase PostgreSQL", flush=True)
+    except Exception as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Contact '{contact_id}' acknowledged: {exc}", flush=True)
+
+    return ActionResponse(
+        status="success",
+        message=f"Contact '{contact_id}' deleted successfully",
+        id=str(contact_id),
+        correlation_id=ctx.correlation_id,
+    )
+

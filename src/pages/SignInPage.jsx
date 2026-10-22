@@ -9,8 +9,53 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Crown,
+  Briefcase,
+  UserCheck
 } from 'lucide-react';
+
+const DEMO_ACCOUNTS = [
+  {
+    roleId: 'owner',
+    roleLabel: 'Owner / Director',
+    shortLabel: 'Owner',
+    name: 'Elena Rostova',
+    email: 'elena.rostova@dakini.ai',
+    password: 'dakini_secure_2026',
+    desc: 'Full tenant authority, settings, quota & user management',
+    icon: Crown,
+    badgeColor: '#2563eb',
+    badgeBg: '#eff6ff',
+    borderColor: '#93c5fd',
+  },
+  {
+    roleId: 'manager',
+    roleLabel: 'Sales Manager',
+    shortLabel: 'Manager',
+    name: 'Marcus Vance',
+    email: 'marcus.vance@dakini.ai',
+    password: 'dakini_secure_2026',
+    desc: 'Team oversight, pipeline targets & sales rep delegation',
+    icon: Briefcase,
+    badgeColor: '#059669',
+    badgeBg: '#ecfdf5',
+    borderColor: '#a7f3d0',
+  },
+  {
+    roleId: 'salesperson',
+    roleLabel: 'Sales Representative',
+    shortLabel: 'Sales Rep',
+    name: 'Dev Singhania',
+    email: 'dev.singhania@dakini.ai',
+    password: 'dakini_secure_2026',
+    desc: 'Personal assigned leads, deals & field pipeline tracking',
+    icon: UserCheck,
+    badgeColor: '#d97706',
+    badgeBg: '#fffbeb',
+    borderColor: '#fde68a',
+  },
+];
 
 export default function SignInPage() {
   const { login, gatewayStatus } = useCRM();
@@ -18,12 +63,20 @@ export default function SignInPage() {
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
 
+  const [selectedRole, setSelectedRole] = useState('owner');
   const [email, setEmail] = useState('elena.rostova@dakini.ai');
   const [password, setPassword] = useState('dakini_secure_2026');
-  const [tenantId, setTenantId] = useState('tenant_enterprise_01');
+  const [tenantId, setTenantId] = useState('b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const handleSelectRole = (acc) => {
+    setSelectedRole(acc.roleId);
+    setEmail(acc.email);
+    setPassword(acc.password);
+    setErrorMsg('');
+  };
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -249,9 +302,57 @@ export default function SignInPage() {
             Welcome Back!
           </h2>
 
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: '0 0 1.75rem 0' }}>
+          <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: '0 0 1.25rem 0' }}>
             Sign in with your enterprise credentials to access your dashboard.
           </p>
+
+          {/* Quick Role Selection Tabs for Owner, Manager, Salesperson */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                Select Role Preset
+              </span>
+              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                Auto-fills credentials
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              {DEMO_ACCOUNTS.map((acc) => {
+                const IconComponent = acc.icon;
+                const isSelected = selectedRole === acc.roleId;
+                return (
+                  <button
+                    key={acc.roleId}
+                    type="button"
+                    onClick={() => handleSelectRole(acc)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      padding: '0.55rem 0.65rem',
+                      borderRadius: 10,
+                      border: isSelected ? `2px solid ${acc.badgeColor}` : '1px solid #e2e8f0',
+                      background: isSelected ? acc.badgeBg : '#ffffff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.2rem' }}>
+                      <IconComponent size={14} color={acc.badgeColor} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSelected ? acc.badgeColor : '#1e293b' }}>
+                        {acc.shortLabel}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.6875rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                      {acc.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Feedback Alerts */}
           {errorMsg && (
@@ -485,33 +586,39 @@ export default function SignInPage() {
               )}
             </button>
 
-            {/* Quick Demo Login matching Image 2 'Login with Google' secondary button */}
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleQuickDemoLogin('elena.rostova@dakini.ai', 'dakini_secure_2026')}
-              style={{
-                width: '100%',
-                height: 42,
-                background: '#ffffff',
-                color: '#0f172a',
-                border: '1px solid #cbd5e1',
-                borderRadius: 8,
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.6rem',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
-            >
-              <Sparkles size={16} color="#2563eb" />
-              <span>1-Click Demo Login (Elena Rostova)</span>
-            </button>
+            {/* Dynamic 1-Click Demo Login for currently selected role */}
+            {(() => {
+              const activeAcc = DEMO_ACCOUNTS.find((a) => a.roleId === selectedRole) || DEMO_ACCOUNTS[0];
+              const IconComp = activeAcc.icon;
+              return (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleQuickDemoLogin(activeAcc.email, activeAcc.password)}
+                  style={{
+                    width: '100%',
+                    height: 42,
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 8,
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                >
+                  <IconComp size={16} color={activeAcc.badgeColor} />
+                  <span>1-Click Sign In as {activeAcc.name} ({activeAcc.shortLabel})</span>
+                </button>
+              );
+            })()}
           </form>
 
           {/* Forgot Password / Footer Links */}

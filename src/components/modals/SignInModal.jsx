@@ -1,15 +1,29 @@
 import React, { useState } from 'react';
 import { useCRM } from '../../context/CRMContext';
-import { X, Lock, Mail, Shield, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Lock, Mail, Shield, ArrowRight, CheckCircle2, AlertCircle, Crown, Briefcase, UserCheck } from 'lucide-react';
+
+const PRESETS = [
+  { role: 'Owner', name: 'Elena Rostova', email: 'elena.rostova@dakini.ai', password: 'dakini_secure_2026', icon: Crown, color: '#2563eb', bg: '#eff6ff' },
+  { role: 'Manager', name: 'Marcus Vance', email: 'marcus.vance@dakini.ai', password: 'dakini_secure_2026', icon: Briefcase, color: '#059669', bg: '#ecfdf5' },
+  { role: 'Sales Rep', name: 'Dev Singhania', email: 'dev.singhania@dakini.ai', password: 'dakini_secure_2026', icon: UserCheck, color: '#d97706', bg: '#fffbeb' },
+];
 
 export default function SignInModal() {
   const { isSignInModalOpen, setIsSignInModalOpen, login, gatewayStatus } = useCRM();
 
+  const [selectedRole, setSelectedRole] = useState('Owner');
   const [email, setEmail] = useState('elena.rostova@dakini.ai');
   const [password, setPassword] = useState('dakini_secure_2026');
-  const [tenantId, setTenantId] = useState('tenant_enterprise_01');
+  const [tenantId, setTenantId] = useState('b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSelectPreset = (p) => {
+    setSelectedRole(p.role);
+    setEmail(p.email);
+    setPassword(p.password);
+    setErrorMsg('');
+  };
 
   if (!isSignInModalOpen) return null;
 
@@ -88,6 +102,48 @@ export default function SignInModal() {
                 <span>{errorMsg}</span>
               </div>
             )}
+
+            {/* Quick Role Presets */}
+            <div>
+              <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.03em' }}>
+                Select Role Preset
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                {PRESETS.map((p) => {
+                  const Icon = p.icon;
+                  const isSel = selectedRole === p.role;
+                  return (
+                    <button
+                      key={p.role}
+                      type="button"
+                      onClick={() => handleSelectPreset(p)}
+                      style={{
+                        padding: '0.45rem 0.5rem',
+                        borderRadius: 8,
+                        border: isSel ? `2px solid ${p.color}` : '1px solid #e2e8f0',
+                        background: isSel ? p.bg : '#ffffff',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.15rem',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Icon size={13} color={p.color} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSel ? p.color : '#1e293b' }}>
+                          {p.role}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {p.name.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>

@@ -1,6 +1,12 @@
+import sys
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +21,7 @@ from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
 # Import routes
-from backend.app.api.routes import health, users, leads, deals, accounts, contacts, tasks, targets, dashboard
+from backend.app.api.routes import health, users, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns
 
 logger = get_logger("backend.main")
 
@@ -26,58 +32,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("=" * 60)
     logger.info(f"Starting Dakini CRM - Layer 3 Application API (Port {settings.PORT})")
     logger.info(f"Environment:       {settings.ENVIRONMENT}")
-    logger.info(f"Database dialect:  {'PostgreSQL' if settings.is_postgres else 'SQLite'}")
+    logger.info(f"Database dialect:  {'PostgreSQL (Supabase)' if settings.is_postgres else 'SQLite'}")
     logger.info("=" * 60)
 
-    # Initialize database
+    # Initialize Supabase PostgreSQL database connection
     engine = init_db()
 
-    # If SQLite in development or testing, ensure tables exist and seed default organization
-    if settings.is_sqlite:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Auto-created development tables in SQLite database.")
-
-        import uuid
-        from backend.app.data.database import get_session_factory
-        from backend.app.data.models.organization import Organization
-        from backend.app.data.models.user import User
-
-        session_factory = get_session_factory()
-        async with session_factory() as session:
-            async with session.begin():
-                for t_id, name in [
-                    ("tenant_enterprise_01", "Dakini Enterprise 01"),
-                    ("tenant_01", "Acme Corporation"),
-                    ("tenant_02", "Beta Industries"),
-                ]:
-                    t_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, t_id)
-                    existing_org = await session.get(Organization, t_uuid)
-                    if not existing_org:
-                        session.add(
-                            Organization(
-                                id=t_uuid,
-                                name=name,
-                                slug=t_id.replace("_", "-"),
-                            )
-                        )
-
-                # Seed default user Elena Rostova
-                user_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, "usr_elena.rostova")
-                tenant_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, "tenant_enterprise_01")
-                existing_user = await session.get(User, user_uuid)
-                if not existing_user:
-                    session.add(
-                        User(
-                            id=user_uuid,
-                            organization_id=tenant_uuid,
-                            name="Elena Rostova",
-                            email="elena.rostova@dakini.ai",
-                            role_name="owner",
-                            status="active",
-                        )
-                    )
-        logger.info("Auto-seeded development organizations and users.")
+    # NOTE: SQLite local mock auto-seeding is commented out per user request.
+    # The application connects exclusively to live Supabase PostgreSQL.
+    # if settings.is_sqlite:
+    #     async with engine.begin() as conn:
+    #         await conn.run_sync(Base.metadata.create_all)
+    #     logger.info("Auto-created development tables in SQLite database.")
+    #     import uuid
+    #     from backend.app.data.database import get_session_factory
+    #     from backend.app.data.models.organization import Organization
+    #     from backend.app.data.models.user import User
+    #     session_factory = get_session_factory()
+    #     async with session_factory() as session:
+    #         async with session.begin():
+    #             ...
+    #     logger.info("Auto-seeded development organizations and users (owner, manager, salespersons).")
 
     yield
 
@@ -255,6 +230,8 @@ app.include_router(contacts.router)
 app.include_router(tasks.router)
 app.include_router(targets.router)
 app.include_router(dashboard.router)
+app.include_router(agent.router)
+app.include_router(campaigns.router)
 
 if __name__ == "__main__":
     import uvicorn

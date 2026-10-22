@@ -53,6 +53,7 @@ app = FastAPI(
 @app.exception_handler(GatewayException)
 async def gateway_exception_handler(request: Request, exc: GatewayException):
     correlation_id = getattr(request.state, "correlation_id", "req_unknown")
+    print(f"\n[GATEWAY REJECT] >> {request.method} {request.url.path} -> {exc.code}: {exc.message}", flush=True)
     return create_error_response(
         status_code=exc.status_code,
         code=exc.code,
@@ -60,6 +61,7 @@ async def gateway_exception_handler(request: Request, exc: GatewayException):
         correlation_id=correlation_id,
         headers=exc.headers,
     )
+
 
 
 @app.exception_handler(StarletteHTTPException)

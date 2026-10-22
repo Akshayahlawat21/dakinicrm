@@ -9,7 +9,10 @@ import {
   User,
   ShieldCheck,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Database,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -26,6 +29,8 @@ export default function TopBar() {
     gatewayStatus,
     currentUser,
     isAuthenticated,
+    isLoadingData,
+    fetchSupabaseData,
     logout,
     setIsSignInModalOpen
   } = useCRM();
@@ -50,6 +55,24 @@ export default function TopBar() {
 
       {/* TopBar Actions */}
       <div className="topbar-actions">
+        {/* Loading Spinner Icon (only shown while fetching) */}
+        {isLoadingData && (
+          <div
+            id="global-loading-spinner"
+            title="Loading data..."
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              color: '#2563eb',
+            }}
+          >
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        )}
+
         {/* + Ask Dakini Sparkle Button */}
         <button
           className="btn btn-sparkle"
@@ -90,7 +113,8 @@ export default function TopBar() {
                 { type: 'lead', label: 'New Lead' },
                 { type: 'deal', label: 'New Deal' },
                 { type: 'contact', label: 'New Contact' },
-                { type: 'task', label: 'New Task' }
+                { type: 'task', label: 'New Task' },
+                { type: 'campaign', label: 'New Campaign' }
               ].map((opt) => (
                 <button
                   key={opt.type}

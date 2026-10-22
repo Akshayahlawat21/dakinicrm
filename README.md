@@ -73,15 +73,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 🔐 Authentication & Demo Credentials
 
-When opening the app or logging out, you are presented with the split-screen Sign In page:
+When opening the app or logging out, you are presented with the split-screen Sign In page (`/login`) with 1-click role preset buttons:
 
-| Field | Default Value | Notes |
-| :--- | :--- | :--- |
-| **Email** | `elena.rostova@dakini.ai` | Sales Director profile |
-| **Password** | `dakini_secure_2026` | Default dev password |
-| **Tenant ID** | `tenant_enterprise_01` | Enterprise organization workspace |
+| Role | Name | Email | Password | Tenant ID | Permissions & Scope |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Owner** | Elena Rostova | `elena.rostova@dakini.ai` | `dakini_secure_2026` | `tenant_enterprise_01` | Full organization & system admin access, settings, user role management, sales quotas |
+| **Manager** | Marcus Vance | `marcus.vance@dakini.ai` | `dakini_secure_2026` | `tenant_enterprise_01` | Team oversight, assigning sales targets and tasks to team sales reps, pipeline approvals |
+| **Salesperson** | Dev Singhania | `dev.singhania@dakini.ai` | `dakini_secure_2026` | `tenant_enterprise_01` | Personal assigned leads, deals pipeline progression, customer activities |
+| **Salesperson** | Asha Nair | `asha.nair@dakini.ai` | `dakini_secure_2026` | `tenant_enterprise_01` | Field sales representative, accounts, and tasks |
 
-> **Quick Login:** You can also click the **"1-Click Demo Login (Elena Rostova)"** button on `/login` to sign in instantly with verified Layer 2 JWT credentials.
+> **Quick Login:** On the `/login` page or in the **Sign In Modal**, click any of the **Owner**, **Manager**, or **Sales Rep** role preset buttons to auto-populate the form, or use the **1-Click Sign In** button.
 
 ---
 

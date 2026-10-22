@@ -42,13 +42,32 @@ async def get_request_context(request: Request) -> RequestContext:
             else:
                 primary_role = roles_list[0] if roles_list else "salesperson"
 
+        KNOWN_USERS = {
+            "usr_elena": "e7e81b6a-d30e-5270-87f1-260879092306",
+            "usr_elena.rostova": "e7e81b6a-d30e-5270-87f1-260879092306",
+            "usr_marcus": "33333333-3333-3333-3333-333333330002",
+            "usr_marcus.vance": "33333333-3333-3333-3333-333333330002",
+            "usr_dev": "33333333-3333-3333-3333-333333330003",
+            "usr_dev.singhania": "33333333-3333-3333-3333-333333330003",
+            "usr_asha": "33333333-3333-3333-3333-333333330004",
+            "usr_asha.nair": "33333333-3333-3333-3333-333333330004",
+        }
+        KNOWN_TENANTS = {
+            "tenant_enterprise_01": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+            "dakini-enterprise": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+            "default": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+        }
+        resolved_user = KNOWN_USERS.get(gateway_user, gateway_user)
+        resolved_tenant = KNOWN_TENANTS.get(gateway_tenant, gateway_tenant)
+
         return RequestContext(
-            user_id=gateway_user,
-            tenant_id=gateway_tenant,
+            user_id=resolved_user,
+            tenant_id=resolved_tenant,
             role=primary_role,
             team_id=gateway_team,
             correlation_id=correlation_id,
         )
+
 
     # 2. Bearer Token Verification fallback
     auth_header = request.headers.get("Authorization")
@@ -70,6 +89,24 @@ async def get_request_context(request: Request) -> RequestContext:
 
         if not user_id or not tenant_id:
             raise UnauthorizedError("Token missing mandatory user_id or tenant_id claims")
+
+        KNOWN_USERS = {
+            "usr_elena": "e7e81b6a-d30e-5270-87f1-260879092306",
+            "usr_elena.rostova": "e7e81b6a-d30e-5270-87f1-260879092306",
+            "usr_marcus": "33333333-3333-3333-3333-333333330002",
+            "usr_marcus.vance": "33333333-3333-3333-3333-333333330002",
+            "usr_dev": "33333333-3333-3333-3333-333333330003",
+            "usr_dev.singhania": "33333333-3333-3333-3333-333333330003",
+            "usr_asha": "33333333-3333-3333-3333-333333330004",
+            "usr_asha.nair": "33333333-3333-3333-3333-333333330004",
+        }
+        KNOWN_TENANTS = {
+            "tenant_enterprise_01": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+            "dakini-enterprise": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+            "default": "b4b76cde-a5e0-5ffb-9670-2df601cd5eef",
+        }
+        user_id = KNOWN_USERS.get(str(user_id), str(user_id))
+        tenant_id = KNOWN_TENANTS.get(str(tenant_id), str(tenant_id))
 
         primary_role = "salesperson"
         if isinstance(roles, list):

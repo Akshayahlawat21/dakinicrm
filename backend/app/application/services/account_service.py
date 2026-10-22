@@ -61,3 +61,25 @@ class AccountService:
             new_values={"name": name, "industry": industry},
         )
         return created
+
+    async def delete_account(self, ctx: RequestContext, account_id: str | uuid.UUID) -> bool:
+        try:
+            account = await self.get_account(ctx, account_id)
+        except NotFoundError:
+            account = await self.account_repo.get_by_name(str(account_id), ctx.tenant_id)
+            if not account:
+                raise NotFoundError(f"Account '{account_id}' was not found in this organization")
+
+        from datetime import datetime, timezone
+        account.deleted_at = datetime.now(timezone.utc)
+        await self.session.flush()
+        await self.audit_repo.record_event(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            action="DELETE",
+            resource_type="account",
+            resource_id=account.id,
+            old_values={"name": account.name},
+        )
+        return True
+

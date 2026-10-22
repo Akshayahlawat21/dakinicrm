@@ -107,3 +107,15 @@ class DealService:
 
     async def get_pipeline_summary(self, ctx: RequestContext) -> Dict[str, Any]:
         return await self.deal_repo.get_pipeline_summary(ctx.tenant_id)
+
+    async def delete_deal(self, ctx: RequestContext, deal_id: str | uuid.UUID) -> bool:
+        deal = await self.get_deal(ctx, deal_id)
+        await self.deal_repo.delete_scoped(deal.id, ctx.tenant_id, soft_delete=True)
+        await self.audit_repo.record_event(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            action="DELETE",
+            resource_type="deal",
+            resource_id=deal.id,
+        )
+        return True

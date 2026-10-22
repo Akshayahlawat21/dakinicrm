@@ -217,3 +217,15 @@ class LeadService:
             "deal_id": str(deal.id),
             "conversion_id": str(conversion.id),
         }
+
+    async def delete_lead(self, ctx: RequestContext, lead_id: str | uuid.UUID) -> bool:
+        lead = await self.get_lead(ctx, lead_id)
+        await self.lead_repo.delete_scoped(lead.id, ctx.tenant_id, soft_delete=True)
+        await self.audit_repo.record_event(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            action="DELETE",
+            resource_type="lead",
+            resource_id=lead.id,
+        )
+        return True

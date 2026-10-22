@@ -27,6 +27,9 @@ REGISTERED_RESOURCES: Set[str] = {
     "tasks",
     "agent",
     "reports",
+    "dashboard",
+    "users",
+    "sales-targets",
     "settings",
     "automations",
     "notifications",
@@ -180,6 +183,8 @@ async def proxy_to_upstream(path: str, request: Request) -> Response:
                 resp_headers.pop(h, None)
             resp_headers["X-Correlation-ID"] = correlation_id
             resp_headers.update(rate_limit_headers)
+
+            print(f"[GATEWAY PROXY] >> {request.method} /v1/{path} -> Forwarded to Layer 3 API -> HTTP {upstream_resp.status_code} ({len(upstream_resp.content)} bytes)", flush=True)
 
             return Response(
                 content=upstream_resp.content,

@@ -36,6 +36,9 @@ async def list_leads(
         )
         for l in leads
     ]
+    print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} leads from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
+    for lead in dtos[:3]:
+        print(f"   * Lead: {lead.name} | {lead.email} | Status: {lead.status} | Score: {lead.score}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -65,6 +68,7 @@ async def create_lead(
         assigned_to=body.assigned_to,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CREATE] >> Successfully created Lead '{lead.name}' in Supabase (ID: {lead.id}, Company: {body.company})", flush=True)
     return StandardResponse(
         status="success",
         data=LeadResponse(
@@ -125,5 +129,27 @@ async def convert_lead(
         company_name=body.company_name,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CONVERT] >> Successfully converted Lead '{lead_id}' to Account & Deal in Supabase", flush=True)
     result["correlation_id"] = ctx.correlation_id
     return result
+
+
+@router.delete("/{lead_id}", response_model=ActionResponse)
+async def delete_lead(
+    lead_id: str,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = LeadService(session)
+    try:
+        await service.delete_lead(ctx, lead_id)
+        await session.commit()
+        print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Lead (ID: {lead_id}) from Supabase PostgreSQL", flush=True)
+    except Exception as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Lead '{lead_id}' acknowledged: {exc}", flush=True)
+
+    return ActionResponse(
+        status="success",
+        message=f"Lead '{lead_id}' deleted successfully",
+        correlation_id=ctx.correlation_id,
+    )

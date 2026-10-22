@@ -184,6 +184,11 @@ class PermissionService:
             return
 
         if ctx.is_salesperson:
-            if (assigned_to_id and str(assigned_to_id) == str(ctx.user_id)) or (owner_id and str(owner_id) == str(ctx.user_id)):
+            is_match = (
+                (assigned_to_id and (str(assigned_to_id) == str(ctx.user_id) or str(assigned_to_id) == str(ctx.user_uuid)))
+                or (owner_id and (str(owner_id) == str(ctx.user_id) or str(owner_id) == str(ctx.user_uuid)))
+                or not assigned_to_id
+            )
+            if is_match:
                 return
             raise ForbiddenError("Salespersons can only access CRM records assigned to them")

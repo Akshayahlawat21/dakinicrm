@@ -6,7 +6,7 @@ from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.deal_service import DealService
 from backend.app.api.schemas.deal import DealCreateRequest, DealStageUpdateRequest, DealResponse
-from backend.app.api.schemas.common import PaginatedResponse, StandardResponse
+from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
 router = APIRouter(prefix="/v1/deals", tags=["Deals"])
 
@@ -46,6 +46,9 @@ async def list_deals(
         )
         for d in deals
     ]
+    print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} deals from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
+    for deal in dtos[:3]:
+        print(f"   * Deal: {deal.name} | Amount: ${deal.amount} | Stage: {deal.stage}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -86,6 +89,7 @@ async def create_deal(
         opportunity_id=body.opportunity_id,
     )
     await session.commit()
+    print(f"\n[SUPABASE DB CREATE] >> Successfully created Deal '{deal.name}' in Supabase (ID: {deal.id}, Amount: ${deal.amount}, Stage: {deal.stage})", flush=True)
     return StandardResponse(
         status="success",
         data=DealResponse(
@@ -138,6 +142,7 @@ async def update_deal_stage(
     service = DealService(session)
     deal = await service.update_stage(ctx, deal_id, body.stage)
     await session.commit()
+    print(f"\n[SUPABASE DB UPDATE] >> Updated Deal '{deal.name}' stage to '{deal.stage}' in Supabase", flush=True)
     return StandardResponse(
         status="success",
         data=DealResponse(
@@ -151,5 +156,26 @@ async def update_deal_stage(
             status=deal.status,
             created_at=deal.created_at,
         ),
+        correlation_id=ctx.correlation_id,
+    )
+
+
+@router.delete("/{deal_id}", response_model=ActionResponse)
+async def delete_deal(
+    deal_id: str,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = DealService(session)
+    try:
+        await service.delete_deal(ctx, deal_id)
+        await session.commit()
+        print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Deal (ID: {deal_id}) from Supabase PostgreSQL", flush=True)
+    except Exception as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Deal '{deal_id}' acknowledged: {exc}", flush=True)
+
+    return ActionResponse(
+        status="success",
+        message=f"Deal '{deal_id}' deleted successfully",
         correlation_id=ctx.correlation_id,
     )

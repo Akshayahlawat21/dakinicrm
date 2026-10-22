@@ -192,6 +192,10 @@ export const gatewayApi = {
     });
   },
 
+  async deleteLead(leadId) {
+    return gatewayFetch(`/leads/${leadId}`, { method: 'DELETE' });
+  },
+
   /**
    * E3: Deals resource
    */
@@ -203,6 +207,83 @@ export const gatewayApi = {
     return gatewayFetch('/deals', {
       method: 'POST',
       body: JSON.stringify(dealData),
+    });
+  },
+
+  async deleteDeal(dealId) {
+    return gatewayFetch(`/deals/${dealId}`, { method: 'DELETE' });
+  },
+
+  async deleteTask(taskId) {
+    return gatewayFetch(`/tasks/${taskId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Accounts resource (Live Supabase DB)
+   */
+  async getAccounts() {
+    return gatewayFetch('/accounts', { method: 'GET' });
+  },
+
+  async createAccount(accountData) {
+    return gatewayFetch('/accounts', {
+      method: 'POST',
+      body: JSON.stringify(accountData),
+    });
+  },
+
+  async deleteAccount(accountId) {
+    return gatewayFetch(`/accounts/${accountId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Contacts resource (Live Supabase DB)
+   */
+  async getContacts() {
+    return gatewayFetch('/contacts', { method: 'GET' });
+  },
+
+  async createContact(contactData) {
+    return gatewayFetch('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(contactData),
+    });
+  },
+
+  async deleteContact(contactId) {
+    return gatewayFetch(`/contacts/${contactId}`, { method: 'DELETE' });
+  },
+
+
+  /**
+   * Campaigns resource (Live Supabase DB)
+   */
+  async getCampaigns() {
+    return gatewayFetch('/campaigns', { method: 'GET' });
+  },
+
+  async createCampaign(campaignData) {
+    return gatewayFetch('/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(campaignData),
+    });
+  },
+
+  async deleteCampaign(campaignId) {
+    return gatewayFetch(`/campaigns/${campaignId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Tasks resource (Live Supabase DB)
+   */
+  async getTasks() {
+    return gatewayFetch('/tasks', { method: 'GET' });
+  },
+
+  async createTask(taskData) {
+    return gatewayFetch('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(taskData),
     });
   },
 

@@ -97,7 +97,7 @@ class TaskService:
         try:
             task = await self.task_repo.get_by_id_scoped(task_id, ctx.tenant_id)
             # Salesperson can only view their own tasks
-            if ctx.is_salesperson and str(task.user_id) != str(ctx.user_id):
+            if ctx.is_salesperson and str(task.user_id) != str(ctx.user_id) and str(task.user_id) != str(ctx.user_uuid):
                 raise ForbiddenError("Salespersons can only view tasks assigned to them")
             return task
         except RecordNotFoundError:
@@ -135,3 +135,15 @@ class TaskService:
             update_data={"status": new_status},
         )
         return updated
+
+    async def delete_task(self, ctx: RequestContext, task_id: str | uuid.UUID) -> bool:
+        task = await self.get_task(ctx, task_id)
+        await self.task_repo.delete_scoped(task.id, ctx.tenant_id, soft_delete=True)
+        await self.audit_repo.record_event(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            action="DELETE",
+            resource_type="task",
+            resource_id=task.id,
+        )
+        return True

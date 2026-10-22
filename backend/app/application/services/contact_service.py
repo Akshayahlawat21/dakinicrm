@@ -80,3 +80,19 @@ class ContactService:
             new_values={"name": f"{first_name} {last_name}", "account_id": str(account.id)},
         )
         return contact
+
+    async def delete_contact(self, ctx: RequestContext, contact_id: str | uuid.UUID) -> bool:
+        contact = await self.get_contact(ctx, contact_id)
+        from datetime import datetime, timezone
+        contact.deleted_at = datetime.now(timezone.utc)
+        await self.session.flush()
+        await self.audit_repo.record_event(
+            tenant_id=ctx.tenant_id,
+            user_id=ctx.user_id,
+            action="DELETE",
+            resource_type="contact",
+            resource_id=contact.id,
+            old_values={"first_name": contact.first_name, "last_name": contact.last_name},
+        )
+        return True
+

@@ -26,16 +26,37 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.session = session
 
+    KNOWN_UUID_ALIASES = {
+        "tenant_enterprise_01": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+        "dakini-enterprise": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+        "default": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+        "usr_elena": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+        "usr_elena.rostova": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+        "elena.rostova@dakini.ai": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+        "usr_marcus": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+        "usr_marcus.vance": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+        "marcus.vance@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+        "usr_dev": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+        "usr_dev.singhania": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+        "dev.singhania@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+        "usr_asha": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+        "usr_asha.nair": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+        "asha.nair@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+    }
+
     def _parse_uuid(self, val: str | uuid.UUID | None) -> uuid.UUID | None:
         if val is None:
             return None
         if isinstance(val, uuid.UUID):
             return val
+        s_val = str(val).strip()
+        if s_val in self.KNOWN_UUID_ALIASES:
+            return self.KNOWN_UUID_ALIASES[s_val]
         try:
-            return uuid.UUID(str(val))
+            return uuid.UUID(s_val)
         except (ValueError, TypeError):
             # Deterministic namespace UUID for string IDs like 'tenant_enterprise_01'
-            return uuid.uuid5(uuid.NAMESPACE_DNS, str(val))
+            return uuid.uuid5(uuid.NAMESPACE_DNS, s_val)
 
     async def get_by_id_scoped(
         self, record_id: str | uuid.UUID, tenant_id: str | uuid.UUID

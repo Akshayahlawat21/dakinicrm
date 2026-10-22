@@ -13,36 +13,87 @@ An enterprise-grade Customer Relationship Management (CRM) application built wit
 
 ---
 
-## 🖥️ Running the Application
+## 🖥️ Running the Application (3-Terminal Architecture)
 
-### Step 1: Start the Layer 2 Python API Gateway (Backend)
+To run the complete system locally with live Supabase PostgreSQL data, open **three terminal windows** in the project root directory:
 
-The gateway acts as the secure entry point, handling JWT issuance/verification, rate limiting, request validation, and proxy routing.
+```text
+┌────────────────────────────┐     ┌────────────────────────────┐     ┌────────────────────────────┐
+│   TERMINAL 1: BACKEND      │ ──> │   TERMINAL 2: GATEWAY      │ ──> │   TERMINAL 3: FRONTEND     │
+│  Layer 3 Application API   │     │   Layer 2 API Gateway      │     │    React 18 / Vite SPA     │
+│   http://localhost:8000    │     │   http://localhost:8080    │     │   http://localhost:3000    │
+└────────────────────────────┘     └────────────────────────────┘     └────────────────────────────┘
+```
 
-#### 1. Setup Python Virtual Environment (One-time)
+---
+
+### 🖥️ Terminal 1 — Layer 3 Backend API (Port 8000)
+
+The Layer 3 backend provides multi-tenant CRM business services, permission governance, and direct connectivity to Supabase PostgreSQL.
+
+#### 1. Setup Python Virtual Environment & Dependencies (One-time)
+```bash
+# Windows (PowerShell)
+python -m venv backend/.venv
+.\backend\.venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r backend/requirements.txt
+
+# Linux / macOS
+python3 -m venv backend/.venv
+source backend/.venv/bin/activate
+pip install --upgrade pip
+pip install -r backend/requirements.txt
+```
+
+#### 2. Start the Backend Server
+```bash
+# Inside activated virtual environment:
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Or via npm script (from project root):
+npm run backend
+```
+
+- **Backend Base URL:** [http://localhost:8000](http://localhost:8000)
+- **Interactive API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+### 🖥️ Terminal 2 — Layer 2 Edge / API Gateway (Port 8080)
+
+The gateway acts as the secure reverse proxy, handling JWT token issuance/verification, rate limiting, request validation, and proxy routing to Layer 3.
+
+#### 1. Setup Python Virtual Environment & Dependencies (One-time)
 ```bash
 # Windows (PowerShell)
 python -m venv gateway/.venv
 .\gateway\.venv\Scripts\Activate.ps1
+pip install --upgrade pip
 pip install -r gateway/requirements.txt
 
 # Linux / macOS
 python3 -m venv gateway/.venv
 source gateway/.venv/bin/activate
+pip install --upgrade pip
 pip install -r gateway/requirements.txt
 ```
 
-#### 2. Launch the Gateway Server
+*(Note: You can also use a single shared virtual environment in the project root if preferred).*
+
+#### 2. Start the Gateway Server
 ```bash
-# Windows / Linux / macOS (inside virtual environment):
+# Inside activated virtual environment:
 python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8080 --reload
 
-# Or via npm script (if python/uvicorn is in PATH):
+# Or via npm script (from project root):
 npm run gateway
 ```
-- **Gateway Root:** [http://localhost:8080](http://localhost:8080)
-- **Interactive API Docs (Swagger):** [http://localhost:8080/docs](http://localhost:8080/docs)
-- **Health Check Endpoint:** [http://localhost:8080/health](http://localhost:8080/health) or `/v1/health`
+
+- **Gateway Base URL:** [http://localhost:8080](http://localhost:8080)
+- **Interactive Gateway Docs (Swagger):** [http://localhost:8080/docs](http://localhost:8080/docs)
+- **Gateway Health Check:** [http://localhost:8080/health](http://localhost:8080/health) or [http://localhost:8080/v1/health](http://localhost:8080/v1/health)
 
 #### 3. Run Gateway Test Suite (27 Automated Tests)
 ```bash
@@ -55,19 +106,21 @@ npm run gateway
 
 ---
 
-### Step 2: Start the React Frontend
+### 🖥️ Terminal 3 — React 18 Frontend SPA (Port 3000)
 
-The React frontend runs on Vite and connects to the Layer 2 Gateway via Vite's proxy (`/v1` and `/health` $\rightarrow$ `http://localhost:8080`).
+The React frontend runs on Vite and communicates with the Layer 2 Gateway via Vite's proxy (`/v1` and `/health` $\rightarrow$ `http://localhost:8080`).
 
+#### 1. Install Frontend Dependencies (One-time)
 ```bash
-# 1. Install frontend dependencies
 npm install
+```
 
-# 2. Start Vite development server
+#### 2. Start Vite Development Server
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+- **Web Application URL:** [http://localhost:3000](http://localhost:3000)
 
 ---
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import {
   Search,
@@ -12,7 +13,8 @@ import {
   ExternalLink,
   Database,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -35,6 +37,7 @@ export default function TopBar() {
     setIsSignInModalOpen
   } = useCRM();
 
+  const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
 
@@ -143,6 +146,17 @@ export default function TopBar() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Documentation & Help Button */}
+        <div>
+          <button
+            className="topbar-action-icon"
+            onClick={() => navigate('/help')}
+            title="Knowledge Base & Documentation"
+          >
+            <HelpCircle size={19} />
+          </button>
         </div>
 
         {/* Notifications Bell */}

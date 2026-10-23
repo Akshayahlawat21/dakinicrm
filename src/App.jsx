@@ -33,6 +33,7 @@ import ReportsPage from './pages/ReportsPage';
 import AutomationsPage from './pages/AutomationsPage';
 import AgentsPage from './pages/AgentsPage';
 import SettingsPage from './pages/SettingsPage';
+import HelpDocsPage from './pages/HelpDocsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 /**
@@ -131,6 +132,8 @@ function AppRoutes() {
         <Route path="/automations" element={<AutomationsPage />} />
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpDocsPage />} />
+        <Route path="/docs" element={<HelpDocsPage />} />
 
         {/* Unknown routes inside workspace show 404 */}
         <Route path="*" element={<NotFoundPage />} />

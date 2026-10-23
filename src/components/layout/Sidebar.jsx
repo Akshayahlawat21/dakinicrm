@@ -18,6 +18,7 @@ import {
   Zap,
   Bot,
   Settings,
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
   Sparkles
@@ -62,7 +63,8 @@ export default function Sidebar() {
       title: "AI & System",
       items: [
         { id: "agents", label: "Dakini AI Agents", icon: Bot, count: approvals.length, highlight: true },
-        { id: "settings", label: "Settings", icon: Settings }
+        { id: "settings", label: "Settings", icon: Settings },
+        { id: "help", label: "Documentation & Help", icon: HelpCircle }
       ]
     }
   ];

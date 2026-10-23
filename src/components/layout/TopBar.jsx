@@ -13,8 +13,7 @@ import {
   ExternalLink,
   Database,
   Loader2,
-  RefreshCw,
-  HelpCircle
+  RefreshCw
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -146,17 +145,6 @@ export default function TopBar() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Documentation & Help Button */}
-        <div>
-          <button
-            className="topbar-action-icon"
-            onClick={() => navigate('/help')}
-            title="Knowledge Base & Documentation"
-          >
-            <HelpCircle size={19} />
-          </button>
         </div>
 
         {/* Notifications Bell */}

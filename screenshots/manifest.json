@@ -1,0 +1,92 @@
+[
+  {
+    "file": "d:\\CRM\\screenshots\\01_Dashboard_Overview.png",
+    "filename": "01_Dashboard_Overview.png",
+    "title": "Executive Dashboard & Commercial Snapshot",
+    "desc": "Elena Rostova commercial snapshot with 6 KPI cards, sparkline growth, target progress gauge, revenue trend curve, and pipeline stages."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\02_Dashboard_AI_Copilot.png",
+    "filename": "02_Dashboard_AI_Copilot.png",
+    "title": "Dakini AI Copilot & Approvals Dock",
+    "desc": "Slide-out autonomous AI Copilot with context awareness, suggested action chips, and pending email approvals."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\03_Leads_Management.png",
+    "filename": "03_Leads_Management.png",
+    "title": "Leads Directory & Scoring Pipeline",
+    "desc": "Enterprise leads table with 248 prospective accounts, soft blue status pills, AI score progress meters, and bulk action bar."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\04_Lead_Detail_Aarav_Patel.png",
+    "filename": "04_Lead_Detail_Aarav_Patel.png",
+    "title": "Salesforce 3-Column Lead Detail Record (Aarav Patel)",
+    "desc": "Full 3-column architecture featuring AP avatar card, score 128, multi-dimension score breakdown bars, timeline, and contextual Copilot."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\05_Deals_Pipeline_Kanban.png",
+    "filename": "05_Deals_Pipeline_Kanban.png",
+    "title": "Active Deals & Opportunity Pipeline Kanban",
+    "desc": "Salesforce Kanban board with stage totals, stuck deal amber warnings, velocity probability metrics, and Salesforce Path chevrons."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\06_Accounts_Directory.png",
+    "filename": "06_Accounts_Directory.png",
+    "title": "Accounts & Enterprise Companies Directory",
+    "desc": "Company directory with ARR contracts, health score bars, website verification links, and 360-degree account drawer."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\07_Contacts_Directory.png",
+    "filename": "07_Contacts_Directory.png",
+    "title": "Key Decision Makers & Buyers Directory",
+    "desc": "Executive stakeholder directory across accounts with one-click Dakini AI draft outreach triggers."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\08_Campaigns_Tracking.png",
+    "filename": "08_Campaigns_Tracking.png",
+    "title": "Marketing Campaigns, Roadshows & ROI Analytics",
+    "desc": "Roadshows, webinars, and inbound campaigns tracking budget spent, pipeline generated, and ROI percentages."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\09_Tasks_Action_Queue.png",
+    "filename": "09_Tasks_Action_Queue.png",
+    "title": "Tasks & Priority Action Queue",
+    "desc": "Time-sensitive sales cadences categorized by Overdue (red alert), Today, and Tomorrow, with instant quick-add line."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\10_Inbox_Communication.png",
+    "filename": "10_Inbox_Communication.png",
+    "title": "3-Pane Email Client with CRM Record Linking",
+    "desc": "Integrated mailbox with automatic CRM record detection and Dakini Smart Reply generator."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\11_Calendar_Engagements.png",
+    "filename": "11_Calendar_Engagements.png",
+    "title": "Calendar & Meeting Scheduler",
+    "desc": "Weekly schedule of customer discovery calls, architecture reviews, and today’s video bridge agenda."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\12_Reports_Analytics.png",
+    "filename": "12_Reports_Analytics.png",
+    "title": "Pipeline Reports, Donut Attribution & Conversion Funnel",
+    "desc": "Lead source donut attribution, 5-stage commercial conversion funnel, revenue pacing vs quota, and team leaderboard."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\13_Automations_Builder.png",
+    "filename": "13_Automations_Builder.png",
+    "title": "Visual Workflow Builder Canvas",
+    "desc": "Deterministic rule builder connecting Event Trigger -> Qualification Condition -> Autonomous Action execution."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\14_AI_Agents_Fleet.png",
+    "filename": "14_AI_Agents_Fleet.png",
+    "title": "Dakini AI Autonomous Agents Fleet",
+    "desc": "Autonomous agent fleet configuration with human-in-the-loop guardrails, activity logs, and 1-click undo."
+  },
+  {
+    "file": "d:\\CRM\\screenshots\\15_Workspace_Settings.png",
+    "filename": "15_Workspace_Settings.png",
+    "title": "Workspace Settings & Integrations",
+    "desc": "2-column enterprise preferences, team roles, custom CRM fields, and two-way Salesforce/Gmail connectors."
+  }
+]

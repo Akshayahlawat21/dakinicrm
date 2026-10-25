@@ -1,8 +1,21 @@
 // ==========================================================================
-// DAKINI SALES CRM — ENTERPRISE MOCK DATA
+// DAKINI SALES CRM — LIVE SUPABASE DATABASE CONFIGURATION
+//
+// NOTE: Hardcoded mock entities (leads, accounts, contacts, deals, campaigns,
+// tasks) are commented out per user request. The CRM now strictly queries
+// and persists to the live Supabase PostgreSQL database via Layer 2 Gateway.
 // ==========================================================================
 
-export const initialLeads = [
+export const initialLeads = [];
+export const initialAccounts = [];
+export const initialContacts = [];
+export const initialDeals = [];
+export const initialCampaigns = [];
+export const initialTasks = [];
+
+/*
+-- COMMENTED OUT HARDCODED MOCK DATA (Replaced by live Supabase PostgreSQL DB) --
+export const _legacyInitialLeads = [
   {
     id: "lead-001",
     name: "Aarav Patel",
@@ -503,6 +516,7 @@ export const initialTasks = [
     isAiGenerated: false
   }
 ];
+*/
 
 export const initialEmails = [
   {

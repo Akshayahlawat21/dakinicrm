@@ -1,38 +1,39 @@
 import React, { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
+import LoadingSymbol from '../components/common/LoadingSymbol';
 import {
   Building2,
   Plus,
   Search,
   ExternalLink,
   ChevronRight,
-  Users,
-  DollarSign,
-  Activity,
   Globe,
-  MapPin,
-  CheckCircle
+  Trash2
 } from 'lucide-react';
 
 export default function AccountsPage() {
-  const { accounts, navigateTo, deals, setIsQuickCreateOpen, setQuickCreateType } = useCRM();
+  const { accounts = [], deleteAccount, navigateTo, setIsQuickCreateOpen, setQuickCreateType, isLoadingData } = useCRM();
+
 
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [selectedAccount, setSelectedAccount] = useState(null);
 
-  const filteredAccounts = accounts.filter((acc) => {
-    const matchSearch =
-      acc.name.toLowerCase().includes(search.toLowerCase()) ||
-      acc.industry.toLowerCase().includes(search.toLowerCase());
+  const filteredAccounts = (accounts || []).filter((acc) => {
+    if (!acc) return false;
+    const nameStr = (acc.name || '').toLowerCase();
+    const indStr = (acc.industry || '').toLowerCase();
+    const q = (search || '').toLowerCase();
+    const matchSearch = nameStr.includes(q) || indStr.includes(q);
 
-    if (activeTab === 'Active') return matchSearch && acc.status === 'Active';
-    if (activeTab === 'Prospect') return matchSearch && acc.status === 'Prospect';
+    const statusLower = (acc.status || '').toLowerCase();
+    if (activeTab === 'Active') return matchSearch && statusLower === 'active';
+    if (activeTab === 'Prospect') return matchSearch && statusLower === 'prospect';
     return matchSearch;
   });
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', paddingBottom: '2rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -40,7 +41,7 @@ export default function AccountsPage() {
             <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
               Accounts & Companies
             </h1>
-            <span className="badge badge-blue">{accounts.length} total</span>
+            <span className="badge badge-blue">{(accounts || []).length} total</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
             Enterprise company profiles, contract ARR, and stakeholder hierarchies
@@ -60,19 +61,24 @@ export default function AccountsPage() {
       </div>
 
       {/* Tabs Bar */}
-      <div className="tab-group">
-        {['All', 'Active', 'Prospect'].map((tab) => (
-          <button
-            key={tab}
-            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-            <span className="tab-count-pill">
-              {tab === 'All' ? accounts.length : accounts.filter((a) => a.status === tab).length}
-            </span>
-          </button>
-        ))}
+      <div className="tab-group" style={{ marginBottom: '1rem' }}>
+        {['All', 'Active', 'Prospect'].map((tab) => {
+          const count =
+            tab === 'All'
+              ? (accounts || []).length
+              : (accounts || []).filter((a) => (a?.status || '').toLowerCase() === tab.toLowerCase()).length;
+
+          return (
+            <button
+              key={tab}
+              className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+              <span className="tab-count-pill">{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Search Bar */}
@@ -89,90 +95,143 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="crm-table-container">
-        <table className="crm-table">
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Industry</th>
-              <th>Website</th>
-              <th>Status</th>
-              <th>Contacts</th>
-              <th>Deals</th>
-              <th>Annual ARR</th>
-              <th style={{ width: 40 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAccounts.map((acc) => (
-              <tr
-                key={acc.id}
-                onClick={() => setSelectedAccount(acc)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 8,
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}>
-                      <Building2 size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{acc.name}</div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{acc.city || 'India'}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span style={{ color: '#334155', fontWeight: 500 }}>{acc.industry}</span>
-                </td>
-                <td>
-                  {acc.website && acc.website !== '—' ? (
-                    <a
-                      href={`https://${acc.website}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: '#2563eb', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {acc.website} <ExternalLink size={12} />
-                    </a>
-                  ) : (
-                    <span style={{ color: '#94a3b8' }}>—</span>
-                  )}
-                </td>
-                <td>
-                  <span className={`badge ${acc.status === 'Active' ? 'badge-green' : 'badge-amber'}`}>
-                    <span className="badge-dot" />
-                    {acc.status}
-                  </span>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{acc.contactsCount}</span>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{acc.dealsCount}</span>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{acc.arr}</span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <ChevronRight size={16} color="#94a3b8" />
-                </td>
+      {/* Loading state indicator */}
+      {isLoadingData && (accounts || []).length === 0 ? (
+        <LoadingSymbol message="" />
+      ) : (
+        <div className="crm-table-container">
+          <table className="crm-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Industry</th>
+                <th>Website</th>
+                <th>Status</th>
+                <th>Contacts</th>
+                <th>Deals</th>
+                <th>Annual ARR</th>
+                <th style={{ width: 40 }}></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredAccounts.map((acc) => {
+                const displayName = acc.name || 'Enterprise Account';
+                const displayIndustry = acc.industry || 'Logistics & Tech';
+                const displayLocation = acc.city || acc.address || 'Global';
+                const displayWebsite = acc.website && acc.website !== '—' ? acc.website : null;
+                const statusText = (acc.status || 'Active').toLowerCase();
+                const isStatusActive = statusText === 'active';
+
+                return (
+                  <tr
+                    key={acc.id || `acc-${displayName}`}
+                    onClick={() => setSelectedAccount(acc)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Building2 size={18} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{displayName}</div>
+                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{displayLocation}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ color: '#334155', fontWeight: 500 }}>{displayIndustry}</span>
+                    </td>
+                    <td>
+                      {displayWebsite ? (
+                        <a
+                          href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#2563eb', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Globe size={13} />
+                          <span>{displayWebsite}</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge ${isStatusActive ? 'badge-green' : 'badge-amber'}`}>
+                        <span className="badge-dot" />
+                        {isStatusActive ? 'Active' : 'Prospect'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{acc.contactsCount || 1}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{acc.dealsCount || 0}</span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{acc.arr || '$50,000'}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          title="Delete Account"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Delete account "${displayName}"?`)) {
+                              deleteAccount(acc.id);
+                              if (selectedAccount?.id === acc.id) setSelectedAccount(null);
+                            }
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: 4,
+                            borderRadius: 4,
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                        <ChevronRight size={16} color="#94a3b8" />
+                      </div>
+                    </td>
+                  </tr>
+
+                );
+              })}
+            </tbody>
+          </table>
+
+          {filteredAccounts.length === 0 && !isLoadingData && (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+              <Building2 size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>No accounts found</div>
+              <div style={{ fontSize: '0.8125rem', marginTop: 4 }}>Try clearing search or launch a new account</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Account Details Drawer */}
       {selectedAccount && (
@@ -189,7 +248,7 @@ export default function AccountsPage() {
             zIndex: 45,
             display: 'flex',
             flexDirection: 'column',
-            animation: 'slideLeft 0.2s ease'
+            animation: 'slideLeft 0.2s ease',
           }}
         >
           <div style={{ padding: '1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -199,12 +258,17 @@ export default function AccountsPage() {
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                  {selectedAccount.name}
+                  {selectedAccount.name || 'Account Details'}
                 </h3>
-                <span className="badge badge-green">{selectedAccount.status}</span>
+                <span className="badge badge-green">
+                  {(selectedAccount.status || 'Active').toUpperCase()}
+                </span>
               </div>
             </div>
-            <button onClick={() => setSelectedAccount(null)} style={{ color: '#64748b' }}>
+            <button
+              onClick={() => setSelectedAccount(null)}
+              style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+            >
               ✕
             </button>
           </div>
@@ -225,11 +289,11 @@ export default function AccountsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div className="crm-card" style={{ padding: '0.85rem' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Contract ARR</span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{selectedAccount.arr}</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{selectedAccount.arr || '$50,000'}</div>
               </div>
               <div className="crm-card" style={{ padding: '0.85rem' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Key Contacts</span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{selectedAccount.contactsCount} Buyers</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{selectedAccount.contactsCount || 1} Buyers</div>
               </div>
             </div>
 
@@ -241,21 +305,35 @@ export default function AccountsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Industry</span>
-                  <span style={{ fontWeight: 600 }}>{selectedAccount.industry}</span>
+                  <span style={{ fontWeight: 600 }}>{selectedAccount.industry || 'Logistics & Tech'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Location</span>
-                  <span style={{ fontWeight: 600 }}>{selectedAccount.city}</span>
+                  <span style={{ fontWeight: 600 }}>{selectedAccount.city || selectedAccount.address || 'Global'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Website</span>
-                  <span style={{ fontWeight: 600, color: '#2563eb' }}>{selectedAccount.website}</span>
+                  <span style={{ fontWeight: 600, color: '#2563eb' }}>{selectedAccount.website || '—'}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem' }}>
+          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              className="btn btn-outline"
+              style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+              onClick={() => {
+                if (window.confirm(`Delete account "${selectedAccount.name}"?`)) {
+                  deleteAccount(selectedAccount.id);
+                  setSelectedAccount(null);
+                }
+              }}
+              title="Delete Account"
+            >
+              <Trash2 size={15} />
+              <span>Delete</span>
+            </button>
             <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => navigateTo('deals')}>
               View Deals
             </button>
@@ -269,6 +347,7 @@ export default function AccountsPage() {
               + Create Deal
             </button>
           </div>
+
         </div>
       )}
     </div>

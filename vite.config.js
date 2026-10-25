@@ -8,7 +8,7 @@ export default defineConfig({
     open: false,
     host: true,
     proxy: {
-      // Existing Layer 2 gateway; authenticated application API.
+
       '/v1': {
         target: 'http://localhost:8080',
         changeOrigin: true
@@ -16,12 +16,14 @@ export default defineConfig({
       '/health': {
         target: 'http://localhost:8080',
         changeOrigin: true
+
       },
       // Local development only. Production should use /v1/analytics through Layer 2.
       '/analytics': {
         target: 'http://localhost:8090',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/analytics/, '')
+
       }
     }
   }

@@ -11,7 +11,8 @@ export default function QuickCreateModal() {
     addLead,
     addDeal,
     addContact,
-    addTask
+    addTask,
+    addCampaign
   } = useCRM();
 
   if (!isQuickCreateOpen) return null;
@@ -28,7 +29,11 @@ export default function QuickCreateModal() {
     dealStage: 'Qualified',
     taskTitle: '',
     taskPriority: 'Medium',
-    taskRecord: 'Acme Corp'
+    taskRecord: 'Acme Corp',
+    campaignName: '',
+    campaignType: 'Roadshow & In-Person',
+    campaignBudget: '25000',
+    campaignStatus: 'Active'
   });
 
   const handleChange = (e) => {
@@ -70,6 +75,17 @@ export default function QuickCreateModal() {
       });
     } else if (quickCreateType === 'task') {
       addTask(formData.taskTitle || 'Follow up with customer', formData.taskRecord, formData.taskPriority);
+    } else if (quickCreateType === 'campaign') {
+      addCampaign({
+        name: formData.campaignName || formData.name || 'Q4 Growth Roadshow',
+        type: formData.campaignType || 'Roadshow & In-Person',
+        budget: Number(formData.campaignBudget) || 25000,
+        status: formData.campaignStatus || 'Active',
+        spent: 0,
+        leadsGenerated: 0,
+        pipelineValue: 0,
+        roi: '0%'
+      });
     }
     setIsQuickCreateOpen(false);
   };
@@ -83,7 +99,7 @@ export default function QuickCreateModal() {
               Create New Record
             </h3>
             <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2 }}>
-              {['lead', 'deal', 'contact', 'task'].map((t) => (
+              {['lead', 'deal', 'contact', 'task', 'campaign'].map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -329,6 +345,64 @@ export default function QuickCreateModal() {
                       <option value="Urgent">Urgent</option>
                     </select>
                   </div>
+                </div>
+              </>
+            )}
+
+            {quickCreateType === 'campaign' && (
+              <>
+                <div>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    Campaign Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="campaignName"
+                    required
+                    placeholder="e.g. Q4 Autonomous Logistics Roadshow"
+                    className="input-field"
+                    value={formData.campaignName}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Campaign Type
+                    </label>
+                    <select name="campaignType" className="input-field" value={formData.campaignType} onChange={handleChange}>
+                      <option value="Roadshow & In-Person">Roadshow & In-Person</option>
+                      <option value="Webinar Series">Webinar Series</option>
+                      <option value="Digital Ads & Content">Digital Ads & Content</option>
+                      <option value="Email Outreach">Email Outreach</option>
+                      <option value="Partner Co-Marketing">Partner Co-Marketing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Budget ($ USD) *
+                    </label>
+                    <input
+                      type="number"
+                      name="campaignBudget"
+                      required
+                      min="100"
+                      step="500"
+                      placeholder="25000"
+                      className="input-field"
+                      value={formData.campaignBudget}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    Status
+                  </label>
+                  <select name="campaignStatus" className="input-field" value={formData.campaignStatus} onChange={handleChange}>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                  </select>
                 </div>
               </>
             )}

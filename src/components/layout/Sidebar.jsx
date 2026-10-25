@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink, Link } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import {
   LayoutDashboard,
@@ -103,10 +104,12 @@ export default function Sidebar() {
               const isActive = currentTab === item.id || (item.id === 'leads' && currentTab === 'lead-detail');
 
               return (
-                <button
+                <NavLink
                   key={item.id}
-                  onClick={() => navigateTo(item.id)}
-                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  to={`/${item.id}`}
+                  className={({ isActive: navActive }) =>
+                    `nav-item ${navActive || (item.id === 'leads' && currentTab === 'lead-detail') ? 'active' : ''}`
+                  }
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   <div className="nav-item-icon">
@@ -120,7 +123,7 @@ export default function Sidebar() {
                       )}
                     </>
                   )}
-                </button>
+                </NavLink>
               );
             })}
           </div>

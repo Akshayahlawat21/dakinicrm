@@ -15,7 +15,7 @@ node_modules/
 # Environment secrets
 .env
 .env.*
-!.env.example
+!.env
 
 # Production build
 dist/
@@ -48,3 +48,16 @@ Thumbs.db
 # Temporary files
 .cache/
 .eslintcache
+
+# Python & Gateway
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.pytest_cache/
+*.db
+*.sqlite3

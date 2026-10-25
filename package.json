@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gateway": "python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8080 --reload",
+    "gateway:test": "pytest gateway/tests -v",
+    "backend": "python backend/run.py",
+    "backend:test": "pytest backend/tests -v"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

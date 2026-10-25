@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
 import {
   Search,
@@ -9,7 +10,10 @@ import {
   User,
   ShieldCheck,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Database,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -22,9 +26,17 @@ export default function TopBar() {
     approvals,
     isNotificationsOpen,
     setIsNotificationsOpen,
-    navigateTo
+    navigateTo,
+    gatewayStatus,
+    currentUser,
+    isAuthenticated,
+    isLoadingData,
+    fetchSupabaseData,
+    logout,
+    setIsSignInModalOpen
   } = useCRM();
 
+  const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
 
@@ -40,12 +52,29 @@ export default function TopBar() {
             <Search size={17} />
             <span>Search records, accounts, or ask Dakini...</span>
           </div>
-          <span className="search-kbd">⌘K / Ctrl+K</span>
         </button>
       </div>
 
       {/* TopBar Actions */}
       <div className="topbar-actions">
+        {/* Loading Spinner Icon (only shown while fetching) */}
+        {isLoadingData && (
+          <div
+            id="global-loading-spinner"
+            title="Loading data..."
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              color: '#2563eb',
+            }}
+          >
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        )}
+
         {/* + Ask Dakini Sparkle Button */}
         <button
           className="btn btn-sparkle"
@@ -86,7 +115,8 @@ export default function TopBar() {
                 { type: 'lead', label: 'New Lead' },
                 { type: 'deal', label: 'New Deal' },
                 { type: 'contact', label: 'New Contact' },
-                { type: 'task', label: 'New Task' }
+                { type: 'task', label: 'New Task' },
+                { type: 'campaign', label: 'New Campaign' }
               ].map((opt) => (
                 <button
                   key={opt.type}
@@ -129,78 +159,114 @@ export default function TopBar() {
           </button>
         </div>
 
-        {/* User Profile Pill */}
-        <div style={{ position: 'relative' }}>
-          <div
-            className="topbar-avatar-pill"
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-          >
-            <div className="avatar-circle">ER</div>
-            <div style={{ textAlign: 'left', paddingRight: '0.25rem' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                Elena Rostova
-              </div>
-              <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
-                Sales Director
-              </div>
-            </div>
-            <ChevronDown size={14} color="#64748b" />
-          </div>
-
-          {isUserMenuOpen && (
+        {/* User Profile Pill or Sign In Button */}
+        {isAuthenticated && currentUser ? (
+          <div style={{ position: 'relative' }}>
             <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                right: 0,
-                width: 220,
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 12,
-                boxShadow: '0 12px 28px rgba(0,0,0,0.12)',
-                padding: '0.5rem',
-                zIndex: 100
-              }}
-              onMouseLeave={() => setIsUserMenuOpen(false)}
+              className="topbar-avatar-pill"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             >
-              <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>Elena Rostova</div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>elena.rostova@dakini.ai</div>
+              <div className="avatar-circle">
+                {(currentUser.name || 'ER')
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
-              <button
-                className="nav-item"
-                style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem' }}
-                onClick={() => {
-                  navigateTo('settings');
-                  setIsUserMenuOpen(false);
-                }}
-              >
-                <User size={15} />
-                User Preferences
-              </button>
-              <button
-                className="nav-item"
-                style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem' }}
-                onClick={() => {
-                  navigateTo('agents');
-                  setIsUserMenuOpen(false);
-                }}
-              >
-                <ShieldCheck size={15} />
-                Agent Permissions
-              </button>
-              <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.35rem 0' }} />
-              <button
-                className="nav-item"
-                style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem', color: '#dc2626' }}
-                onClick={() => setIsUserMenuOpen(false)}
-              >
-                <LogOut size={15} />
-                Sign Out
-              </button>
+              <div style={{ textAlign: 'left', paddingRight: '0.25rem' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                  {currentUser.name || 'Elena Rostova'}
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                  {currentUser.role || 'Sales Director'}
+                </div>
+              </div>
+              <ChevronDown size={14} color="#64748b" />
             </div>
-          )}
-        </div>
+
+            {isUserMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: 220,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  boxShadow: '0 12px 28px rgba(0,0,0,0.12)',
+                  padding: '0.5rem',
+                  zIndex: 100
+                }}
+                onMouseLeave={() => setIsUserMenuOpen(false)}
+              >
+                <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                    {currentUser.name || 'Elena Rostova'}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    {currentUser.email || 'elena.rostova@dakini.ai'}
+                  </div>
+                </div>
+                <button
+                  className="nav-item"
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem' }}
+                  onClick={() => {
+                    navigateTo('settings');
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  <User size={15} />
+                  User Preferences
+                </button>
+                <button
+                  className="nav-item"
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem' }}
+                  onClick={() => {
+                    navigateTo('agents');
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  <ShieldCheck size={15} />
+                  Agent Permissions
+                </button>
+                <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.35rem 0' }} />
+                <button
+                  className="nav-item"
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem', color: '#dc2626' }}
+                  onClick={() => {
+                    logout();
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  <LogOut size={15} />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            className="btn btn-primary"
+            style={{
+              padding: '0.45rem 1rem',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              borderRadius: 'var(--radius-full)',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+            onClick={() => setIsSignInModalOpen(true)}
+          >
+            <User size={15} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

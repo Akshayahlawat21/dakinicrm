@@ -2,6 +2,20 @@
 node_modules/
 .pnp
 .pnp.js
+.venv
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node dependencies
+node_modules/
+
+# Environment secrets
+.env
+.env.*
+!.env
 
 # Production build
 dist/

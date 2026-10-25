@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { analyticsApi } from '../services/analyticsApi';
 import { useCRM } from '../context/CRMContext';
 import {
   Sparkline,
@@ -21,7 +22,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { teamPerformance } from '../data/mockData';
+
 
 export default function DashboardPage() {
   const {
@@ -32,32 +33,58 @@ export default function DashboardPage() {
     approveItem,
     deals,
     setIsAgentDockOpen,
-    sendAgentMessage,
-    gatewayApi,
-    currentUser
+    sendAgentMessage
   } = useCRM();
 
-  const [period, setPeriod] = useState('This week');
+  const [period, setPeriod] = useState('This month');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [analytics, setAnalytics] = useState({ overview: null, revenue: [], pipeline: [], team: [], targetPace: [] });
+  const [analyticsError, setAnalyticsError] = useState('');
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const periodKey = ({ 'This week': 'week', 'This month': 'month', 'This quarter': 'quarter', 'Year to date': 'ytd' })[period] || 'month';
 
-  const handleRefresh = async () => {
+  const loadAnalytics = useCallback(async () => {
     setIsRefreshing(true);
+    setAnalyticsLoading(true);
+    setAnalyticsError('');
     try {
-      if (gatewayApi) {
-        await Promise.allSettled([
-          gatewayApi.checkHealth(),
-          gatewayApi.getLeads(),
-          gatewayApi.getDeals(),
-        ]);
-      }
-    } catch (err) {
-      console.warn('Metrics refresh warning:', err);
+      const [overview, revenue, pipeline, team, targetPace] = await Promise.all([
+        analyticsApi.getOverview(periodKey),
+        analyticsApi.getRevenueTrend(6),
+        analyticsApi.getPipelineByStage(),
+        analyticsApi.getQuotaLeaderboard(periodKey),
+        analyticsApi.getTargetPace(periodKey)
+      ]);
+      setAnalytics({
+        overview,
+        revenue: Array.isArray(revenue.data) ? revenue.data : [],
+        pipeline: Array.isArray(pipeline.data) ? pipeline.data : [],
+        team: Array.isArray(team.data) ? team.data : [],
+        targetPace: Array.isArray(targetPace.data) ? targetPace.data : []
+      });
+    } catch (error) {
+      setAnalyticsError(error instanceof Error ? error.message : 'Unable to load analytics.');
+    } finally {
+      setAnalyticsLoading(false);
+      setIsRefreshing(false);
     }
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setLastRefreshed(nowTime);
-    setTimeout(() => setIsRefreshing(false), 600);
+  }, [periodKey]);
+
+  useEffect(() => { loadAnalytics(); }, [loadAnalytics]);
+  const overview = analytics.overview || {};
+  const money = (value, currency = 'USD') => {
+    if (value == null || !Number.isFinite(Number(value))) return 'ΓÇö';
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value));
+    } catch {
+      return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${currency}`;
+    }
   };
+  const wonCurrency = overviewCurrency => overviewCurrency || 'USD';
+  const revenueLabel = overview.closed_won_revenue == null && Object.keys(overview.closed_won_revenue_by_currency || {}).length > 1
+    ? 'Multiple currencies'
+    : money(overview.closed_won_revenue, wonCurrency(overview.closed_won_currency));
+  const handleRefresh = () => { loadAnalytics(); };
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -65,23 +92,17 @@ export default function DashboardPage() {
       <div className="dashboard-header">
         <div>
           <div className="header-meta-date">
-            Saturday, 10 October • Live Sales telemetry
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} ΓÇó Live Sales telemetry
           </div>
           <h1 className="header-greeting-title">
-            Good evening, {currentUser?.name?.split(' ')[0] || 'Elena'}
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}
           </h1>
           <p className="header-subtitle">
             Here is your commercial snapshot and AI pipeline acceleration summary.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {lastRefreshed && (
-            <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700, background: '#ecfdf5', padding: '0.3rem 0.6rem', borderRadius: 6, border: '1px solid #a7f3d0' }}>
-              ✓ Synced {lastRefreshed}
-            </span>
-          )}
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <select
             className="input-field"
             value={period}
@@ -97,15 +118,18 @@ export default function DashboardPage() {
           <button
             className="btn btn-secondary"
             onClick={handleRefresh}
-            disabled={isRefreshing}
-            title="Sync live CRM metrics and Gateway telemetry"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+            title="Refresh Layer 9 analytics"
           >
             <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Refresh metrics'}</span>
+            <span>Refresh metrics</span>
           </button>
         </div>
       </div>
+
+      {analyticsError && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.875rem' }}>
+        <strong>Analytics unavailable.</strong> {analyticsError} Check the Layer 9 service, tenant configuration, and gateway route, then refresh.
+      </div>}
+      {analyticsLoading && <div aria-live="polite" style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.8125rem' }}>Loading live Layer 9 analyticsΓÇª</div>}
 
       {/* Row 1: Primary KPI Cards */}
       <div className="kpi-grid-top">
@@ -113,17 +137,14 @@ export default function DashboardPage() {
         <div className="kpi-card" onClick={() => navigateTo('deals')} style={{ cursor: 'pointer' }}>
           <div>
             <div className="kpi-title">Total revenue</div>
-            <div className="kpi-value">$25,500.00</div>
+            <div className="kpi-value">{analyticsLoading ? 'ΓÇö' : revenueLabel}</div>
             <div className="kpi-subtext">
-              <span className="badge badge-green">
-                <ArrowUpRight size={12} />
-                +12% vs target
-              </span>
-              <span>1 closed contract</span>
+              <span className="badge badge-green"><ArrowUpRight size={12} />Database-backed</span>
+              <span>{Number(overview.deals_won) || 0} deals won in period</span>
             </div>
           </div>
           <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
-            <Sparkline points={[10, 12, 14, 13, 19, 21, 25.5]} color="#2563eb" width={140} height={42} />
+            <Sparkline points={(analytics.revenue.length ? analytics.revenue : [{ revenue: 0 }]).map((item) => Number(item.revenue) || 0)} color="#2563eb" width={140} height={42} />
           </div>
         </div>
 
@@ -131,19 +152,19 @@ export default function DashboardPage() {
         <div className="kpi-card" onClick={() => navigateTo('deals')} style={{ cursor: 'pointer' }}>
           <div>
             <div className="kpi-title">Active pipeline</div>
-            <div className="kpi-value">$123,000.00</div>
+            <div className="kpi-value">{analyticsLoading ? 'ΓÇö' : money(overview.open_pipeline_value)}</div>
             <div className="kpi-subtext">
-              <span style={{ fontWeight: 600, color: '#2563eb' }}>4 open opportunities</span>
-              <span>• Avg cycle 18 days</span>
+              <span style={{ fontWeight: 600, color: '#2563eb' }}>{Number(overview.open_opportunities) || 0} open opportunities</span>
+              <span>ΓÇó Live Layer 9 data</span>
             </div>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
-              <span>Weighted probability</span>
-              <span style={{ color: '#0f172a' }}>68% ($83,640)</span>
+              <span>Weighted pipeline value</span>
+              <span style={{ color: '#0f172a' }}>{money(overview.weighted_pipeline_value)}</span>
             </div>
             <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: '68%', height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #2563eb 100%)', borderRadius: 4 }} />
+              <div style={{ width: `${Math.max(0, Math.min(100, Number(overview.open_pipeline_value) ? (Number(overview.weighted_pipeline_value || 0) / Number(overview.open_pipeline_value)) * 100 : 0))}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #2563eb 100%)', borderRadius: 4 }} />
             </div>
           </div>
         </div>
@@ -153,16 +174,16 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div className="kpi-title">Sales target</div>
-              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>$25,500</div>
+              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading ? 'ΓÇö' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'ΓÇö')}</div>
               <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                of <strong style={{ color: '#0f172a' }}>$130,000</strong> quarterly quota
+                Actual {analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : 'ΓÇö'} ┬╖ selected period
               </div>
               <div style={{ marginTop: '0.5rem' }}>
-                <span className="badge badge-blue">On track for pacing</span>
+                <span className="badge badge-blue">{analytics.targetPace.length === 1 && analytics.targetPace[0].attainment_percent != null ? `${analytics.targetPace[0].attainment_percent}% attained` : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'No matching target'}</span>
               </div>
             </div>
             <div>
-              <RadialProgressDonut percent={20} size={76} strokeWidth={9} color="#2563eb" />
+              <RadialProgressDonut percent={Math.max(0, Math.min(100, analytics.targetPace.length === 1 ? Number(analytics.targetPace[0]?.attainment_percent) || 0 : 0))} size={76} strokeWidth={9} color="#2563eb" />
             </div>
           </div>
         </div>
@@ -172,9 +193,9 @@ export default function DashboardPage() {
       <div className="kpi-grid-bottom">
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Deals won</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>1</div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>1 closed this month</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Total leads</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{Number(overview.total_leads) || 0}</div>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Leads created in selected period</span>
           </div>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Trophy size={22} />
@@ -184,8 +205,8 @@ export default function DashboardPage() {
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Open opportunities</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>4</div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>4 in active pipeline</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{Number(overview.open_opportunities) || 0}</div>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>In active pipeline</span>
           </div>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Briefcase size={22} />
@@ -195,8 +216,8 @@ export default function DashboardPage() {
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Conversion rate</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>100%</div>
-            <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>1 won vs pipeline</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{overview.conversion_metric_available ? `${Number(overview.lead_conversion_rate_percent) || 0}%` : 'ΓÇö'}</div>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Lead conversion rate</span>
           </div>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle size={22} />
@@ -215,7 +236,7 @@ export default function DashboardPage() {
             </div>
             <span className="badge badge-blue">Real-time sync</span>
           </div>
-          <RevenueTrendChart />
+          <RevenueTrendChart data={analytics.revenue} />
         </div>
 
         {/* Pipeline by Stage Chart */}
@@ -229,7 +250,7 @@ export default function DashboardPage() {
               View Kanban <ChevronRight size={14} />
             </button>
           </div>
-          <PipelineStageChart />
+          <PipelineStageChart data={analytics.pipeline} />
         </div>
       </div>
 
@@ -259,8 +280,8 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {teamPerformance.map((rep) => (
-                  <tr key={rep.id}>
+                {analytics.team.length === 0 ? <tr><td colSpan="5" style={{ color: '#64748b', textAlign: 'center', padding: '1rem' }}>No quota records found for this period.</td></tr> : analytics.team.map((rep) => (
+                  <tr key={rep.user_id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                         <div style={{
@@ -275,20 +296,20 @@ export default function DashboardPage() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                          {rep.name.split(' ').map(n => n[0]).join('')}
+                          {String(rep.name || 'U').split(' ').map(n => n[0]).join('')}
                         </div>
                         <span style={{ fontWeight: 600, color: '#0f172a' }}>{rep.name}</span>
                       </div>
                     </td>
-                    <td>${rep.target.toLocaleString()}</td>
-                    <td style={{ fontWeight: 700, color: '#10b981' }}>{rep.won}</td>
-                    <td>${rep.pipeline.toLocaleString()}</td>
+                    <td>{money(rep.target_amount, rep.currency || 'USD')}</td>
+                    <td style={{ fontWeight: 700, color: '#10b981' }}>{money(rep.won_revenue, rep.currency || 'USD')}</td>
+                    <td>{money(rep.open_pipeline_value, rep.currency || 'USD')}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 100 }}>
                         <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ width: `${rep.progress}%`, height: '100%', background: '#2563eb', borderRadius: 3 }} />
+                          <div style={{ width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, height: '100%', background: '#2563eb', borderRadius: 3 }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{rep.progress}%</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{rep.attainment_percent == null ? "ΓÇö" : `${rep.attainment_percent}%`}</span>
                       </div>
                     </td>
                   </tr>
@@ -417,7 +438,7 @@ export default function DashboardPage() {
                     {tsk.title}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    Linked to: <strong>{tsk.record}</strong> • Assigned to {tsk.owner}
+                    Linked to: <strong>{tsk.record}</strong> ΓÇó Assigned to {tsk.owner}
                   </div>
                 </div>
               </div>

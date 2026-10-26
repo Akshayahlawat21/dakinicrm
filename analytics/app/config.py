@@ -1,10 +1,23 @@
 import json
 from functools import lru_cache
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ANALYTICS_DIR = Path(__file__).resolve().parent.parent
+_PROJECT_ROOT = _ANALYTICS_DIR.parent
+_BACKEND_DIR = _PROJECT_ROOT / "backend"
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=[
+            str(_ANALYTICS_DIR / ".env"),
+            str(_BACKEND_DIR / ".env"),
+            str(_PROJECT_ROOT / ".env"),
+            ".env",
+        ],
+        extra="ignore",
+    )
     database_url: str = Field("", alias="DATABASE_URL")
     pool_size: int = Field(5, ge=1, le=50, alias="DATABASE_POOL_SIZE")
     max_overflow: int = Field(5, ge=0, le=50, alias="DATABASE_MAX_OVERFLOW")

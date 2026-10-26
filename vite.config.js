@@ -18,12 +18,11 @@ export default defineConfig({
         changeOrigin: true
 
       },
-      // Local development only. Production should use /v1/analytics through Layer 2.
+      // Route analytics through Layer 2 Gateway (8080) so JWT headers are properly injected and forwarded
       '/analytics': {
-        target: 'http://localhost:8090',
+        target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/analytics/, '')
-
+        rewrite: (path) => path.replace(/^\/analytics/, '/v1/analytics')
       }
     }
   }

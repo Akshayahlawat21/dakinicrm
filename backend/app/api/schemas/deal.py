@@ -47,4 +47,6 @@ class DealResponse(BaseModel):
     currency: str
     stage: str
     status: str
+    owner_id: Optional[str] = None
+    owner: Optional[str] = None
     created_at: datetime

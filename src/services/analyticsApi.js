@@ -32,6 +32,12 @@ function requestHeaders() {
   // Direct mode is intended for local development only. The Layer 9 service
   // must not be exposed directly to untrusted clients in deployed environments.
   headers['X-Tenant-Id'] = tenantId;
+  const storedUser = readStoredUser();
+  if (storedUser?.id) headers['X-User-Id'] = String(storedUser.id);
+  if (storedUser?.role || storedUser?.roles) {
+    const r = Array.isArray(storedUser.roles) ? storedUser.roles.join(',') : String(storedUser.role);
+    headers['X-User-Roles'] = r;
+  }
   try {
     const token = localStorage.getItem('dakini_access_token');
     if (token) headers.Authorization = `Bearer ${token}`;

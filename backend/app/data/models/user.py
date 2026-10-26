@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import String, ForeignKey
+from datetime import datetime
+from sqlalchemy import String, ForeignKey, Boolean, DateTime, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.app.data.models.base import Base, UUIDMixin, TimestampMixin, SoftDeleteMixin
 
@@ -34,8 +35,13 @@ class User(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
+    login_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
     role: Mapped["Role"] = relationship("Role", foreign_keys=[role_id])
     manager: Mapped["User"] = relationship("User", remote_side="User.id", foreign_keys=[manager_id])
+

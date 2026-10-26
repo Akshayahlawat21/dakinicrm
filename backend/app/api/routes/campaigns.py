@@ -9,6 +9,7 @@ from backend.app.api.dependencies import get_request_context
 from backend.app.data.models.campaign import Campaign
 from backend.app.api.schemas.campaign import CampaignCreateRequest, CampaignResponse
 from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
+from backend.app.application.permissions import PermissionService
 
 router = APIRouter(prefix="/v1/campaigns", tags=["Campaigns"])
 
@@ -83,6 +84,7 @@ async def create_campaign(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Create a new campaign stored in Supabase PostgreSQL."""
+    PermissionService.check_can_manage_campaign(ctx)
     new_camp = Campaign(
         id=uuid.uuid4(),
         organization_id=ctx.tenant_uuid,
@@ -129,6 +131,7 @@ async def delete_campaign(
     session: AsyncSession = Depends(get_db_session),
 ):
     """Soft delete campaign in Supabase PostgreSQL and print to cmd."""
+    PermissionService.check_can_manage_campaign(ctx)
     camp = None
     try:
         camp_uuid = uuid.UUID(str(campaign_id))

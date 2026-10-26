@@ -167,7 +167,7 @@ export default function TopBar() {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             >
               <div className="avatar-circle">
-                {(currentUser.name || 'ER')
+                {(currentUser.name || 'User')
                   .split(' ')
                   .map((n) => n[0])
                   .join('')
@@ -176,10 +176,10 @@ export default function TopBar() {
               </div>
               <div style={{ textAlign: 'left', paddingRight: '0.25rem' }}>
                 <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                  {currentUser.name || 'Elena Rostova'}
+                  {currentUser.name || 'User'}
                 </div>
                 <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
-                  {currentUser.role || 'Sales Director'}
+                  {currentUser.role || 'Sales Representative'}
                 </div>
               </div>
               <ChevronDown size={14} color="#64748b" />
@@ -203,10 +203,10 @@ export default function TopBar() {
               >
                 <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
-                    {currentUser.name || 'Elena Rostova'}
+                    {currentUser.name || 'User'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    {currentUser.email || 'elena.rostova@dakini.ai'}
+                    {currentUser.email || 'user@dakini.ai'}
                   </div>
                 </div>
                 <button

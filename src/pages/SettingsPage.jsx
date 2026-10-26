@@ -12,6 +12,7 @@ import {
   Save,
   LogOut
 } from 'lucide-react';
+import TeamRolesSettings from '../components/settings/TeamRolesSettings';
 
 export default function SettingsPage() {
   const { currentUser, updateUserProfile, logout } = useCRM();
@@ -223,7 +224,11 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {activeSection !== 'profile' && activeSection !== 'integrations' && (
+          {activeSection === 'team' && (
+            <TeamRolesSettings currentUser={currentUser} />
+          )}
+
+          {activeSection !== 'profile' && activeSection !== 'integrations' && activeSection !== 'team' && (
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
                 {activeSection.replace('-', ' ')}

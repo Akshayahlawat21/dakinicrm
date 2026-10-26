@@ -29,6 +29,7 @@ REGISTERED_RESOURCES: Set[str] = {
     "reports",
     "dashboard",
     "users",
+    "teams",
     "sales-targets",
     "settings",
     "automations",
@@ -153,6 +154,10 @@ async def proxy_to_upstream(path: str, request: Request) -> Response:
         forward_headers["X-Tenant-Id"] = str(request.state.tenant_id)
     if hasattr(request.state, "roles") and request.state.roles:
         forward_headers["X-User-Roles"] = ",".join(request.state.roles)
+    if hasattr(request.state, "token_version") and request.state.token_version is not None:
+        forward_headers["X-Token-Version"] = str(request.state.token_version)
+    if hasattr(request.state, "must_change_password") and request.state.must_change_password is not None:
+        forward_headers["X-Must-Change-Password"] = "true" if request.state.must_change_password else "false"
 
     forward_headers["X-Correlation-ID"] = correlation_id
     forward_headers["X-Forwarded-For"] = getattr(request.state, "client_ip", "127.0.0.1")

@@ -128,7 +128,8 @@ export function CRMProvider({ children }) {
       if (leadsRes.status === 'fulfilled' && leadsRes.value?.success && Array.isArray(leadsRes.value.data?.data)) {
         loadedLeads = leadsRes.value.data.data.map((l) => ({
           ...l,
-          owner: l.owner || 'Elena Rostova',
+          source: l.source || 'Website',
+          owner: l.owner || currentUser?.name || 'Sales Representative',
           company: l.company || l.name,
           score: l.score || 85,
         }));
@@ -139,13 +140,30 @@ export function CRMProvider({ children }) {
       }
 
       if (dealsRes.status === 'fulfilled' && dealsRes.value?.success && Array.isArray(dealsRes.value.data?.data)) {
-        loadedDeals = dealsRes.value.data.data.map((d) => ({
-          ...d,
-          owner: d.owner || 'Elena Rostova',
-          company: d.company || d.name,
-          value: Number(d.value || d.amount || 45000),
-          stage: d.stage || 'Qualified',
-        }));
+        const STAGE_NORM = {
+          discovery: 'Qualified',
+          qualification: 'Qualified',
+          qualified: 'Qualified',
+          proposal: 'Proposal',
+          negotiation: 'Negotiation',
+          won: 'Won',
+          'closed won': 'Won',
+          closed_won: 'Won',
+          lost: 'Lost',
+          'closed lost': 'Lost',
+          closed_lost: 'Lost',
+        };
+        loadedDeals = dealsRes.value.data.data.map((d) => {
+          const rawStage = (d.stage || 'Qualified').toLowerCase().trim();
+          const normStage = STAGE_NORM[rawStage] || d.stage || 'Qualified';
+          return {
+            ...d,
+            owner: d.owner || currentUser?.name || 'Sales Representative',
+            company: d.company || d.name,
+            value: Number(d.value || d.amount || 45000),
+            stage: normStage,
+          };
+        });
         setDeals(loadedDeals);
       }
 
@@ -198,7 +216,7 @@ export function CRMProvider({ children }) {
           priority: t.priority || 'Medium',
           completed: t.status === 'completed',
           dueDate: t.due_date || 'Upcoming',
-          owner: t.owner || 'Elena Rostova',
+          owner: t.owner || currentUser?.name || 'Sales Representative',
         }));
         setTasks(loadedTasks);
       }
@@ -371,9 +389,11 @@ export function CRMProvider({ children }) {
 
   const addLead = async (newLead) => {
     const tempId = `temp-lead-${Date.now()}`;
+    const defaultOwner = newLead.owner || currentUser?.name || 'Sales Representative';
     const lead = {
       ...newLead,
       id: tempId,
+      owner: defaultOwner,
       status: newLead.status || 'New',
       score: newLead.score || 75,
       lastContact: 'Just now',
@@ -383,7 +403,7 @@ export function CRMProvider({ children }) {
           id: `t-${Date.now()}`,
           type: 'system',
           title: 'Lead created',
-          description: `Created manually and assigned to ${newLead.owner || 'Marcus Vance'}`,
+          description: `Created manually and assigned to ${defaultOwner}`,
           time: 'Just now'
         }
       ]
@@ -405,11 +425,12 @@ export function CRMProvider({ children }) {
       });
       if (res.success && res.data?.data) {
         const realId = String(res.data.data.id);
+        const resolvedOwner = res.data.data.owner || lead.owner;
         console.log(`%c[SUPABASE CREATE] ✅ Lead persisted with UUID: ${realId}`, 'color: #10b981; font-weight: bold;');
         setLeads((prev) =>
-          prev.map((l) => (l.id === tempId ? { ...l, id: realId, organization_id: res.data.data.organization_id } : l))
+          prev.map((l) => (l.id === tempId ? { ...l, id: realId, owner: resolvedOwner, organization_id: res.data.data.organization_id } : l))
         );
-        return { success: true, data: { ...lead, id: realId } };
+        return { success: true, data: { ...lead, id: realId, owner: resolvedOwner } };
       } else {
         console.warn('Backend rejected lead creation:', res.error);
       }
@@ -439,9 +460,11 @@ export function CRMProvider({ children }) {
 
   const addDeal = async (newDeal) => {
     const tempId = `temp-deal-${Date.now()}`;
+    const defaultOwner = newDeal.owner || currentUser?.name || 'Sales Representative';
     const deal = {
       ...newDeal,
       id: tempId,
+      owner: defaultOwner,
       daysInStage: 0,
       priority: newDeal.priority || 'Medium',
       probability: newDeal.probability || 50
@@ -459,11 +482,12 @@ export function CRMProvider({ children }) {
       });
       if (res.success && res.data?.data) {
         const realId = String(res.data.data.id);
+        const resolvedOwner = res.data.data.owner || deal.owner;
         console.log(`%c[SUPABASE CREATE] ✅ Deal persisted with UUID: ${realId}`, 'color: #10b981; font-weight: bold;');
         setDeals((prev) =>
-          prev.map((d) => (d.id === tempId ? { ...d, id: realId, organization_id: res.data.data.organization_id } : d))
+          prev.map((d) => (d.id === tempId ? { ...d, id: realId, owner: resolvedOwner, organization_id: res.data.data.organization_id } : d))
         );
-        return { success: true, data: { ...deal, id: realId } };
+        return { success: true, data: { ...deal, id: realId, owner: resolvedOwner } };
       } else {
         console.warn('Backend rejected deal creation:', res.error);
       }
@@ -599,7 +623,7 @@ export function CRMProvider({ children }) {
       time: '5:00 PM',
       dueDate: 'Today',
       record,
-      owner: 'Elena Rostova',
+      owner: currentUser?.name || 'Sales Representative',
       completed: false,
       priority,
       isAiGenerated: false
@@ -702,18 +726,22 @@ export function CRMProvider({ children }) {
   };
 
 
-  const convertLead = (lead, dealName, dealAmount) => {
+  const convertLead = async (lead, dealName, dealAmount) => {
+    // Dynamic converter name based on logged-in user
+    const converterName = currentUser?.name || 'Sales Representative';
+
     // 1. Mark lead as converted
     setLeads((prev) =>
       prev.map((l) => (l.id === lead.id ? { ...l, status: 'Converted' } : l))
     );
     // 2. Create account if not present
-    const accExists = accounts.some((a) => a.name.toLowerCase() === lead.company.toLowerCase());
+    const leadCompany = lead.company || lead.name || 'Enterprise Corp';
+    const accExists = accounts.some((a) => a.name.toLowerCase() === leadCompany.toLowerCase());
     if (!accExists) {
       addAccount({
-        name: lead.company,
+        name: leadCompany,
         industry: lead.industry || 'Logistics',
-        website: `${lead.company.toLowerCase().replace(/\s+/g, '')}.com`,
+        website: `${leadCompany.toLowerCase().replace(/\s+/g, '')}.com`,
         status: 'Active',
         arr: `$${dealAmount ? Number(dealAmount).toLocaleString() : '50,000'}`,
         city: 'New Delhi, India'
@@ -722,22 +750,40 @@ export function CRMProvider({ children }) {
     // 3. Create contact
     addContact({
       name: lead.name,
-      account: lead.company,
+      account: leadCompany,
       title: lead.title || 'Decision Maker',
       email: lead.email,
       phone: lead.phone,
       industry: lead.industry
     });
-    // 4. Create deal
-    addDeal({
-      name: dealName || `${lead.company} - Expansion Deal`,
-      company: lead.company,
+    // 4. Create deal with the converter's exact name
+    const createdDeal = await addDeal({
+      name: dealName || `${leadCompany} - Expansion Deal`,
+      company: leadCompany,
       value: dealAmount ? Number(dealAmount) : 35000,
       stage: 'Qualified',
-      owner: lead.owner || 'Elena Rostova',
+      owner: converterName,
       closeDate: '2026-11-30'
     });
     setIsConvertModalOpen(false);
+
+    try {
+      const res = await gatewayApi.convertLead(lead.id, {
+        deal_name: dealName || `${leadCompany} - Expansion Deal`,
+        deal_amount: dealAmount ? Number(dealAmount) : 35000,
+        company_name: leadCompany,
+      });
+      if (res.success && res.data) {
+        const resolvedOwner = res.data.owner || converterName;
+        if (createdDeal && createdDeal.id) {
+          setDeals((prev) =>
+            prev.map((d) => (d.id === createdDeal.id ? { ...d, owner: resolvedOwner } : d))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Gateway convertLead sync skipped:', err);
+    }
   };
 
   const sendAgentMessage = async (text) => {

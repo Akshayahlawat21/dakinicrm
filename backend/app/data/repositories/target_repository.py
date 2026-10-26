@@ -45,3 +45,33 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
         ).order_by(SalesTarget.period_start.desc())
         res = await self.session.execute(stmt)
         return list(res.scalars().all())
+
+    async def list_scoped_by_users(
+        self,
+        tenant_id: str | uuid.UUID,
+        user_ids: List[uuid.UUID],
+        skip: int = 0,
+        limit: int = 50,
+        filters: Optional[dict] = None,
+    ) -> tuple[List[SalesTarget], int]:
+        from sqlalchemy import func
+        tenant_uuid = self._parse_uuid(tenant_id)
+        if not user_ids:
+            return [], 0
+        base_filter = [
+            SalesTarget.organization_id == tenant_uuid,
+            SalesTarget.assigned_to_user_id.in_(user_ids),
+        ]
+        if filters:
+            for field, val in filters.items():
+                if hasattr(SalesTarget, field) and val is not None:
+                    base_filter.append(getattr(SalesTarget, field) == val)
+
+        count_stmt = select(func.count(SalesTarget.id)).where(*base_filter)
+        count_res = await self.session.execute(count_stmt)
+        total = count_res.scalar_one()
+
+        stmt = select(SalesTarget).where(*base_filter).order_by(SalesTarget.period_start.desc())
+        stmt = stmt.offset(skip).limit(limit)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all()), total

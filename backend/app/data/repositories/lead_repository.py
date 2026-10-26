@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional, List
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.data.models.lead import Lead, LeadSignal, LeadConversion
 from backend.app.data.repositories.base import BaseRepository
@@ -24,6 +24,33 @@ class LeadRepository(BaseRepository[Lead]):
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def list_scoped_by_assignees(
+        self,
+        tenant_id: str | uuid.UUID,
+        assignee_ids: List[uuid.UUID],
+        skip: int = 0,
+        limit: int = 50,
+        filters: Optional[dict] = None,
+    ) -> tuple[List[Lead], int]:
+        tenant_uuid = self._parse_uuid(tenant_id)
+        base_filter = [
+            Lead.organization_id == tenant_uuid,
+            Lead.deleted_at.is_(None),
+            Lead.assigned_to.in_(assignee_ids),
+        ]
+        if filters:
+            for field, val in filters.items():
+                if hasattr(Lead, field) and val is not None:
+                    base_filter.append(getattr(Lead, field) == val)
+
+        count_stmt = select(func.count(Lead.id)).where(*base_filter)
+        count_res = await self.session.execute(count_stmt)
+        total = count_res.scalar_one()
+
+        stmt = select(Lead).where(*base_filter).order_by(Lead.created_at.desc()).offset(skip).limit(limit)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all()), total
 
     async def record_conversion(
         self,

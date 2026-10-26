@@ -33,8 +33,14 @@ export default function DashboardPage() {
     approveItem,
     deals,
     setIsAgentDockOpen,
-    sendAgentMessage
+    sendAgentMessage,
+    currentUser,
   } = useCRM();
+
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'owner').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+  const greetingName = currentUser?.name ? currentUser.name.split(' ')[0] : 'there';
 
   const [period, setPeriod] = useState('This month');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -48,20 +54,24 @@ export default function DashboardPage() {
     setAnalyticsLoading(true);
     setAnalyticsError('');
     try {
-      const [overview, revenue, pipeline, team, targetPace] = await Promise.all([
+      const results = await Promise.allSettled([
         analyticsApi.getOverview(periodKey),
         analyticsApi.getRevenueTrend(6),
         analyticsApi.getPipelineByStage(),
         analyticsApi.getQuotaLeaderboard(periodKey),
         analyticsApi.getTargetPace(periodKey)
       ]);
+      const [overviewRes, revenueRes, pipelineRes, teamRes, targetPaceRes] = results;
       setAnalytics({
-        overview,
-        revenue: Array.isArray(revenue.data) ? revenue.data : [],
-        pipeline: Array.isArray(pipeline.data) ? pipeline.data : [],
-        team: Array.isArray(team.data) ? team.data : [],
-        targetPace: Array.isArray(targetPace.data) ? targetPace.data : []
+        overview: overviewRes.status === 'fulfilled' ? overviewRes.value : null,
+        revenue: revenueRes.status === 'fulfilled' && Array.isArray(revenueRes.value?.data) ? revenueRes.value.data : [],
+        pipeline: pipelineRes.status === 'fulfilled' && Array.isArray(pipelineRes.value?.data) ? pipelineRes.value.data : [],
+        team: teamRes.status === 'fulfilled' && Array.isArray(teamRes.value?.data) ? teamRes.value.data : [],
+        targetPace: targetPaceRes.status === 'fulfilled' && Array.isArray(targetPaceRes.value?.data) ? targetPaceRes.value.data : []
       });
+      if (overviewRes.status === 'rejected') {
+        setAnalyticsError(overviewRes.reason instanceof Error ? overviewRes.reason.message : 'Unable to load analytics overview.');
+      }
     } catch (error) {
       setAnalyticsError(error instanceof Error ? error.message : 'Unable to load analytics.');
     } finally {
@@ -73,7 +83,7 @@ export default function DashboardPage() {
   useEffect(() => { loadAnalytics(); }, [loadAnalytics]);
   const overview = analytics.overview || {};
   const money = (value, currency = 'USD') => {
-    if (value == null || !Number.isFinite(Number(value))) return 'ΓÇö';
+    if (value == null || !Number.isFinite(Number(value))) return '—';
     try {
       return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value));
     } catch {
@@ -92,13 +102,17 @@ export default function DashboardPage() {
       <div className="dashboard-header">
         <div>
           <div className="header-meta-date">
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} ΓÇó Live Sales telemetry
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} • Live Sales telemetry
           </div>
           <h1 className="header-greeting-title">
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {greetingName}
           </h1>
           <p className="header-subtitle">
-            Here is your commercial snapshot and AI pipeline acceleration summary.
+            {isOwner
+              ? 'Here is your overall company commercial snapshot and pipeline acceleration summary.'
+              : isManager
+              ? 'Here is your managed team pipeline performance and team target attainment.'
+              : 'Here is your personal pipeline overview, assigned leads, and daily task focus.'}
           </p>
         </div>
 
@@ -129,7 +143,7 @@ export default function DashboardPage() {
       {analyticsError && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.875rem' }}>
         <strong>Analytics unavailable.</strong> {analyticsError} Check the Layer 9 service, tenant configuration, and gateway route, then refresh.
       </div>}
-      {analyticsLoading && <div aria-live="polite" style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.8125rem' }}>Loading live Layer 9 analyticsΓÇª</div>}
+      {analyticsLoading && <div aria-live="polite" style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.8125rem' }}>Loading live Layer 9 analytics...</div>}
 
       {/* Row 1: Primary KPI Cards */}
       <div className="kpi-grid-top">
@@ -137,7 +151,7 @@ export default function DashboardPage() {
         <div className="kpi-card" onClick={() => navigateTo('deals')} style={{ cursor: 'pointer' }}>
           <div>
             <div className="kpi-title">Total revenue</div>
-            <div className="kpi-value">{analyticsLoading ? 'ΓÇö' : revenueLabel}</div>
+            <div className="kpi-value">{analyticsLoading ? '—' : revenueLabel}</div>
             <div className="kpi-subtext">
               <span className="badge badge-green"><ArrowUpRight size={12} />Database-backed</span>
               <span>{Number(overview.deals_won) || 0} deals won in period</span>
@@ -152,10 +166,10 @@ export default function DashboardPage() {
         <div className="kpi-card" onClick={() => navigateTo('deals')} style={{ cursor: 'pointer' }}>
           <div>
             <div className="kpi-title">Active pipeline</div>
-            <div className="kpi-value">{analyticsLoading ? 'ΓÇö' : money(overview.open_pipeline_value)}</div>
+            <div className="kpi-value">{analyticsLoading ? '—' : money(overview.open_pipeline_value)}</div>
             <div className="kpi-subtext">
               <span style={{ fontWeight: 600, color: '#2563eb' }}>{Number(overview.open_opportunities) || 0} open opportunities</span>
-              <span>ΓÇó Live Layer 9 data</span>
+              <span>• Live Layer 9 data</span>
             </div>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
@@ -174,9 +188,9 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div className="kpi-title">Sales target</div>
-              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading ? 'ΓÇö' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'ΓÇö')}</div>
+              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading ? '—' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : '—')}</div>
               <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                Actual {analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : 'ΓÇö'} ┬╖ selected period
+                Actual {analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : '—'} · selected period
               </div>
               <div style={{ marginTop: '0.5rem' }}>
                 <span className="badge badge-blue">{analytics.targetPace.length === 1 && analytics.targetPace[0].attainment_percent != null ? `${analytics.targetPace[0].attainment_percent}% attained` : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'No matching target'}</span>
@@ -216,7 +230,7 @@ export default function DashboardPage() {
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Conversion rate</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{overview.conversion_metric_available ? `${Number(overview.lead_conversion_rate_percent) || 0}%` : 'ΓÇö'}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{overview.conversion_metric_available ? `${Number(overview.lead_conversion_rate_percent) || 0}%` : '—'}</div>
             <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Lead conversion rate</span>
           </div>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -309,7 +323,7 @@ export default function DashboardPage() {
                         <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{ width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, height: '100%', background: '#2563eb', borderRadius: 3 }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{rep.attainment_percent == null ? "ΓÇö" : `${rep.attainment_percent}%`}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{rep.attainment_percent == null ? "—" : `${rep.attainment_percent}%`}</span>
                       </div>
                     </td>
                   </tr>
@@ -438,7 +452,7 @@ export default function DashboardPage() {
                     {tsk.title}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    Linked to: <strong>{tsk.record}</strong> ΓÇó Assigned to {tsk.owner}
+                    Linked to: <strong>{tsk.record}</strong> • Assigned to {tsk.owner}
                   </div>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, Trophy, RefreshCw, AlertCircle, Activity, Users, GitBranch, TrendingUp } from 'lucide-react';
+import { useCRM } from '../context/CRMContext';
 import { analyticsApi } from '../services/analyticsApi';
 import { LeadSourceDonutChart, ConversionFunnelChart, RevenueTrendChart, PipelineStageChart } from '../components/common/Charts';
 
@@ -42,6 +43,7 @@ function EmptyState({ children = 'No records found for this organization and per
 }
 
 export default function ReportsPage() {
+  const { currentUser } = useCRM();
   const [activeReportTab, setActiveReportTab] = useState('Sales');
   const [dateRange, setDateRange] = useState('Last 30 Days');
   const [reports, setReports] = useState(EMPTY);
@@ -51,6 +53,11 @@ export default function ReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const period = useMemo(() => PERIOD_BY_LABEL[dateRange] || 'last_30_days', [dateRange]);
+
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'owner').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+  const isSalesperson = !isOwner && !isManager;
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -138,7 +145,13 @@ export default function ReportsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Reports & Pipeline Intelligence</h1>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 6 }}>Database-backed sales, lead, activity and team performance reports.</p>
+          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 6 }}>
+            {isOwner
+              ? 'Database-backed overall company reports from all leads, contacts, deals, activities, and pipelines.'
+              : isManager
+              ? 'Database-backed team reports from your managed team members and your own leads, contacts, and pipeline.'
+              : 'Database-backed personal reports from your assigned leads, contacts, and pipeline deals.'}
+          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <select className="input-field" style={{ width: 155 }} value={dateRange} onChange={(event) => setDateRange(event.target.value)}>
@@ -154,6 +167,51 @@ export default function ReportsPage() {
             <Download size={15} /> <span>{exporting ? 'Exporting…' : 'Export CSV'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Role-Based Scope Indicator Banner */}
+      <div style={{
+        background: isOwner ? 'linear-gradient(90deg, #eff6ff 0%, #ffffff 100%)' : isManager ? 'linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%)' : 'linear-gradient(90deg, #fffbeb 0%, #ffffff 100%)',
+        border: `1px solid ${isOwner ? '#bfdbfe' : isManager ? '#a7f3d0' : '#fde68a'}`,
+        borderRadius: 12,
+        padding: '0.85rem 1.25rem',
+        marginBottom: '1.25rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '1rem',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            background: isOwner ? '#2563eb' : isManager ? '#059669' : '#d97706',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1rem'
+          }}>
+            {isOwner ? '👑' : isManager ? '👥' : '👤'}
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.925rem', color: '#0f172a' }}>
+              {isOwner ? 'Overall Organization Records' : isManager ? 'Managed Team & Personal Records' : 'Personal Assigned Records'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: 2 }}>
+              {isOwner
+                ? `Displaying overall company records from all leads, contacts, deals, activities, and pipelines across all teams (User: ${currentUser?.name || 'Owner'})`
+                : isManager
+                ? `Displaying records from your managed team members and your own leads, contacts, and pipeline (User: ${currentUser?.name || 'Manager'})`
+                : `Displaying your personal records from your assigned leads, contacts, and pipeline deals (User: ${currentUser?.name || 'Salesperson'})`}
+            </div>
+          </div>
+        </div>
+        <span className={`badge ${isOwner ? 'badge-blue' : isManager ? 'badge-green' : 'badge-amber'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.75rem', fontWeight: 700 }}>
+          {isOwner ? 'Scope: Overall Organization' : isManager ? 'Scope: Team Records' : 'Scope: Personal Records'}
+        </span>
       </div>
 
       {error && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.8125rem' }}><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />{error}</div>}

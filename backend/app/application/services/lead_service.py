@@ -13,6 +13,8 @@ from backend.app.data.repositories.lead_repository import LeadRepository
 from backend.app.data.repositories.account_repository import AccountRepository
 from backend.app.data.repositories.contact_repository import ContactRepository
 from backend.app.data.repositories.deal_repository import DealRepository
+from backend.app.data.repositories.team_repository import TeamRepository
+from backend.app.data.repositories.user_repository import UserRepository
 from backend.app.data.repositories.audit_repository import AuditLogRepository
 from backend.app.data.exceptions import RecordNotFoundError
 
@@ -30,15 +32,34 @@ class LeadService:
         self.account_repo = AccountRepository(session)
         self.contact_repo = ContactRepository(session)
         self.deal_repo = DealRepository(session)
+        self.team_repo = TeamRepository(session)
+        self.user_repo = UserRepository(session)
         self.audit_repo = AuditLogRepository(session)
 
     async def get_lead(self, ctx: RequestContext, lead_id: str | uuid.UUID) -> Lead:
         try:
             lead = await self.lead_repo.get_by_id_scoped(lead_id, ctx.tenant_id)
+
+            # 1. Unassigned lead check
+            if not lead.assigned_to:
+                is_auth_mgr = getattr(ctx, "can_access_unassigned", False)
+                PermissionService.check_can_access_unassigned_leads(ctx, is_authorized_manager=is_auth_mgr)
+                return lead
+
+            # 2. Team membership check for managers
+            is_team_record = False
+            if ctx.is_manager:
+                mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+                if mgr_team:
+                    is_team_record = await self.team_repo.is_user_in_team(
+                        lead.assigned_to, mgr_team.id, ctx.tenant_id
+                    )
+
             PermissionService.check_record_access(
                 ctx=ctx,
                 record_tenant_id=str(lead.organization_id),
-                assigned_to_id=str(lead.assigned_to) if lead.assigned_to else None,
+                assigned_to_id=str(lead.assigned_to),
+                is_team_record=is_team_record,
             )
             return lead
         except RecordNotFoundError:
@@ -54,9 +75,31 @@ class LeadService:
         filters = {}
         if status and status.lower() != "all":
             filters["status"] = status
-        if ctx.is_salesperson:
-            filters["assigned_to"] = ctx.user_uuid
 
+        if ctx.is_salesperson:
+            # Salespersons strictly see only assigned leads
+            filters["assigned_to"] = ctx.user_uuid
+            return await self.lead_repo.list_scoped(
+                tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
+            )
+
+        if ctx.is_manager:
+            # Managers strictly see leads assigned to members of their active team
+            mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+            if not mgr_team:
+                return [], 0
+            team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+            team_user_ids = [u.id for u in team_users] + [ctx.user_uuid]
+
+            return await self.lead_repo.list_scoped_by_assignees(
+                tenant_id=ctx.tenant_id,
+                assignee_ids=team_user_ids,
+                skip=skip,
+                limit=limit,
+                filters=filters,
+            )
+
+        # Owner: all organization leads
         return await self.lead_repo.list_scoped(
             tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
         )
@@ -166,15 +209,34 @@ class LeadService:
         self.session.add(contact)
         await self.session.flush()
 
-        # 3. Deal
+        from backend.app.data.models.user import User
+        converter = await self.session.get(User, ctx.user_uuid) if ctx.user_uuid else None
+        converter_name = converter.name if converter else None
+
+        # 3. Opportunity & Deal
+        from backend.app.data.models.deal import Opportunity
         deal_title = deal_name or f"{target_company} - Strategic Expansion"
+        opp = Opportunity(
+            organization_id=ctx.tenant_uuid,
+            account_id=account.id,
+            owner_id=ctx.user_uuid or lead.assigned_to,
+            name=deal_title,
+            amount=deal_amount,
+            stage="qualified",
+            probability=50,
+        )
+        self.session.add(opp)
+        await self.session.flush()
+
         deal = Deal(
             organization_id=ctx.tenant_uuid,
             account_id=account.id,
+            opportunity_id=opp.id,
             name=deal_title,
             amount=deal_amount,
             stage="Qualified",
             status="open",
+            owner_id=ctx.user_uuid or lead.assigned_to,
         )
         deal = await self.deal_repo.create(deal, ctx.tenant_id)
 
@@ -189,7 +251,7 @@ class LeadService:
         conversion = await self.lead_repo.record_conversion(
             lead_id=lead.id,
             account_id=account.id,
-            opportunity_id=None,
+            opportunity_id=opp.id,
             conversion_type="standard",
             notes=f"Converted by user {ctx.user_id}",
         )
@@ -215,11 +277,27 @@ class LeadService:
             "account_id": str(account.id),
             "contact_id": str(contact.id),
             "deal_id": str(deal.id),
+            "owner": converter_name,
+            "owner_id": str(deal.owner_id) if deal.owner_id else None,
             "conversion_id": str(conversion.id),
         }
 
     async def delete_lead(self, ctx: RequestContext, lead_id: str | uuid.UUID) -> bool:
         lead = await self.get_lead(ctx, lead_id)
+        is_team_lead = False
+        if ctx.is_manager:
+            mgr_team = await self.team_repo.get_by_manager(ctx.user_uuid, ctx.tenant_id)
+            if mgr_team and lead.assigned_to:
+                team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+                team_user_ids = {u.id for u in team_users} | {ctx.user_uuid}
+                is_team_lead = lead.assigned_to in team_user_ids
+
+        PermissionService.check_can_delete_lead(
+            ctx=ctx,
+            lead_tenant_id=str(lead.organization_id),
+            is_team_lead=is_team_lead,
+        )
+
         await self.lead_repo.delete_scoped(lead.id, ctx.tenant_id, soft_delete=True)
         await self.audit_repo.record_event(
             tenant_id=ctx.tenant_id,

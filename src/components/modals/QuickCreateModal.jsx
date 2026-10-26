@@ -12,7 +12,8 @@ export default function QuickCreateModal() {
     addDeal,
     addContact,
     addTask,
-    addCampaign
+    addCampaign,
+    currentUser,
   } = useCRM();
 
   if (!isQuickCreateOpen) return null;
@@ -42,6 +43,7 @@ export default function QuickCreateModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const dynamicOwner = currentUser?.name || 'Sales Representative';
     if (quickCreateType === 'lead') {
       addLead({
         name: formData.name || 'New Prospect',
@@ -50,7 +52,7 @@ export default function QuickCreateModal() {
         email: formData.email || 'prospect@enterprise.com',
         phone: formData.phone || '+1 555-019-2831',
         industry: formData.industry,
-        owner: 'Elena Rostova',
+        owner: dynamicOwner,
         source: 'Direct Inbound',
         score: Math.floor(Math.random() * 40) + 70
       });
@@ -61,7 +63,7 @@ export default function QuickCreateModal() {
         value: Number(formData.dealValue) || 30000,
         stage: formData.dealStage,
         closeDate: '2026-11-30',
-        owner: 'Elena Rostova',
+        owner: dynamicOwner,
         priority: 'High'
       });
     } else if (quickCreateType === 'contact') {

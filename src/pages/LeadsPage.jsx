@@ -33,7 +33,8 @@ export default function LeadsPage() {
     setQuickCreateType,
     quickPreviewLead,
     setQuickPreviewLead,
-    isLoadingData
+    isLoadingData,
+    currentUser,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('All');
@@ -70,7 +71,7 @@ export default function LeadsPage() {
             score: Number(item.score) || 75,
             email: item.email || `lead${idx}@imported.com`,
             phone: item.phone || '+91 98000 00000',
-            owner: item.owner || 'Elena Rostova',
+            owner: item.owner || currentUser?.name || 'Sales Representative',
             industry: item.industry || 'Enterprise Technology',
             lastContact: 'Just now',
             scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
@@ -103,7 +104,7 @@ export default function LeadsPage() {
                 score: Number(cols[4]) || 80,
                 email: cols[5] || `lead${idx}@imported.com`,
                 phone: cols[6] || '+91 98000 00000',
-                owner: 'Elena Rostova',
+                owner: currentUser?.name || 'Sales Representative',
                 industry: 'Enterprise Technology',
                 lastContact: 'Just now',
                 scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
@@ -154,14 +155,20 @@ export default function LeadsPage() {
 
       const matchStatus = statusFilter === 'All' ? true : l.status === statusFilter;
 
-      if (activeTab === 'My leads') return matchSearch && matchStatus && l.owner.includes('Elena');
+      if (activeTab === 'My leads') {
+        const myName = (currentUser?.name || '').toLowerCase();
+        const myFirst = myName.split(' ')[0] || '';
+        const ownerLower = (l.owner || '').toLowerCase();
+        const isMine = myName ? (ownerLower.includes(myName) || (myFirst && ownerLower.includes(myFirst))) : true;
+        return matchSearch && matchStatus && isMine;
+      }
       if (activeTab === 'New') return matchSearch && matchStatus && l.status === 'New';
       if (activeTab === 'Hot') return matchSearch && matchStatus && l.score >= 90;
       if (activeTab === 'Converted') return matchSearch && matchStatus && l.status === 'Converted';
 
       return matchSearch && matchStatus;
     });
-  }, [leads, searchQuery, statusFilter, activeTab]);
+  }, [leads, searchQuery, statusFilter, activeTab, currentUser]);
 
   const toggleSelectAll = (e) => {
     if (e.target.checked) {

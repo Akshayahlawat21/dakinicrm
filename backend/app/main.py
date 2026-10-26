@@ -21,7 +21,7 @@ from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
 # Import routes
-from backend.app.api.routes import health, users, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns
+from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns
 
 logger = get_logger("backend.main")
 
@@ -222,7 +222,9 @@ app.add_middleware(
 # --------------------------------------------------------------------------
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(teams.router)
 app.include_router(leads.router)
 app.include_router(deals.router)
 app.include_router(accounts.router)

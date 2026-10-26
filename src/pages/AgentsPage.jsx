@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function AgentsPage() {
-  const { agents, approvals, approveItem } = useCRM();
+  const { agents, approvals, approveItem, currentUser } = useCRM();
   const [activeTab, setActiveTab] = useState('Agents');
   const [selectedAgent, setSelectedAgent] = useState(agents[0]);
 
@@ -194,7 +194,7 @@ export default function AgentsPage() {
               <div key={appr.id} className="crm-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>{appr.title}</h3>
-                  <span className="badge badge-amber">Waiting for Elena</span>
+                  <span className="badge badge-amber">Waiting for {currentUser?.name ? currentUser.name.split(' ')[0] : 'Review'}</span>
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 700, marginBottom: '0.5rem' }}>
                   Target: {appr.entity}

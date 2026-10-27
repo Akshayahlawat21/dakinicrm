@@ -159,6 +159,10 @@ async def seed_data(db_session: AsyncSession):
     db_session.add_all([owner_a, manager_a1, manager_a2, sales_a1, sales_a2, owner_b, manager_b, sales_b])
     await db_session.flush()
 
+    # Assign team managers
+    team_alpha.manager_id = manager_a1.id
+    team_beta.manager_id = manager_a2.id
+
     # 5. Team memberships
     member_bob = TeamMember(team_id=team_alpha.id, user_id=manager_a1.id)
     member_david = TeamMember(team_id=team_alpha.id, user_id=sales_a1.id)

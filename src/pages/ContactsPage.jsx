@@ -10,7 +10,12 @@ import {
 } from 'lucide-react';
 
 export default function ContactsPage() {
-  const { contacts = [], deleteContact, setIsQuickCreateOpen, setQuickCreateType, setIsAgentDockOpen, sendAgentMessage, isLoadingData } = useCRM();
+  const { contacts = [], deleteContact, setIsQuickCreateOpen, setQuickCreateType, setIsAgentDockOpen, sendAgentMessage, isLoadingData, currentUser } = useCRM();
+
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'owner').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+  const canDeleteContacts = isOwner || isManager;
 
   const [search, setSearch] = useState('');
 
@@ -157,24 +162,34 @@ export default function ContactsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
                         <button
                           type="button"
-                          title="Delete Contact"
+                          title={canDeleteContacts ? "Delete Contact" : "Permission Denied: Only Owners and Managers can delete contacts"}
+                          disabled={!canDeleteContacts}
                           onClick={() => {
+                            if (!canDeleteContacts) {
+                              alert("Permission Denied: Salespersons are not authorized to delete contacts.");
+                              return;
+                            }
                             if (window.confirm(`Delete contact "${displayName}"?`)) {
-                              deleteContact(c.id);
+                              deleteContact(contact.id);
                             }
                           }}
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
+                            color: canDeleteContacts ? '#94a3b8' : '#cbd5e1',
+                            cursor: canDeleteContacts ? 'pointer' : 'not-allowed',
                             padding: 6,
                             borderRadius: 6,
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            opacity: canDeleteContacts ? 1 : 0.4
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          onMouseEnter={(e) => {
+                            if (canDeleteContacts) e.currentTarget.style.color = '#ef4444';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (canDeleteContacts) e.currentTarget.style.color = '#94a3b8';
+                          }}
                         >
                           <Trash2 size={15} />
                         </button>

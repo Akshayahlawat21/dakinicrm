@@ -31,7 +31,8 @@ export default function LeadDetailPage() {
     setIsConvertModalOpen,
     addTask,
     sendAgentMessage,
-    isLoadingData
+    isLoadingData,
+    currentUser,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('Overview');
@@ -52,18 +53,19 @@ export default function LeadDetailPage() {
       score: 85,
       email: 'lead@enterprise.com',
       phone: '+91 98000 00000',
-      owner: 'Elena Rostova',
+      owner: currentUser?.name || 'Sales Representative',
       scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
       timeline: []
     };
 
   const handleAddNote = () => {
     if (!quickNote.trim()) return;
+    const authorName = currentUser?.name || 'Sales Representative';
     setTimelineNotes([
       {
         id: `note-${Date.now()}`,
         type: "note",
-        title: "Note logged by Elena",
+        title: `Note logged by ${authorName}`,
         description: quickNote,
         time: "Just now"
       },
@@ -88,10 +90,10 @@ export default function LeadDetailPage() {
             <span>Leads</span>
           </button>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
-            {lead.name}
+            {lead.name || 'Lead Record'}
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-            {lead.industry}, from a {lead.source.toLowerCase()}
+            {lead.industry || 'Enterprise Technology'}, from a {(lead.source || 'Website').toLowerCase()}
           </p>
         </div>
 
@@ -122,11 +124,11 @@ export default function LeadDetailPage() {
             ========================================================================= */}
         <div className="crm-card lead-profile-card">
           <div className="lead-profile-avatar">
-            {lead.name.split(' ').map((n) => n[0]).join('')}
+            {(lead.name || 'Lead Record').split(' ').map((n) => n[0]).join('')}
           </div>
 
           <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
-            {lead.name}
+            {lead.name || 'Lead Record'}
           </h2>
 
           <div style={{ margin: '0.45rem 0' }}>
@@ -179,7 +181,7 @@ export default function LeadDetailPage() {
             <div className="lead-meta-row">
               <span className="lead-meta-label">Account</span>
               <span className="lead-meta-value" style={{ color: '#2563eb', cursor: 'pointer' }} onClick={() => navigateTo('accounts')}>
-                {lead.company}
+                {lead.company || lead.name || 'Enterprise Corp'}
               </span>
             </div>
           </div>
@@ -299,13 +301,13 @@ export default function LeadDetailPage() {
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
-                  onClick={() => addTask(`Follow-up call with ${lead.name}`, lead.company, 'High')}
+                  onClick={() => addTask(`Follow-up call with ${lead.name || 'Lead'}`, lead.company || lead.name || 'Enterprise Corp', 'High')}
                 >
                   <Phone size={13} /> Log call
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
-                  onClick={() => addTask(`Prepare proposal for ${lead.company}`, lead.company, 'High')}
+                  onClick={() => addTask(`Prepare proposal for ${lead.company || lead.name || 'Enterprise Corp'}`, lead.company || lead.name || 'Enterprise Corp', 'High')}
                 >
                   <Calendar size={13} /> Create task
                 </button>
@@ -362,10 +364,10 @@ export default function LeadDetailPage() {
 
             <div style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem', border: '1px solid #dbeafe', fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45, marginBottom: '0.85rem' }}>
               <p>
-                <strong>{lead.name}</strong> is already converted. His score of <strong>{lead.score}</strong> comes mostly from the website demo request.
+                <strong>{lead.name || 'Lead Record'}</strong> is already converted. His score of <strong>{lead.score || 85}</strong> comes mostly from the website demo request.
               </p>
               <p style={{ marginTop: '0.35rem', color: '#1e40af', fontWeight: 600 }}>
-                Next step: book a discovery call with {lead.owner}.
+                Next step: book a discovery call with {lead.owner || 'Assigned Representative'}.
               </p>
             </div>
 

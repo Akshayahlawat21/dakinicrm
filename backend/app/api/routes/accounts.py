@@ -4,6 +4,8 @@ from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.account_service import AccountService
+from backend.app.application.exceptions import ForbiddenError, NotFoundError
+from backend.app.data.exceptions import RecordNotFoundError
 from backend.app.api.schemas.account import AccountCreateRequest, AccountResponse
 from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
@@ -114,6 +116,10 @@ async def delete_account(
         await service.delete_account(ctx, account_id)
         await session.commit()
         print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Account (ID: {account_id}) from Supabase PostgreSQL", flush=True)
+    except ForbiddenError:
+        raise
+    except (RecordNotFoundError, NotFoundError) as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Account '{account_id}' not found in DB: {exc}", flush=True)
     except Exception as exc:
         print(f"\n[SUPABASE DB DELETE] >> Account '{account_id}' acknowledged: {exc}", flush=True)
 

@@ -302,6 +302,105 @@ export const gatewayApi = {
   },
 
   /**
+   * Teams resource
+   */
+  async getTeams(status = 'active') {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return gatewayFetch(`/teams${query}`, { method: 'GET' });
+  },
+
+  async createTeam(teamData) {
+    return gatewayFetch('/teams', {
+      method: 'POST',
+      body: JSON.stringify(teamData),
+    });
+  },
+
+  async getTeam(teamId) {
+    return gatewayFetch(`/teams/${teamId}`, { method: 'GET' });
+  },
+
+  async updateTeam(teamId, teamData) {
+    return gatewayFetch(`/teams/${teamId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(teamData),
+    });
+  },
+
+  async deactivateTeam(teamId) {
+    return gatewayFetch(`/teams/${teamId}/deactivate`, { method: 'POST' });
+  },
+
+  async addTeamMember(teamId, userId) {
+    return gatewayFetch(`/teams/${teamId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    });
+  },
+
+  async removeTeamMember(teamId, userId) {
+    return gatewayFetch(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
+  },
+
+  async transferTeamMember(teamId, userId, targetTeamId) {
+    return gatewayFetch(`/teams/${teamId}/members/${userId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ target_team_id: targetTeamId }),
+    });
+  },
+
+  /**
+   * Users resource
+   */
+  async getUsers(params = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.skip !== undefined) searchParams.set('skip', params.skip);
+    if (params.limit !== undefined) searchParams.set('limit', params.limit);
+    if (params.team_id) searchParams.set('team_id', params.team_id);
+    if (params.role) searchParams.set('role', params.role);
+    if (params.status) searchParams.set('status', params.status);
+    const qs = searchParams.toString();
+    return gatewayFetch(`/users${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
+
+  async createUser(userData) {
+    return gatewayFetch('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  async getUser(userId) {
+    return gatewayFetch(`/users/${userId}`, { method: 'GET' });
+  },
+
+  async updateUser(userId, userData) {
+    return gatewayFetch(`/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  async resetUserPassword(userId) {
+    return gatewayFetch(`/users/${userId}/reset-password`, { method: 'POST' });
+  },
+
+  async deactivateUser(userId) {
+    return gatewayFetch(`/users/${userId}/deactivate`, { method: 'POST' });
+  },
+
+  async reactivateUser(userId) {
+    return gatewayFetch(`/users/${userId}/reactivate`, { method: 'POST' });
+  },
+
+  async changePassword(oldPassword, newPassword) {
+    return gatewayFetch('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    });
+  },
+
+  /**
    * E3 & E5: Copilot AI Assistant
    */
   async sendAgentMessage(message) {
@@ -313,3 +412,4 @@ export const gatewayApi = {
 };
 
 export default gatewayApi;
+

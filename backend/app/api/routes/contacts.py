@@ -5,6 +5,8 @@ from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.contact_service import ContactService
+from backend.app.application.exceptions import ForbiddenError, NotFoundError
+from backend.app.data.exceptions import RecordNotFoundError
 from backend.app.api.schemas.contact import ContactCreateRequest, ContactResponse
 from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
@@ -140,6 +142,10 @@ async def delete_contact(
         await service.delete_contact(ctx, contact_id)
         await session.commit()
         print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Contact (ID: {contact_id}) from Supabase PostgreSQL", flush=True)
+    except ForbiddenError:
+        raise
+    except (RecordNotFoundError, NotFoundError) as exc:
+        print(f"\n[SUPABASE DB DELETE] >> Contact '{contact_id}' not found in DB: {exc}", flush=True)
     except Exception as exc:
         print(f"\n[SUPABASE DB DELETE] >> Contact '{contact_id}' acknowledged: {exc}", flush=True)
 

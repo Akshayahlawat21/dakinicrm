@@ -11,7 +11,7 @@ from gateway.errors import GatewayException, create_error_response
 from gateway.middleware.correlation import CorrelationLoggingMiddleware
 from gateway.middleware.edge_shield import EdgeShieldMiddleware
 from gateway.middleware.request_validation import RequestValidationMiddleware
-from gateway.routers import health, auth, webhooks, proxy
+from gateway.routers import health, auth, webhooks, analytics, proxy
 
 logger = logging.getLogger("gateway.main")
 
@@ -163,6 +163,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(webhooks.router)
+app.include_router(analytics.router)
 app.include_router(proxy.router)
 
 

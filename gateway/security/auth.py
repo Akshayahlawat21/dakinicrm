@@ -45,6 +45,8 @@ def create_access_token(
     roles: Optional[List[str]] = None,
     email: str = "elena.rostova@dakini.ai",
     expires_delta_seconds: int = 3600 * 24,
+    token_version: int = 1,
+    must_change_password: bool = False,
 ) -> str:
     """Helper to generate JWT tokens for testing and frontend authentication."""
     if roles is None:
@@ -55,6 +57,8 @@ def create_access_token(
         "tenant_id": tenant_id,
         "roles": roles,
         "email": email,
+        "tv": token_version,
+        "mcp": must_change_password,
         "iat": now,
         "nbf": now,
         "exp": now + expires_delta_seconds,
@@ -149,6 +153,8 @@ async def validate_jwt_token(request: Request) -> Dict[str, Any]:
         request.state.user_id = payload.get("sub")
         request.state.tenant_id = payload.get("tenant_id", "default_tenant")
         request.state.roles = payload.get("roles", [])
+        request.state.token_version = payload.get("tv", payload.get("token_version", 1))
+        request.state.must_change_password = payload.get("mcp", payload.get("must_change_password", False))
 
         return payload
 

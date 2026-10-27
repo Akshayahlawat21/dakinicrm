@@ -83,7 +83,34 @@ def _lost_values() -> list[str]:
     return list(dict.fromkeys([*get_settings().lost_values, "lost", "closed_lost", "closed-lost", "cancelled", "canceled"]))
 
 
-async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
+def _deal_scope_filter(deal_cols: set[str], opp_cols: set[str], scoped_users: list | None, alias: str = "t") -> str:
+    if not scoped_users:
+        return ""
+    if "owner_id" in deal_cols and "opportunity_id" in deal_cols:
+        return f"AND ({alias}.owner_id = ANY(:scoped_users) OR {alias}.opportunity_id IN (SELECT id FROM public.opportunities WHERE owner_id = ANY(:scoped_users)))"
+    if "owner_id" in deal_cols:
+        return f"AND {alias}.owner_id = ANY(:scoped_users)"
+    if "opportunity_id" in deal_cols:
+        return f"AND {alias}.opportunity_id IN (SELECT id FROM public.opportunities WHERE owner_id = ANY(:scoped_users))"
+    return ""
+
+
+def _user_scope_filter(col_name: str, cols: set[str], scoped_users: list | None, alias: str = "t") -> str:
+    if not scoped_users:
+        return ""
+    if col_name in cols:
+        return f"AND {alias}.{col_name} = ANY(:scoped_users)"
+    return ""
+
+
+def _format_scoped_users(scoped_users: list | None) -> list | None:
+    if not scoped_users:
+        return None
+    import uuid
+    return [uuid.UUID(str(u)) if not isinstance(u, uuid.UUID) else u for u in scoped_users]
+
+
+async def overview(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     start, end = period_bounds(period)
     leads_cols = await get_columns(conn, "leads")
     opp_cols = await get_columns(conn, "opportunities")
@@ -96,39 +123,87 @@ async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
         if not required.issubset(columns):
             raise RuntimeError(f"Schema mismatch in {table}: missing {sorted(required - columns)}")
 
+    formatted_users = _format_scoped_users(scoped_users)
+    lead_scope = _user_scope_filter("assigned_to", leads_cols, formatted_users, "t")
+    opp_scope = _user_scope_filter("owner_id", opp_cols, formatted_users, "t")
+    deal_scope = _deal_scope_filter(deal_cols, opp_cols, formatted_users, "t")
+
+    params_base = {"org": org, "start": start, "end": end}
+    if formatted_users:
+        params_base["scoped_users"] = formatted_users
+
     result = await conn.execute(text(f"""
         SELECT COUNT(*) FROM public.leads t
         WHERE t.organization_id = :org AND t.created_at >= :start AND t.created_at < :end
+        {lead_scope}
         {soft_delete_filter(leads_cols)}
-    """), {"org": org, "start": start, "end": end})
+    """), params_base)
     total_leads = int(result.scalar_one())
 
     closed_stages = _won_values() + _lost_values() + ["closed"]
-    weighted_expr = f"SUM(t.amount * COALESCE(t.probability, 0) / 100.0)" if "probability" in opp_cols else "SUM(t.amount * 0)"
+    opp_params = {"org": org, "closed_stages": [v.lower() for v in dict.fromkeys(closed_stages)]}
+    if formatted_users:
+        opp_params["scoped_users"] = formatted_users
     result = await conn.execute(text(f"""
+        WITH pipeline_items AS (
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   COALESCE(d.amount, o.amount) AS amount, 
+                   LOWER(COALESCE(d.stage, o.stage, '')) AS stage,
+                   (COALESCE(d.amount, o.amount) * CASE LOWER(COALESCE(d.stage, o.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE COALESCE(o.probability, 50)
+                   END / 100.0) AS weighted_amount
+            FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
+            WHERE o.organization_id = :org {soft_delete_filter(opp_cols, 'o')}
+            UNION ALL
+            SELECT d.id, d.organization_id, d.owner_id, d.amount, LOWER(COALESCE(d.stage, '')) AS stage,
+                   (d.amount * CASE LOWER(COALESCE(d.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE 50
+                   END / 100.0) AS weighted_amount
+            FROM public.deals d
+            WHERE d.organization_id = :org
+              AND d.opportunity_id IS NULL
+              {soft_delete_filter(deal_cols, 'd')}
+              AND (d.status = 'open' OR d.status IS NULL)
+              AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
+        )
         SELECT COUNT(*) AS count, COALESCE(SUM(t.amount), 0) AS value,
-               COALESCE({weighted_expr}, 0) AS weighted_value
-        FROM public.opportunities t
+               COALESCE(SUM(t.weighted_amount), 0) AS weighted_value
+        FROM pipeline_items t
         WHERE t.organization_id = :org
-          AND LOWER(COALESCE(t.stage, '')) <> ALL(:closed_stages)
-          {soft_delete_filter(opp_cols)}
-    """), {"org": org, "closed_stages": [v.lower() for v in dict.fromkeys(closed_stages)]})
+          AND t.stage <> ALL(:closed_stages)
+          {opp_scope}
+    """), opp_params)
     pipeline = result.mappings().one()
 
     deal_date = first_existing(deal_cols, ("close_date", "closed_at", "created_at"))
     status_expr = deal_status_expression(deal_cols)
     if not deal_date:
         raise RuntimeError("Schema mismatch: deals needs close_date, closed_at or created_at")
+    date_expr = f"COALESCE(t.{deal_date}, t.created_at)" if deal_date != "created_at" and "created_at" in deal_cols else f"t.{deal_date}"
     won_currency_expr = "t.currency" if "currency" in deal_cols else "'USD'"
+    deal_params = {"org": org, "won_values": _won_values(), "start": start, "end": end}
+    if formatted_users:
+        deal_params["scoped_users"] = formatted_users
     result = await conn.execute(text(f"""
         SELECT COUNT(*) AS count, COALESCE(SUM(t.amount), 0) AS revenue, {won_currency_expr} AS currency
         FROM public.deals t
         WHERE t.organization_id = :org
           AND {status_expr} = ANY(:won_values)
-          AND t.{deal_date} >= :start AND t.{deal_date} < :end
+          AND {date_expr} >= :start AND {date_expr} < :end
+          {deal_scope}
           {soft_delete_filter(deal_cols)}
         GROUP BY {won_currency_expr}
-    """), {"org": org, "won_values": _won_values(), "start": start, "end": end})
+    """), deal_params)
     won_rows = list(result.mappings())
     won_count = sum(int(row["count"]) for row in won_rows)
     won_by_currency = {str(row["currency"]): float(row["revenue"] or 0) for row in won_rows}
@@ -143,6 +218,7 @@ async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
             conversion_available = True
             conversion_org_filter = "AND lc.organization_id = :org" if "organization_id" in conversion_cols else ""
             lead_deleted = "AND l.deleted_at IS NULL" if "deleted_at" in leads_cols else ""
+            conv_lead_scope = _user_scope_filter("assigned_to", leads_cols, formatted_users, "l")
             result = await conn.execute(text(f"""
                 SELECT COUNT(DISTINCT lc.lead_id)
                 FROM public.lead_conversions lc
@@ -150,8 +226,9 @@ async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
                 WHERE l.organization_id = :org
                   AND l.created_at >= :start AND l.created_at < :end
                   AND lc.conversion_date >= :start AND lc.conversion_date < :end
+                  {conv_lead_scope}
                   {conversion_org_filter} {lead_deleted}
-            """), {"org": org, "start": start, "end": end})
+            """), params_base)
             converted = int(result.scalar_one())
             conversion_rate = round(converted * 100 / total_leads, 2) if total_leads else 0.0
 
@@ -160,16 +237,19 @@ async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
         activity_cols = await get_columns(conn, "activities")
         activity_date = first_existing(activity_cols, ("start_at", "created_at", "occurred_at"))
         if "organization_id" in activity_cols and activity_date:
+            act_scope = _user_scope_filter("user_id", activity_cols, formatted_users, "t")
             result = await conn.execute(text(f"""
                 SELECT COUNT(*) FROM public.activities t
                 WHERE t.organization_id = :org
                   AND COALESCE(t.{activity_date}, t.created_at) >= :start
                   AND COALESCE(t.{activity_date}, t.created_at) < :end
+                  {act_scope}
             """ if activity_date == "start_at" and "created_at" in activity_cols else f"""
                 SELECT COUNT(*) FROM public.activities t
                 WHERE t.organization_id = :org
                   AND t.{activity_date} >= :start AND t.{activity_date} < :end
-            """), {"org": org, "start": start, "end": end})
+                  {act_scope}
+            """), params_base)
             activity_count = int(result.scalar_one())
 
     return {
@@ -192,7 +272,7 @@ async def overview(conn: AsyncConnection, org: str, period: str) -> dict:
     }
 
 
-async def revenue_trend(conn: AsyncConnection, org: str, months: int) -> dict:
+async def revenue_trend(conn: AsyncConnection, org: str, months: int, scoped_users: list | None = None) -> dict:
     if not 1 <= months <= 24:
         raise ValueError("months must be between 1 and 24")
     columns = await get_columns(conn, "deals")
@@ -208,16 +288,26 @@ async def revenue_trend(conn: AsyncConnection, org: str, months: int) -> dict:
     for _ in range(months - 1):
         start = date(start.year - (1 if start.month == 1 else 0), 12 if start.month == 1 else start.month - 1, 1)
     end = date(today.year + (1 if today.month == 12 else 0), 1 if today.month == 12 else today.month + 1, 1)
+
+    formatted_users = _format_scoped_users(scoped_users)
+    opp_cols = await get_columns(conn, "opportunities") if await table_exists(conn, "opportunities") else set()
+    deal_scope = _deal_scope_filter(columns, opp_cols, formatted_users, "t")
+    deal_params = {"org": org, "won_values": _won_values(), "start": start, "end": end}
+    if formatted_users:
+        deal_params["scoped_users"] = formatted_users
+
+    date_expr = f"COALESCE(t.{date_col}, t.created_at)" if date_col != "created_at" and "created_at" in columns else f"t.{date_col}"
     result = await conn.execute(text(f"""
-        SELECT date_trunc('month', t.{date_col})::date AS month,
+        SELECT date_trunc('month', {date_expr})::date AS month,
                COALESCE(SUM(t.amount), 0) AS revenue, COUNT(*) AS deals_won,
                {('t.currency' if 'currency' in columns else "'USD'")} AS currency
         FROM public.deals t
         WHERE t.organization_id = :org AND {status_expr} = ANY(:won_values)
-          AND t.{date_col} >= :start AND t.{date_col} < :end
+          AND {date_expr} >= :start AND {date_expr} < :end
+          {deal_scope}
           {soft_delete_filter(columns)}
         GROUP BY 1, 4 ORDER BY 1
-    """), {"org": org, "won_values": _won_values(), "start": start, "end": end})
+    """), deal_params)
     found = {}
     observed_currencies = set()
     for row in result.mappings():
@@ -247,7 +337,10 @@ async def revenue_trend(conn: AsyncConnection, org: str, months: int) -> dict:
                 target_type_filter = "AND LOWER(period_type) = ANY(:target_types)" if chosen_types else "AND 1 = 0"
             else:
                 target_type_filter = ""
+            target_scope = _user_scope_filter("assigned_to_user_id", target_cols, formatted_users, "public.sales_targets")
             target_params = {"org": org, "start": start, "end": end}
+            if formatted_users:
+                target_params["scoped_users"] = formatted_users
             if chosen_types and "period_type" in target_cols:
                 target_params["target_types"] = chosen_types
             result = await conn.execute(text(f"""
@@ -255,6 +348,7 @@ async def revenue_trend(conn: AsyncConnection, org: str, months: int) -> dict:
                 FROM public.sales_targets
                 WHERE organization_id = :org
                   AND period_start < :end AND period_end >= :start
+                  {target_scope}
                   {active_filter} {target_type_filter}
             """), target_params)
             for target_row in result.mappings():
@@ -292,49 +386,95 @@ async def revenue_trend(conn: AsyncConnection, org: str, months: int) -> dict:
     }
 
 
-async def pipeline_by_stage(conn: AsyncConnection, org: str) -> dict:
+async def pipeline_by_stage(conn: AsyncConnection, org: str, scoped_users: list | None = None) -> dict:
     columns = await get_columns(conn, "opportunities")
     required = {"organization_id", "stage", "amount"}
     if not required.issubset(columns):
         raise RuntimeError(f"Schema mismatch in opportunities: missing {sorted(required - columns)}")
+    deal_cols = await get_columns(conn, "deals")
     status_closed = _won_values() + _lost_values() + ["closed"]
-    weighted_expr = "COALESCE(SUM(t.amount * COALESCE(t.probability, 0) / 100.0), 0)" if "probability" in columns else "0"
+
+    formatted_users = _format_scoped_users(scoped_users)
+    opp_scope = _user_scope_filter("owner_id", columns, formatted_users, "t")
+    params = {"org": org, "closed_stages": [v.lower() for v in dict.fromkeys(status_closed)]}
+    if formatted_users:
+        params["scoped_users"] = formatted_users
+
     result = await conn.execute(text(f"""
-        SELECT COALESCE(t.stage, 'Unspecified') AS stage,
+        WITH pipeline_items AS (
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   COALESCE(d.amount, o.amount) AS amount, 
+                   COALESCE(d.stage, o.stage, 'Unspecified') AS stage,
+                   (COALESCE(d.amount, o.amount) * CASE LOWER(COALESCE(d.stage, o.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE COALESCE(o.probability, 50)
+                   END / 100.0) AS weighted_amount
+            FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
+            WHERE o.organization_id = :org {soft_delete_filter(columns, 'o')}
+            UNION ALL
+            SELECT d.id, d.organization_id, d.owner_id, d.amount, COALESCE(d.stage, 'Unspecified') AS stage,
+                   (d.amount * CASE LOWER(COALESCE(d.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE 50
+                   END / 100.0) AS weighted_amount
+            FROM public.deals d
+            WHERE d.organization_id = :org
+              AND d.opportunity_id IS NULL
+              {soft_delete_filter(deal_cols, 'd')}
+              AND (d.status = 'open' OR d.status IS NULL)
+              AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
+        )
+        SELECT t.stage AS stage,
                COUNT(*) AS opportunity_count, COALESCE(SUM(t.amount), 0) AS value,
-               {weighted_expr} AS weighted_value
-        FROM public.opportunities t
+               COALESCE(SUM(t.weighted_amount), 0) AS weighted_value
+        FROM pipeline_items t
         WHERE t.organization_id = :org
-          AND LOWER(COALESCE(t.stage, '')) <> ALL(:closed_stages)
-          {soft_delete_filter(columns)}
-        GROUP BY COALESCE(t.stage, 'Unspecified')
+          AND LOWER(t.stage) <> ALL(:closed_stages)
+          {opp_scope}
+        GROUP BY t.stage
         ORDER BY value DESC
-    """), {"org": org, "closed_stages": [v.lower() for v in dict.fromkeys(status_closed)]})
+    """), params)
     return {"data": [{
         "stage": row["stage"], "opportunity_count": int(row["opportunity_count"]),
         "value": float(row["value"] or 0), "weighted_value": float(row.get("weighted_value", 0) or 0)
     } for row in result.mappings()]}
 
 
-async def lead_sources(conn: AsyncConnection, org: str, period: str) -> dict:
+async def lead_sources(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     start, end = period_bounds(period)
     columns = await get_columns(conn, "leads")
     required = {"organization_id", "source", "created_at"}
     if not required.issubset(columns):
         raise RuntimeError(f"Schema mismatch in leads: missing {sorted(required - columns)}")
+
+    formatted_users = _format_scoped_users(scoped_users)
+    lead_scope = _user_scope_filter("assigned_to", columns, formatted_users, "t")
+    params = {"org": org, "start": start, "end": end}
+    if formatted_users:
+        params["scoped_users"] = formatted_users
+
     result = await conn.execute(text(f"""
         SELECT COALESCE(NULLIF(BTRIM(t.source), ''), 'Unknown') AS source, COUNT(*) AS lead_count
         FROM public.leads t
         WHERE t.organization_id = :org AND t.created_at >= :start AND t.created_at < :end
+          {lead_scope}
           {soft_delete_filter(columns)}
         GROUP BY 1 ORDER BY lead_count DESC, source
-    """), {"org": org, "start": start, "end": end})
+    """), params)
     rows = [{"source": row["source"], "lead_count": int(row["lead_count"])} for row in result.mappings()]
     total = sum(row["lead_count"] for row in rows)
     return {"period": period, "total_leads": total, "data": rows}
 
 
-async def conversion_funnel(conn: AsyncConnection, org: str, period: str) -> dict:
+async def conversion_funnel(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     """Event-based conversion funnel. MQL/SQL are counted only when CRM statuses explicitly match those labels."""
     start, end = period_bounds(period)
     lead_cols = await get_columns(conn, "leads")
@@ -343,15 +483,27 @@ async def conversion_funnel(conn: AsyncConnection, org: str, period: str) -> dic
     if not {"organization_id", "created_at"}.issubset(lead_cols):
         raise RuntimeError("Schema mismatch in leads: organization_id and created_at are required")
     lead_filter = soft_delete_filter(lead_cols)
+
+    formatted_users = _format_scoped_users(scoped_users)
+    lead_scope = _user_scope_filter("assigned_to", lead_cols, formatted_users, "t")
+    conv_lead_scope = _user_scope_filter("assigned_to", lead_cols, formatted_users, "l")
+    opp_scope = _user_scope_filter("owner_id", opp_cols, formatted_users, "t")
+    deal_scope = _deal_scope_filter(deal_cols, opp_cols, formatted_users, "t")
+
+    params_base = {"org": org, "start": start, "end": end}
+    if formatted_users:
+        params_base["scoped_users"] = formatted_users
+
     status_col = "status" if "status" in lead_cols else None
     if status_col:
         result = await conn.execute(text(f"""
             SELECT LOWER(BTRIM(COALESCE(status, ''))) AS status, COUNT(*) AS count
             FROM public.leads t
             WHERE t.organization_id = :org AND t.created_at >= :start AND t.created_at < :end
+              {lead_scope}
               {lead_filter}
             GROUP BY 1
-        """), {"org": org, "start": start, "end": end})
+        """), params_base)
         statuses = {str(r["status"]): int(r["count"]) for r in result.mappings()}
     else:
         statuses = {}
@@ -377,8 +529,9 @@ async def conversion_funnel(conn: AsyncConnection, org: str, period: str) -> dic
                 WHERE l.organization_id = :org
                   AND l.created_at >= :start AND l.created_at < :end
                   AND lc.conversion_date >= :start AND lc.conversion_date < :end
+                  {conv_lead_scope}
                   {conv_org} {lead_filter.replace('t.', 'l.')}
-            """), {"org": org, "start": start, "end": end})
+            """), params_base)
             converted = int(result.scalar_one())
         else:
             conversion_available = False
@@ -388,23 +541,47 @@ async def conversion_funnel(conn: AsyncConnection, org: str, period: str) -> dic
     if not required_opp.issubset(opp_cols):
         raise RuntimeError(f"Schema mismatch in opportunities: missing {sorted(required_opp - opp_cols)}")
     closed_stages = [v.lower() for v in dict.fromkeys(_won_values() + _lost_values() + ["closed"])]
+    opp_params = {"org": org, "closed_stages": closed_stages}
+    if formatted_users:
+        opp_params["scoped_users"] = formatted_users
     result = await conn.execute(text(f"""
-        SELECT COUNT(*) FROM public.opportunities t
-        WHERE t.organization_id = :org AND LOWER(COALESCE(t.stage, '')) <> ALL(:closed_stages)
-        {soft_delete_filter(opp_cols)}
-    """), {"org": org, "closed_stages": closed_stages})
+        WITH pipeline_items AS (
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   LOWER(COALESCE(d.stage, o.stage, '')) AS stage
+            FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
+            WHERE o.organization_id = :org {soft_delete_filter(opp_cols, 'o')}
+            UNION ALL
+            SELECT d.id, d.organization_id, d.owner_id, LOWER(COALESCE(d.stage, '')) AS stage
+            FROM public.deals d
+            WHERE d.organization_id = :org
+              AND d.opportunity_id IS NULL
+              {soft_delete_filter(deal_cols, 'd')}
+              AND (d.status = 'open' OR d.status IS NULL)
+              AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
+        )
+        SELECT COUNT(*) FROM pipeline_items t
+        WHERE t.organization_id = :org AND t.stage <> ALL(:closed_stages)
+          {opp_scope}
+    """), opp_params)
     open_pipeline = int(result.scalar_one())
 
     won = 0
     deal_date = first_existing(deal_cols, ("close_date", "closed_at", "created_at"))
     if {"organization_id"}.issubset(deal_cols) and deal_date:
         status_expr = deal_status_expression(deal_cols)
+        date_expr = f"COALESCE(t.{deal_date}, t.created_at)" if deal_date != "created_at" and "created_at" in deal_cols else f"t.{deal_date}"
+        deal_params = {"org": org, "won_values": _won_values(), "start": start, "end": end}
+        if formatted_users:
+            deal_params["scoped_users"] = formatted_users
         result = await conn.execute(text(f"""
             SELECT COUNT(*) FROM public.deals t
             WHERE t.organization_id = :org AND {status_expr} = ANY(:won_values)
-              AND t.{deal_date} >= :start AND t.{deal_date} < :end
+              AND {date_expr} >= :start AND {date_expr} < :end
+              {deal_scope}
               {soft_delete_filter(deal_cols)}
-        """), {"org": org, "won_values": _won_values(), "start": start, "end": end})
+        """), deal_params)
         won = int(result.scalar_one())
     raw = [
         ("Website inquiries / new leads", total_leads, True),
@@ -435,7 +612,7 @@ async def conversion_funnel(conn: AsyncConnection, org: str, period: str) -> dic
     }
 
 
-async def activity_performance(conn: AsyncConnection, org: str, period: str) -> dict:
+async def activity_performance(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     start, end = period_bounds(period)
     if not await table_exists(conn, "activities"):
         return {"period": period, "total_activities": 0, "completed_activities": 0, "by_type": [], "by_status": [], "by_owner": [], "data_status": "activities_table_missing"}
@@ -447,29 +624,37 @@ async def activity_performance(conn: AsyncConnection, org: str, period: str) -> 
         raise RuntimeError("Schema mismatch in activities: expected start_at or created_at")
     date_expr = f"COALESCE(t.{date_col}, t.created_at)" if date_col == "start_at" and "created_at" in cols else f"t.{date_col}"
     deleted = soft_delete_filter(cols)
+
+    formatted_users = _format_scoped_users(scoped_users)
+    act_scope = _user_scope_filter("user_id", cols, formatted_users, "t")
+    params = {"org": org, "start": start, "end": end}
+    if formatted_users:
+        params["scoped_users"] = formatted_users
+
     result = await conn.execute(text(f"""
         SELECT COUNT(*) AS total,
           COUNT(*) FILTER (WHERE LOWER(COALESCE(t.status, '')) IN ('completed','done')) AS completed
         FROM public.activities t
         WHERE t.organization_id = :org AND {date_expr} >= :start AND {date_expr} < :end
-        {deleted}
-    """), {"org": org, "start": start, "end": end})
+          {act_scope}
+          {deleted}
+    """), params)
     totals = result.mappings().one()
     group_type = "COALESCE(NULLIF(BTRIM(t.type), ''), 'Unknown')" if "type" in cols else "'Activity'"
     group_status = "COALESCE(NULLIF(BTRIM(t.status), ''), 'Unknown')" if "status" in cols else "'Unknown'"
     result = await conn.execute(text(f"""
         SELECT {group_type} AS label, COUNT(*) AS count
         FROM public.activities t WHERE t.organization_id = :org
-          AND {date_expr} >= :start AND {date_expr} < :end {deleted}
+          AND {date_expr} >= :start AND {date_expr} < :end {act_scope} {deleted}
         GROUP BY 1 ORDER BY count DESC, label
-    """), {"org": org, "start": start, "end": end})
+    """), params)
     by_type = [{"type": str(r["label"]), "count": int(r["count"])} for r in result.mappings()]
     result = await conn.execute(text(f"""
         SELECT {group_status} AS label, COUNT(*) AS count
         FROM public.activities t WHERE t.organization_id = :org
-          AND {date_expr} >= :start AND {date_expr} < :end {deleted}
+          AND {date_expr} >= :start AND {date_expr} < :end {act_scope} {deleted}
         GROUP BY 1 ORDER BY count DESC, label
-    """), {"org": org, "start": start, "end": end})
+    """), params)
     by_status = [{"status": str(r["label"]), "count": int(r["count"])} for r in result.mappings()]
 
     by_owner = []
@@ -482,9 +667,9 @@ async def activity_performance(conn: AsyncConnection, org: str, period: str) -> 
                   COUNT(t.id) FILTER (WHERE LOWER(COALESCE(t.status, '')) IN ('completed','done')) AS completed_count
                 FROM public.activities t
                 LEFT JOIN public.users u ON u.id = t.user_id AND u.organization_id = :org {user_deleted}
-                WHERE t.organization_id = :org AND {date_expr} >= :start AND {date_expr} < :end {deleted}
+                WHERE t.organization_id = :org AND {date_expr} >= :start AND {date_expr} < :end {act_scope} {deleted}
                 GROUP BY u.id, u.name ORDER BY activity_count DESC, name NULLS LAST
-            """), {"org": org, "start": start, "end": end})
+            """), params)
             by_owner = [{"user_id": r["user_id"], "name": r["name"] or "Unassigned", "activity_count": int(r["activity_count"]), "completed_count": int(r["completed_count"])} for r in result.mappings()]
     return {
         "period": period, "start_date": start.isoformat(), "end_date": (end - timedelta(days=1)).isoformat(),
@@ -530,7 +715,7 @@ async def _matching_target_types(
     return None
 
 
-async def quota_leaderboard(conn: AsyncConnection, org: str, period: str) -> dict:
+async def quota_leaderboard(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     start, end = period_bounds(period)
     if not await table_exists(conn, "sales_targets") or not await table_exists(conn, "users"):
         return {"period": period, "data": [], "data_status": "targets_or_users_table_missing"}
@@ -556,9 +741,15 @@ async def quota_leaderboard(conn: AsyncConnection, org: str, period: str) -> dic
         target_type_filter = "AND LOWER(st.period_type) = ANY(:target_types)" if chosen_types else "AND 1 = 0"
     else:
         target_type_filter = ""
+
+    formatted_users = _format_scoped_users(scoped_users)
+    target_scope = _user_scope_filter("assigned_to_user_id", target_cols, formatted_users, "st")
     target_params = {"org": org, "start": start, "last_day": end - timedelta(days=1)}
+    if formatted_users:
+        target_params["scoped_users"] = formatted_users
     if chosen_types and "period_type" in target_cols:
         target_params["target_types"] = chosen_types
+
     result = await conn.execute(text(f"""
         SELECT u.id::text AS user_id, u.name, {target_currency} AS currency,
                COALESCE(SUM(
@@ -572,6 +763,7 @@ async def quota_leaderboard(conn: AsyncConnection, org: str, period: str) -> dic
         JOIN public.users u ON u.id = st.assigned_to_user_id AND u.organization_id = :org
         WHERE st.organization_id = :org
           AND st.period_start <= :last_day AND st.period_end >= :start
+          {target_scope}
           {target_active} {target_deleted} {target_type_filter}
         GROUP BY u.id, u.name, {target_currency}
         ORDER BY u.name
@@ -587,29 +779,51 @@ async def quota_leaderboard(conn: AsyncConnection, org: str, period: str) -> dic
         d_date = first_existing(deal_cols, ("close_date", "closed_at", "created_at"))
         currency_expr = "d.currency" if "currency" in deal_cols else "'USD'"
         status_expr = deal_status_expression(deal_cols, "d")
-        if d_date and "opportunity_id" in deal_cols and {"id", "owner_id"}.issubset(opp_cols):
+        if d_date:
             d_deleted = soft_delete_filter(deal_cols, "d")
-            o_deleted = soft_delete_filter(opp_cols, "o")
+            o_deleted = soft_delete_filter(opp_cols, "o") if opp_cols else ""
+            deal_params = {"org": org, "start": start, "end": end, "won_values": _won_values()}
+            deal_scope = f"AND COALESCE(d.owner_id, o.owner_id) = ANY(:scoped_users)" if formatted_users else ""
+            if formatted_users:
+                deal_params["scoped_users"] = formatted_users
             result = await conn.execute(text(f"""
-                SELECT o.owner_id::text AS user_id, {currency_expr} AS currency,
+                SELECT COALESCE(d.owner_id, o.owner_id)::text AS user_id, {currency_expr} AS currency,
                        COALESCE(SUM(d.amount),0) AS won_revenue, COUNT(*) AS deals_won
-                FROM public.deals d JOIN public.opportunities o ON o.id = d.opportunity_id
-                WHERE d.organization_id = :org AND o.organization_id = :org AND o.owner_id IS NOT NULL
+                FROM public.deals d LEFT JOIN public.opportunities o ON o.id = d.opportunity_id
+                WHERE d.organization_id = :org AND COALESCE(d.owner_id, o.owner_id) IS NOT NULL
                   AND {status_expr} = ANY(:won_values) AND d.{d_date} >= :start AND d.{d_date} < :end
+                  {deal_scope}
                   {d_deleted} {o_deleted}
-                GROUP BY o.owner_id, {currency_expr}
-            """), {"org": org, "start": start, "end": end, "won_values": _won_values()})
+                GROUP BY COALESCE(d.owner_id, o.owner_id), {currency_expr}
+            """), deal_params)
             for r in result.mappings():
                 won_by_key[(r["user_id"], str(r["currency"]))] = (float(r["won_revenue"] or 0), int(r["deals_won"]))
-    if opp_cols and {"organization_id", "owner_id", "amount", "stage"}.issubset(opp_cols):
-        o_deleted = soft_delete_filter(opp_cols, "o")
+    if (opp_cols and {"organization_id", "owner_id", "amount", "stage"}.issubset(opp_cols)) or (deal_cols and {"organization_id", "owner_id", "amount", "stage"}.issubset(deal_cols)):
         closed = [v.lower() for v in dict.fromkeys(_won_values() + _lost_values() + ["closed"])]
+        opp_params = {"org": org, "closed": closed}
+        opp_scope = f"AND t.owner_id = ANY(:scoped_users)" if formatted_users else ""
+        if formatted_users:
+            opp_params["scoped_users"] = formatted_users
         result = await conn.execute(text(f"""
-            SELECT o.owner_id::text AS user_id, COALESCE(SUM(o.amount),0) AS pipeline_value
-            FROM public.opportunities o WHERE o.organization_id = :org AND o.owner_id IS NOT NULL
-              AND LOWER(COALESCE(o.stage,'')) <> ALL(:closed) {o_deleted}
-            GROUP BY o.owner_id
-        """), {"org": org, "closed": closed})
+            WITH pipeline_items AS (
+                SELECT o.id, o.organization_id, o.owner_id, o.amount, LOWER(COALESCE(o.stage, '')) AS stage
+                FROM public.opportunities o
+                WHERE o.organization_id = :org {soft_delete_filter(opp_cols, 'o')}
+                UNION ALL
+                SELECT d.id, d.organization_id, d.owner_id, d.amount, LOWER(COALESCE(d.stage, '')) AS stage
+                FROM public.deals d
+                WHERE d.organization_id = :org
+                  AND (d.opportunity_id IS NULL OR d.opportunity_id NOT IN (SELECT sub_o.id FROM public.opportunities sub_o WHERE sub_o.organization_id = :org {soft_delete_filter(opp_cols, 'sub_o')}))
+                  {soft_delete_filter(deal_cols, 'd')}
+                  AND (d.status = 'open' OR d.status IS NULL)
+                  AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
+            )
+            SELECT t.owner_id::text AS user_id, COALESCE(SUM(t.amount),0) AS pipeline_value
+            FROM pipeline_items t WHERE t.organization_id = :org AND t.owner_id IS NOT NULL
+              AND t.stage <> ALL(:closed)
+              {opp_scope}
+            GROUP BY t.owner_id
+        """), opp_params)
         for r in result.mappings():
             pipeline_by_key[r["user_id"]] = float(r["pipeline_value"] or 0)
 
@@ -636,7 +850,7 @@ async def quota_leaderboard(conn: AsyncConnection, org: str, period: str) -> dic
     }
 
 
-async def target_pace(conn: AsyncConnection, org: str, period: str) -> dict:
+async def target_pace(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
     start, end = period_bounds(period)
     today = datetime.now(timezone.utc).date()
     targets_exist = await table_exists(conn, "sales_targets")
@@ -663,9 +877,15 @@ async def target_pace(conn: AsyncConnection, org: str, period: str) -> dict:
         target_type_filter = "AND LOWER(period_type) = ANY(:target_types)" if chosen_types else "AND 1 = 0"
     else:
         target_type_filter = ""
+
+    formatted_users = _format_scoped_users(scoped_users)
+    target_scope = _user_scope_filter("assigned_to_user_id", cols, formatted_users, "public.sales_targets")
     target_params = {"org": org, "start": start, "last_day": end - timedelta(days=1)}
+    if formatted_users:
+        target_params["scoped_users"] = formatted_users
     if chosen_types and "period_type" in cols:
         target_params["target_types"] = chosen_types
+
     result = await conn.execute(text(f"""
         SELECT {currency_expr} AS currency,
                COALESCE(SUM(
@@ -675,7 +895,9 @@ async def target_pace(conn: AsyncConnection, org: str, period: str) -> dict:
                ),0) AS target_amount,
                MIN(period_start) AS period_start, MAX(period_end) AS period_end
         FROM public.sales_targets
-        WHERE organization_id = :org AND period_start <= :last_day AND period_end >= :start {active} {target_type_filter}
+        WHERE organization_id = :org AND period_start <= :last_day AND period_end >= :start
+          {target_scope}
+          {active} {target_type_filter}
         GROUP BY {currency_expr}
     """), target_params)
     target_rows = list(result.mappings())
@@ -687,13 +909,19 @@ async def target_pace(conn: AsyncConnection, org: str, period: str) -> dict:
             status = deal_status_expression(deal_cols)
             c = "currency" if "currency" in deal_cols else None
             c_expr = c if c else "'USD'"
+            opp_cols = await get_columns(conn, "opportunities") if await table_exists(conn, "opportunities") else set()
+            deal_scope = _deal_scope_filter(deal_cols, opp_cols, formatted_users, "t")
+            deal_params = {"org": org, "start": start, "end": end, "won_values": _won_values()}
+            if formatted_users:
+                deal_params["scoped_users"] = formatted_users
             result = await conn.execute(text(f"""
                 SELECT {c_expr} AS currency, COALESCE(SUM(amount),0) AS revenue
                 FROM public.deals t WHERE organization_id = :org
                   AND {status} = ANY(:won_values) AND t.{date_col} >= :start AND t.{date_col} < :end
+                  {deal_scope}
                   {soft_delete_filter(deal_cols)}
                 GROUP BY {c_expr}
-            """), {"org": org, "start": start, "end": end, "won_values": _won_values()})
+            """), deal_params)
             actual_by_currency = {str(r["currency"]): float(r["revenue"] or 0) for r in result.mappings()}
     days_total = max(1, (end - start).days)
     days_elapsed = max(0, min(days_total, (min(today + timedelta(days=1), end) - start).days))

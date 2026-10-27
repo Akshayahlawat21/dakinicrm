@@ -30,6 +30,9 @@ class GatewaySettings(BaseSettings):
 
     # E2 & E3: Upstream Layer 3 Backend Routing
     UPSTREAM_API_URL: str = "http://localhost:8000"
+
+    # Private Layer 9 reporting service. Reach it only through this gateway.
+    ANALYTICS_API_URL: str = "http://localhost:8090"
     UPSTREAM_TIMEOUT_SECONDS: float = 15.0
     MOCK_UPSTREAM_IF_DOWN: bool = False  # False by default; only allowed in development
 

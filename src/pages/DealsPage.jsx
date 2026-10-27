@@ -32,24 +32,40 @@ export default function DealsPage() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const stages = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"];
 
-  const totalPipeline = deals
-    .filter((d) => d.stage !== 'Lost')
-    .reduce((acc, d) => acc + d.value, 0);
+  const normalizeStage = (stg) => {
+    if (!stg) return 'Qualified';
+    const s = String(stg).toLowerCase().trim();
+    if (s === 'discovery' || s === 'qualification' || s === 'qualified') return 'Qualified';
+    if (s === 'proposal') return 'Proposal';
+    if (s === 'negotiation') return 'Negotiation';
+    if (s === 'won' || s.includes('won')) return 'Won';
+    if (s === 'lost' || s.includes('lost')) return 'Lost';
+    return stg;
+  };
+
+  const activePipeline = deals
+    .filter((d) => !['Lost', 'Won'].includes(normalizeStage(d.stage)))
+    .reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
 
   const wonTotal = deals
-    .filter((d) => d.stage === 'Won')
-    .reduce((acc, d) => acc + d.value, 0);
+    .filter((d) => normalizeStage(d.stage) === 'Won')
+    .reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
+
+  const totalPipeline = activePipeline + wonTotal;
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       {/* Deals Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
               Deals & Active Pipeline
             </h1>
-            <span className="badge badge-blue">
+            <span className="badge badge-blue" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
+              Active Pipeline: ${activePipeline.toLocaleString()}
+            </span>
+            <span className="badge badge-gray" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
               Total: ${totalPipeline.toLocaleString()}
             </span>
           </div>
@@ -124,8 +140,9 @@ export default function DealsPage() {
           {/* Salesforce Path Chevrons */}
           <div className="salesforce-path">
             {stages.map((stg, idx) => {
-              const currentIdx = stages.indexOf(selectedDeal.stage);
-              const isCurrent = selectedDeal.stage === stg;
+              const currentStage = normalizeStage(selectedDeal.stage);
+              const currentIdx = stages.indexOf(currentStage);
+              const isCurrent = currentStage === stg;
               const isPast = idx < currentIdx;
 
               return (
@@ -154,8 +171,8 @@ export default function DealsPage() {
           {/* Kanban Board */}
           <div className="deals-kanban-board">
         {stages.map((stg) => {
-          const stageDeals = deals.filter((d) => d.stage === stg);
-          const stageValue = stageDeals.reduce((acc, d) => acc + d.value, 0);
+          const stageDeals = deals.filter((d) => normalizeStage(d.stage) === stg);
+          const stageValue = stageDeals.reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
 
           return (
             <div key={stg} className="kanban-column">
@@ -212,7 +229,7 @@ export default function DealsPage() {
                             ${deal.value.toLocaleString()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            {deal.probability}% prob.
+                            {deal.probability != null ? `${deal.probability}% prob.` : normalizeStage(deal.stage) === 'Won' ? '100% prob.' : normalizeStage(deal.stage) === 'Lost' ? '0% prob.' : '50% prob.'}
                           </span>
                         </div>
 

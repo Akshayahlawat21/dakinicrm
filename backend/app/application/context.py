@@ -14,7 +14,10 @@ class RequestContext:
     tenant_id: str
     role: str  # 'owner', 'manager', 'salesperson'
     team_id: Optional[str] = None
+    token_version: int = 1
+    must_change_password: bool = False
     correlation_id: str = "req_internal"
+    can_access_unassigned: bool = False
 
     def __post_init__(self):
         # Normalize role to lowercase

@@ -32,6 +32,17 @@ async def list_deals(
 ):
     service = DealService(session)
     deals, total = await service.list_deals(ctx, skip=skip, limit=limit, stage=stage)
+
+    from sqlalchemy import select
+    from backend.app.data.models.user import User
+
+    user_ids = {d.owner_id for d in deals if getattr(d, 'owner_id', None)}
+    user_map = {}
+    if user_ids:
+        users_stmt = select(User.id, User.name).where(User.id.in_(user_ids))
+        users_res = await session.execute(users_stmt)
+        user_map = {row.id: row.name for row in users_res}
+
     dtos = [
         DealResponse(
             id=str(d.id),
@@ -42,13 +53,15 @@ async def list_deals(
             currency=d.currency,
             stage=d.stage,
             status=d.status,
+            owner_id=str(d.owner_id) if getattr(d, 'owner_id', None) else None,
+            owner=user_map.get(getattr(d, 'owner_id', None)),
             created_at=d.created_at,
         )
         for d in deals
     ]
     print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} deals from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
     for deal in dtos[:3]:
-        print(f"   * Deal: {deal.name} | Amount: ${deal.amount} | Stage: {deal.stage}", flush=True)
+        print(f"   * Deal: {deal.name} | Amount: ${deal.amount} | Stage: {deal.stage} | Owner: {deal.owner}", flush=True)
     return PaginatedResponse(
         status="success",
         data=dtos,
@@ -88,6 +101,11 @@ async def create_deal(
         opportunity_id=body.opportunity_id,
     )
     await session.commit()
+
+    from backend.app.data.models.user import User
+    creator = await session.get(User, ctx.user_uuid) if ctx.user_uuid else None
+    owner_name = creator.name if creator else None
+
     print(f"\n[SUPABASE DB CREATE] >> Successfully created Deal '{deal.name}' in Supabase (ID: {deal.id}, Amount: ${deal.amount}, Stage: {deal.stage})", flush=True)
     return StandardResponse(
         status="success",
@@ -100,6 +118,8 @@ async def create_deal(
             currency=deal.currency,
             stage=deal.stage,
             status=deal.status,
+            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
+            owner=owner_name,
             created_at=deal.created_at,
         ),
         correlation_id=ctx.correlation_id,
@@ -114,6 +134,14 @@ async def get_deal(
 ):
     service = DealService(session)
     deal = await service.get_deal(ctx, deal_id)
+
+    from backend.app.data.models.user import User
+    owner_name = None
+    if getattr(deal, 'owner_id', None):
+        u = await session.get(User, deal.owner_id)
+        if u:
+            owner_name = u.name
+
     return StandardResponse(
         status="success",
         data=DealResponse(
@@ -125,6 +153,8 @@ async def get_deal(
             currency=deal.currency,
             stage=deal.stage,
             status=deal.status,
+            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
+            owner=owner_name,
             created_at=deal.created_at,
         ),
         correlation_id=ctx.correlation_id,

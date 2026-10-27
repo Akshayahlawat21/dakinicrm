@@ -10,7 +10,9 @@
     "gateway": "python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8080 --reload",
     "gateway:test": "pytest gateway/tests -v",
     "backend": "python backend/run.py",
-    "backend:test": "pytest backend/tests -v"
+    "backend:test": "pytest backend/tests -v",
+    "analytics": "python -m uvicorn app.main:app --app-dir analytics --host 127.0.0.1 --port 8090 --reload",
+    "analytics:test": "pytest analytics/tests -o pythonpath=analytics -v"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

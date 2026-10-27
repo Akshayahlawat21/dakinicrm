@@ -60,11 +60,31 @@ async def get_request_context(request: Request) -> RequestContext:
         resolved_user = KNOWN_USERS.get(gateway_user, gateway_user)
         resolved_tenant = KNOWN_TENANTS.get(gateway_tenant, gateway_tenant)
 
+        gateway_tv = request.headers.get("X-Token-Version")
+        gateway_mcp = request.headers.get("X-Must-Change-Password")
+        token_version = int(gateway_tv) if gateway_tv and gateway_tv.isdigit() else 1
+        must_change_password = gateway_mcp == "true" if gateway_mcp else False
+
+        # Gate protected CRM routes if password change required
+        if must_change_password:
+            allowed_paths = (
+                "/v1/users/change-password",
+                "/v1/auth/change-password",
+                "/v1/users/me",
+                "/v1/auth/me",
+                "/health",
+                "/v1/health",
+            )
+            if not any(request.url.path.startswith(p) for p in allowed_paths):
+                raise ForbiddenError("Password change required before accessing CRM resources", code="PASSWORD_CHANGE_REQUIRED")
+
         return RequestContext(
             user_id=resolved_user,
             tenant_id=resolved_tenant,
             role=primary_role,
             team_id=gateway_team,
+            token_version=token_version,
+            must_change_password=must_change_password,
             correlation_id=correlation_id,
         )
 
@@ -86,6 +106,8 @@ async def get_request_context(request: Request) -> RequestContext:
         tenant_id = payload.get("tenant_id") or payload.get("organization_id")
         roles = payload.get("roles", ["salesperson"])
         team_id = payload.get("team_id")
+        token_version = payload.get("tv", payload.get("token_version", 1))
+        must_change_password = payload.get("mcp", payload.get("must_change_password", False))
 
         if not user_id or not tenant_id:
             raise UnauthorizedError("Token missing mandatory user_id or tenant_id claims")
@@ -120,11 +142,26 @@ async def get_request_context(request: Request) -> RequestContext:
         elif isinstance(roles, str):
             primary_role = roles.lower()
 
+        # Gate protected CRM routes if password change required
+        if must_change_password:
+            allowed_paths = (
+                "/v1/users/change-password",
+                "/v1/auth/change-password",
+                "/v1/users/me",
+                "/v1/auth/me",
+                "/health",
+                "/v1/health",
+            )
+            if not any(request.url.path.startswith(p) for p in allowed_paths):
+                raise ForbiddenError("Password change required before accessing CRM resources", code="PASSWORD_CHANGE_REQUIRED")
+
         return RequestContext(
             user_id=str(user_id),
             tenant_id=str(tenant_id),
             role=primary_role,
             team_id=str(team_id) if team_id else None,
+            token_version=int(token_version),
+            must_change_password=bool(must_change_password),
             correlation_id=correlation_id,
         )
 
@@ -132,3 +169,4 @@ async def get_request_context(request: Request) -> RequestContext:
         raise UnauthorizedError("Token has expired")
     except jwt.PyJWTError as exc:
         raise UnauthorizedError(f"Invalid token signature: {exc}")
+

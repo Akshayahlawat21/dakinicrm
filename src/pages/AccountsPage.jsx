@@ -12,7 +12,10 @@ import {
 } from 'lucide-react';
 
 export default function AccountsPage() {
-  const { accounts = [], deleteAccount, navigateTo, setIsQuickCreateOpen, setQuickCreateType, isLoadingData } = useCRM();
+  const { accounts = [], deleteAccount, navigateTo, setIsQuickCreateOpen, setQuickCreateType, isLoadingData, currentUser } = useCRM();
+
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'owner').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
 
 
   const [search, setSearch] = useState('');
@@ -51,7 +54,7 @@ export default function AccountsPage() {
         <button
           className="btn btn-primary"
           onClick={() => {
-            setQuickCreateType('lead');
+            setQuickCreateType('account');
             setIsQuickCreateOpen(true);
           }}
         >
@@ -190,9 +193,14 @@ export default function AccountsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
                         <button
                           type="button"
-                          title="Delete Account"
+                          title={isOwner ? "Delete Account" : "Permission Denied: Only Organization Owners can delete accounts"}
+                          disabled={!isOwner}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!isOwner) {
+                              alert("Permission Denied: Only Organization Owners are permitted to delete accounts.");
+                              return;
+                            }
                             if (window.confirm(`Delete account "${displayName}"?`)) {
                               deleteAccount(acc.id);
                               if (selectedAccount?.id === acc.id) setSelectedAccount(null);
@@ -201,15 +209,20 @@ export default function AccountsPage() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
+                            color: isOwner ? '#94a3b8' : '#cbd5e1',
+                            cursor: isOwner ? 'pointer' : 'not-allowed',
                             padding: 4,
                             borderRadius: 4,
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            opacity: isOwner ? 1 : 0.4
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          onMouseEnter={(e) => {
+                            if (isOwner) e.currentTarget.style.color = '#ef4444';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isOwner) e.currentTarget.style.color = '#94a3b8';
+                          }}
                         >
                           <Trash2 size={15} />
                         </button>

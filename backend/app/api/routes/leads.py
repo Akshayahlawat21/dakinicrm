@@ -21,17 +21,30 @@ async def list_leads(
 ):
     service = LeadService(session)
     leads, total = await service.list_leads(ctx, skip=skip, limit=limit, status=status)
+    from sqlalchemy import select
+    from backend.app.data.models.user import User
+
+    user_ids = {l.assigned_to for l in leads if l.assigned_to}
+    user_map = {}
+    if user_ids:
+        users_stmt = select(User.id, User.name).where(User.id.in_(user_ids))
+        users_res = await session.execute(users_stmt)
+        user_map = {row.id: row.name for row in users_res}
+
     dtos = [
         LeadResponse(
             id=str(l.id),
             organization_id=str(l.organization_id),
             name=l.name,
+            company=getattr(l, "company", None) or l.name,
             email=l.email,
             phone=l.phone,
             industry=l.industry,
+            source=l.source or "Website",
             status=l.status,
             score=l.score,
             assigned_to=str(l.assigned_to) if l.assigned_to else None,
+            owner=user_map.get(l.assigned_to),
             created_at=l.created_at,
         )
         for l in leads
@@ -68,6 +81,10 @@ async def create_lead(
         assigned_to=body.assigned_to,
     )
     await session.commit()
+    from backend.app.data.models.user import User
+    creator = await session.get(User, ctx.user_uuid) if ctx.user_uuid else None
+    owner_name = creator.name if creator else None
+
     print(f"\n[SUPABASE DB CREATE] >> Successfully created Lead '{lead.name}' in Supabase (ID: {lead.id}, Company: {body.company})", flush=True)
     return StandardResponse(
         status="success",
@@ -75,12 +92,15 @@ async def create_lead(
             id=str(lead.id),
             organization_id=str(lead.organization_id),
             name=lead.name,
+            company=body.company or lead.name,
             email=lead.email,
             phone=lead.phone,
             industry=lead.industry,
+            source=lead.source or "Website",
             status=lead.status,
             score=lead.score,
             assigned_to=str(lead.assigned_to) if lead.assigned_to else None,
+            owner=owner_name,
             created_at=lead.created_at,
         ),
         correlation_id=ctx.correlation_id,
@@ -95,18 +115,28 @@ async def get_lead(
 ):
     service = LeadService(session)
     lead = await service.get_lead(ctx, lead_id)
+    from backend.app.data.models.user import User
+    owner_name = None
+    if lead.assigned_to:
+        u = await session.get(User, lead.assigned_to)
+        if u:
+            owner_name = u.name
+
     return StandardResponse(
         status="success",
         data=LeadResponse(
             id=str(lead.id),
             organization_id=str(lead.organization_id),
             name=lead.name,
+            company=getattr(lead, "company", None) or lead.name,
             email=lead.email,
             phone=lead.phone,
             industry=lead.industry,
+            source=lead.source or "Website",
             status=lead.status,
             score=lead.score,
             assigned_to=str(lead.assigned_to) if lead.assigned_to else None,
+            owner=owner_name,
             created_at=lead.created_at,
         ),
         correlation_id=ctx.correlation_id,

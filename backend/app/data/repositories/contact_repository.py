@@ -98,3 +98,34 @@ class ContactRepository(BaseRepository[Contact]):
         )
         res = await self.session.execute(stmt)
         return list(res.scalars().all())
+
+    async def list_scoped_by_accounts(
+        self,
+        tenant_id: str | uuid.UUID,
+        account_ids: Any,
+        skip: int = 0,
+        limit: int = 50,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> tuple[List[Contact], int]:
+        tenant_uuid = self._parse_uuid(tenant_id)
+        if not account_ids:
+            return [], 0
+
+        base_filter = [
+            Account.organization_id == tenant_uuid,
+            Contact.account_id.in_(list(account_ids)),
+            Contact.deleted_at.is_(None),
+            Account.deleted_at.is_(None),
+        ]
+        if filters:
+            for field, val in filters.items():
+                if hasattr(Contact, field) and val is not None:
+                    base_filter.append(getattr(Contact, field) == val)
+
+        count_stmt = select(func.count(Contact.id)).join(Account, Account.id == Contact.account_id).where(*base_filter)
+        count_res = await self.session.execute(count_stmt)
+        total = count_res.scalar_one()
+
+        stmt = select(Contact).join(Account, Account.id == Contact.account_id).where(*base_filter).order_by(Contact.created_at.desc()).offset(skip).limit(limit)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all()), total

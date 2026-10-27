@@ -16,6 +16,7 @@ import QuickCreateModal from './components/modals/QuickCreateModal';
 import CommandPalette from './components/common/CommandPalette';
 import NotificationsModal from './components/modals/NotificationsModal';
 import SignInModal from './components/modals/SignInModal';
+import ChangePasswordModal from './components/modals/ChangePasswordModal';
 
 // Pages
 import SignInPage from './pages/SignInPage';
@@ -80,6 +81,7 @@ function AppLayout() {
       <CommandPalette />
       <NotificationsModal />
       <SignInModal />
+      <ChangePasswordModal />
     </div>
   );
 }

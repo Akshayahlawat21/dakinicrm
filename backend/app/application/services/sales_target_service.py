@@ -112,13 +112,60 @@ class SalesTargetService:
         """Returns all targets assigned to the calling user."""
         return await self.target_repo.list_by_user(ctx.user_id, ctx.tenant_id)
 
+    async def get_target(self, ctx: RequestContext, target_id: str | uuid.UUID) -> SalesTarget:
+        try:
+            target = await self.target_repo.get_by_id_scoped(target_id, ctx.tenant_id)
+            if ctx.is_owner:
+                return target
+
+            if ctx.is_salesperson:
+                if str(target.assigned_to_user_id) != str(ctx.user_id) and str(target.assigned_to_user_id) != str(ctx.user_uuid):
+                    raise ForbiddenError("Salespersons can only view their own sales targets")
+                return target
+
+            if ctx.is_manager:
+                mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+                if not mgr_team:
+                    if str(target.assigned_to_user_id) != str(ctx.user_id) and str(target.assigned_to_user_id) != str(ctx.user_uuid):
+                        raise ForbiddenError("Managers without an active team can only view their own sales targets")
+                else:
+                    is_in_team = await self.team_repo.is_user_in_team(
+                        user_id=target.assigned_to_user_id, team_id=mgr_team.id, tenant_id=ctx.tenant_id
+                    )
+                    if not is_in_team and str(target.assigned_to_user_id) != str(ctx.user_id) and str(target.assigned_to_user_id) != str(ctx.user_uuid):
+                        raise ForbiddenError("Managers cannot access sales targets belonging to other teams")
+                return target
+
+            return target
+        except RecordNotFoundError:
+            raise NotFoundError(f"Sales target '{target_id}' was not found in this organization")
+
     async def list_targets(
         self, ctx: RequestContext, skip: int = 0, limit: int = 50
     ) -> tuple[List[SalesTarget], int]:
         filters = {}
+        if ctx.is_owner:
+            return await self.target_repo.list_scoped(
+                tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
+            )
+
         if ctx.is_salesperson:
             # Salespersons can only view their own targets
             filters["assigned_to_user_id"] = ctx.user_uuid
+            return await self.target_repo.list_scoped(
+                tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
+            )
+
+        if ctx.is_manager:
+            mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+            if not mgr_team:
+                user_ids = [ctx.user_uuid]
+            else:
+                team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+                user_ids = [u.id for u in team_users] + [ctx.user_uuid]
+            return await self.target_repo.list_scoped_by_users(
+                tenant_id=ctx.tenant_id, user_ids=user_ids, skip=skip, limit=limit, filters=filters
+            )
 
         return await self.target_repo.list_scoped(
             tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters

@@ -66,6 +66,42 @@ class TaskRepository(BaseRepository[Activity]):
         res = await self.session.execute(stmt)
         return list(res.scalars().all()), total
 
+    async def list_scoped_by_users(
+        self,
+        tenant_id: str | uuid.UUID,
+        user_ids: List[uuid.UUID],
+        skip: int = 0,
+        limit: int = 50,
+        filters: Optional[Dict[str, Any]] = None,
+        order_by: Any = None,
+    ) -> tuple[List[Activity], int]:
+        tenant_uuid = self._parse_uuid(tenant_id)
+        if not user_ids:
+            return [], 0
+        base_filter = [
+            Activity.organization_id == tenant_uuid,
+            Activity.type == "task",
+            Activity.user_id.in_(user_ids),
+        ]
+        if filters:
+            for field, val in filters.items():
+                if hasattr(Activity, field) and val is not None:
+                    base_filter.append(getattr(Activity, field) == val)
+
+        count_stmt = select(func.count(Activity.id)).where(*base_filter)
+        count_res = await self.session.execute(count_stmt)
+        total = count_res.scalar_one()
+
+        stmt = select(Activity).where(*base_filter)
+        if order_by is not None:
+            stmt = stmt.order_by(order_by)
+        else:
+            stmt = stmt.order_by(Activity.created_at.desc())
+
+        stmt = stmt.offset(skip).limit(limit)
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all()), total
+
     async def create_task(
         self,
         tenant_id: str | uuid.UUID,

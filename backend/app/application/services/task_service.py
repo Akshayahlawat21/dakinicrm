@@ -96,9 +96,27 @@ class TaskService:
     async def get_task(self, ctx: RequestContext, task_id: str | uuid.UUID) -> Activity:
         try:
             task = await self.task_repo.get_by_id_scoped(task_id, ctx.tenant_id)
-            # Salesperson can only view their own tasks
-            if ctx.is_salesperson and str(task.user_id) != str(ctx.user_id) and str(task.user_id) != str(ctx.user_uuid):
-                raise ForbiddenError("Salespersons can only view tasks assigned to them")
+            if ctx.is_owner:
+                return task
+
+            if ctx.is_salesperson:
+                if str(task.user_id) != str(ctx.user_id) and str(task.user_id) != str(ctx.user_uuid):
+                    raise ForbiddenError("Salespersons can only view tasks assigned to them")
+                return task
+
+            if ctx.is_manager:
+                mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+                if not mgr_team:
+                    if str(task.user_id) != str(ctx.user_id) and str(task.user_id) != str(ctx.user_uuid):
+                        raise ForbiddenError("Managers without an active team can only view their own tasks")
+                else:
+                    is_in_team = await self.team_repo.is_user_in_team(
+                        user_id=task.user_id, team_id=mgr_team.id, tenant_id=ctx.tenant_id
+                    )
+                    if not is_in_team and str(task.user_id) != str(ctx.user_id) and str(task.user_id) != str(ctx.user_uuid):
+                        raise ForbiddenError("Managers cannot access tasks belonging to other teams")
+                return task
+
             return task
         except RecordNotFoundError:
             raise NotFoundError(f"Task '{task_id}' was not found in this organization")
@@ -111,9 +129,37 @@ class TaskService:
         filters: Optional[Dict[str, Any]] = None,
     ) -> tuple[List[Activity], int]:
         filters = filters or {}
-        # Salespersons only see tasks assigned to them
+        if ctx.is_owner:
+            return await self.task_repo.list_scoped(
+                tenant_id=ctx.tenant_id,
+                skip=skip,
+                limit=limit,
+                filters=filters,
+            )
+
         if ctx.is_salesperson:
             filters["user_id"] = ctx.user_uuid
+            return await self.task_repo.list_scoped(
+                tenant_id=ctx.tenant_id,
+                skip=skip,
+                limit=limit,
+                filters=filters,
+            )
+
+        if ctx.is_manager:
+            mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+            if not mgr_team:
+                user_ids = [ctx.user_uuid]
+            else:
+                team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+                user_ids = [u.id for u in team_users] + [ctx.user_uuid]
+            return await self.task_repo.list_scoped_by_users(
+                tenant_id=ctx.tenant_id,
+                user_ids=user_ids,
+                skip=skip,
+                limit=limit,
+                filters=filters,
+            )
 
         return await self.task_repo.list_scoped(
             tenant_id=ctx.tenant_id,
@@ -138,6 +184,8 @@ class TaskService:
 
     async def delete_task(self, ctx: RequestContext, task_id: str | uuid.UUID) -> bool:
         task = await self.get_task(ctx, task_id)
+        PermissionService.check_can_delete_task(ctx, str(task.organization_id), created_by_id=task.user_id)
+
         await self.task_repo.delete_scoped(task.id, ctx.tenant_id, soft_delete=True)
         await self.audit_repo.record_event(
             tenant_id=ctx.tenant_id,

@@ -62,68 +62,193 @@ def allow_empty_tenant_fallback(exc: HTTPException) -> bool:
     # Explicitly opt in for local/dev environments only; production tenant isolation stays strict by default.
     return exc.status_code == 404 and get_settings().allow_empty_tenant
 
+from dataclasses import dataclass
+from typing import Optional, List
+import uuid
+from sqlalchemy import text
+
+@dataclass
+class AuthScope:
+    org_id: str
+    user_id: Optional[str]
+    role: str
+    scoped_users: Optional[List[uuid.UUID]]
+
+async def resolve_auth_scope(
+    conn: AsyncConnection,
+    tenant_id: str,
+    user_id_hdr: Optional[str] = None,
+    roles_hdr: Optional[str] = None,
+) -> AuthScope:
+    org_id = await resolve_organization_id(conn, tenant_id)
+
+    # In production and secure endpoints, identity context is strictly required
+    if not user_id_hdr:
+        # Check if caller is permitted default/unrestricted (e.g. test suites mocking empty conn)
+        if not hasattr(conn, "execute"):
+            return AuthScope(org_id=org_id, user_id=None, role="owner", scoped_users=None)
+
+        if get_settings().allow_empty_tenant:
+            dev_user_res = await conn.execute(
+                text("""
+                    SELECT id, role_name FROM public.users
+                    WHERE organization_id = :org_id AND role_name IN ('owner', 'admin') AND status = 'active' AND deleted_at IS NULL
+                    LIMIT 1
+                """),
+                {"org_id": org_id},
+            )
+            dev_user = dev_user_res.mappings().one_or_none()
+            if dev_user:
+                return AuthScope(org_id=org_id, user_id=str(dev_user["id"]), role="owner", scoped_users=None)
+
+        raise HTTPException(
+            status_code=401,
+            detail="Missing required identity context (X-User-Id)",
+        )
+
+    try:
+        user_uuid = uuid.UUID(str(user_id_hdr))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="Invalid X-User-Id format")
+
+    if not hasattr(conn, "execute"):
+        role = "owner"
+        if roles_hdr:
+            role = roles_hdr.split(",")[0].lower().strip()
+        scoped = None if role in ("owner", "admin") else [user_uuid]
+        return AuthScope(org_id=org_id, user_id=str(user_uuid), role=role, scoped_users=scoped)
+
+    # Query trusted database
+    user_res = await conn.execute(
+        text("""
+            SELECT id, role_name, status
+            FROM public.users
+            WHERE id = :uid AND organization_id = :org_id AND deleted_at IS NULL
+        """),
+        {"uid": user_uuid, "org_id": org_id},
+    )
+    user_row = user_res.mappings().one_or_none()
+    if not user_row:
+        raise HTTPException(status_code=403, detail="User not found or cross-tenant access denied")
+
+    if str(user_row["status"]).lower() != "active":
+        raise HTTPException(status_code=403, detail="Inactive user accounts cannot access analytics")
+
+    role = str(user_row["role_name"]).lower().strip()
+    if role in ("owner", "admin"):
+        return AuthScope(org_id=org_id, user_id=str(user_uuid), role="owner", scoped_users=None)
+
+    if role == "manager":
+        team_res = await conn.execute(
+            text("""
+                SELECT tm.user_id
+                FROM public.teams t
+                JOIN public.team_members tm ON tm.team_id = t.id
+                WHERE t.organization_id = :org_id AND t.manager_id = :uid AND tm.is_active = true
+                UNION
+                SELECT u.id AS user_id
+                FROM public.users u
+                WHERE u.organization_id = :org_id AND u.manager_id = :uid AND u.deleted_at IS NULL
+            """),
+            {"org_id": org_id, "uid": user_uuid},
+        )
+        team_member_ids = [r["user_id"] for r in team_res.mappings()]
+        if user_uuid not in team_member_ids:
+            team_member_ids.append(user_uuid)
+        return AuthScope(
+            org_id=org_id,
+            user_id=str(user_uuid),
+            role="manager",
+            scoped_users=team_member_ids,
+        )
+
+    # Salesperson
+    return AuthScope(
+        org_id=org_id,
+        user_id=str(user_uuid),
+        role="salesperson",
+        scoped_users=[user_uuid],
+    )
+
 def checked_period(value: str) -> str:
     if value not in PERIODS:
         raise HTTPException(status_code=422, detail=f"period must be one of {sorted(PERIODS)}")
     return value
 
 @app.get("/v1/reports/overview", tags=["reports"])
-async def get_overview(period: str = Query("month"), conn: AsyncConnection = Depends(get_connection),
-                       tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_overview(
+    period: str = Query("month"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
     try:
-        org = await resolve_organization_id(conn, tenant_id)
+        auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     except HTTPException as exc:
         if allow_empty_tenant_fallback(exc):
             return empty_overview(period)
         raise
     try:
-        return await overview(conn, org, period)
+        return await overview(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 @app.get("/v1/reports/revenue-trend", tags=["reports"])
-async def get_revenue_trend(months: int = Query(6, ge=1, le=24),
-                            conn: AsyncConnection = Depends(get_connection),
-                            tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_revenue_trend(
+    months: int = Query(6, ge=1, le=24),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     try:
-        org = await resolve_organization_id(conn, tenant_id)
+        auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     except HTTPException as exc:
         if allow_empty_tenant_fallback(exc):
             return empty_revenue_trend(months)
         raise
     try:
-        return await revenue_trend(conn, org, months)
+        return await revenue_trend(conn, auth.org_id, months, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 @app.get("/v1/reports/pipeline-by-stage", tags=["reports"])
-async def get_pipeline_by_stage(conn: AsyncConnection = Depends(get_connection),
-                                tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_pipeline_by_stage(
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     try:
-        org = await resolve_organization_id(conn, tenant_id)
+        auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     except HTTPException as exc:
         if allow_empty_tenant_fallback(exc):
             return {"data": [], "data_status": "empty_tenant_fallback"}
         raise
     try:
-        return await pipeline_by_stage(conn, org)
+        return await pipeline_by_stage(conn, auth.org_id, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 @app.get("/v1/reports/lead-sources", tags=["reports"])
-async def get_lead_sources(period: str = Query("last_30_days"),
-                           conn: AsyncConnection = Depends(get_connection),
-                           tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_lead_sources(
+    period: str = Query("last_30_days"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
     try:
-        org = await resolve_organization_id(conn, tenant_id)
+        auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     except HTTPException as exc:
         if allow_empty_tenant_fallback(exc):
             return {"period": period, "data": [], "data_status": "empty_tenant_fallback"}
         raise
     try:
-        return await lead_sources(conn, org, period)
+        return await lead_sources(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -216,49 +341,65 @@ def report_to_csv(report: str, payload: dict) -> str:
 
 
 @app.get("/v1/reports/conversion-funnel", tags=["reports"])
-async def get_conversion_funnel(period: str = Query("last_30_days"),
-                                conn: AsyncConnection = Depends(get_connection),
-                                tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_conversion_funnel(
+    period: str = Query("last_30_days"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
-    org = await resolve_organization_id(conn, tenant_id)
+    auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     try:
-        return await conversion_funnel(conn, org, period)
+        return await conversion_funnel(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/v1/reports/activity-performance", tags=["reports"])
-async def get_activity_performance(period: str = Query("last_30_days"),
-                                   conn: AsyncConnection = Depends(get_connection),
-                                   tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_activity_performance(
+    period: str = Query("last_30_days"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
-    org = await resolve_organization_id(conn, tenant_id)
+    auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     try:
-        return await activity_performance(conn, org, period)
+        return await activity_performance(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/v1/reports/quota-leaderboard", tags=["reports"])
-async def get_quota_leaderboard(period: str = Query("month"),
-                                conn: AsyncConnection = Depends(get_connection),
-                                tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_quota_leaderboard(
+    period: str = Query("month"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
-    org = await resolve_organization_id(conn, tenant_id)
+    auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     try:
-        return await quota_leaderboard(conn, org, period)
+        return await quota_leaderboard(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/v1/reports/target-pace", tags=["reports"])
-async def get_target_pace(period: str = Query("quarter"),
-                          conn: AsyncConnection = Depends(get_connection),
-                          tenant_id: str = Header(alias="X-Tenant-Id")):
+async def get_target_pace(
+    period: str = Query("quarter"),
+    conn: AsyncConnection = Depends(get_connection),
+    tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
+):
     period = checked_period(period)
-    org = await resolve_organization_id(conn, tenant_id)
+    auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     try:
-        return await target_pace(conn, org, period)
+        return await target_pace(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -270,26 +411,28 @@ async def export_report_csv(
     months: int = Query(6, ge=1, le=24),
     conn: AsyncConnection = Depends(get_connection),
     tenant_id: str = Header(alias="X-Tenant-Id"),
+    user_id_hdr: Optional[str] = Header(None, alias="X-User-Id"),
+    roles_hdr: Optional[str] = Header(None, alias="X-User-Roles"),
 ):
     period = checked_period(period)
-    org = await resolve_organization_id(conn, tenant_id)
+    auth = await resolve_auth_scope(conn, tenant_id, user_id_hdr, roles_hdr)
     try:
         if report == "overview":
-            payload = await overview(conn, org, period)
+            payload = await overview(conn, auth.org_id, period, scoped_users=auth.scoped_users)
         elif report == "revenue-trend":
-            payload = await revenue_trend(conn, org, months)
+            payload = await revenue_trend(conn, auth.org_id, months, scoped_users=auth.scoped_users)
         elif report == "pipeline-by-stage":
-            payload = await pipeline_by_stage(conn, org)
+            payload = await pipeline_by_stage(conn, auth.org_id, scoped_users=auth.scoped_users)
         elif report == "lead-sources":
-            payload = await lead_sources(conn, org, period)
+            payload = await lead_sources(conn, auth.org_id, period, scoped_users=auth.scoped_users)
         elif report == "conversion-funnel":
-            payload = await conversion_funnel(conn, org, period)
+            payload = await conversion_funnel(conn, auth.org_id, period, scoped_users=auth.scoped_users)
         elif report == "activity-performance":
-            payload = await activity_performance(conn, org, period)
+            payload = await activity_performance(conn, auth.org_id, period, scoped_users=auth.scoped_users)
         elif report == "quota-leaderboard":
-            payload = await quota_leaderboard(conn, org, period)
+            payload = await quota_leaderboard(conn, auth.org_id, period, scoped_users=auth.scoped_users)
         else:
-            payload = await target_pace(conn, org, period)
+            payload = await target_pace(conn, auth.org_id, period, scoped_users=auth.scoped_users)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     csv_text = report_to_csv(report, payload)

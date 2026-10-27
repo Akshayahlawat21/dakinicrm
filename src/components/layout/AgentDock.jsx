@@ -21,7 +21,8 @@ export default function AgentDock() {
     agentThinking,
     sendAgentMessage,
     approvals,
-    approveItem
+    approveItem,
+    currentUser,
   } = useCRM();
 
   const [inputVal, setInputVal] = useState('');
@@ -35,7 +36,8 @@ export default function AgentDock() {
     if (currentTab === 'leads') return 'Context: Leads Management';
     if (currentTab === 'deals') return 'Context: Active Pipeline';
     if (currentTab === 'accounts') return 'Context: Enterprise Accounts';
-    return 'Context: Elena’s Sales Workspace';
+    const firstName = currentUser?.name ? currentUser.name.split(' ')[0] : 'Sales';
+    return `Context: ${firstName}’s Sales Workspace`;
   };
 
   const handleSend = () => {

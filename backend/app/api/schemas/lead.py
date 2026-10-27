@@ -37,10 +37,13 @@ class LeadResponse(BaseModel):
     id: str
     organization_id: str
     name: str
+    company: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     industry: Optional[str] = None
+    source: Optional[str] = "Website"
     status: str
     score: int
     assigned_to: Optional[str] = None
+    owner: Optional[str] = None
     created_at: datetime

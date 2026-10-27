@@ -10,7 +10,7 @@ router = APIRouter(tags=["Health & Diagnostics"])
 async def check_upstream_health() -> str:
     """Probe upstream Layer 3 API health endpoint."""
     try:
-        async with httpx.AsyncClient(timeout=0.5) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(f"{settings.UPSTREAM_API_URL.rstrip('/')}/health")
             if resp.status_code == 200:
                 return "healthy"

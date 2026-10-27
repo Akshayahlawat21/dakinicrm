@@ -144,6 +144,12 @@ class DealService:
             self.session.add(opp)
             await self.session.flush()
             opp_id = opp.id
+        else:
+            opp = await self.session.get(Opportunity, opp_id)
+            if opp:
+                opp.stage = stage.lower()
+                opp.probability = STAGE_PROBABILITIES.get(stage.lower(), opp.probability)
+                await self.session.flush()
 
         deal = Deal(
             organization_id=ctx.tenant_uuid,

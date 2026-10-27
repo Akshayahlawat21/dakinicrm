@@ -146,9 +146,19 @@ async def overview(conn: AsyncConnection, org: str, period: str, scoped_users: l
         opp_params["scoped_users"] = formatted_users
     result = await conn.execute(text(f"""
         WITH pipeline_items AS (
-            SELECT o.id, o.organization_id, o.owner_id, o.amount, LOWER(COALESCE(o.stage, '')) AS stage,
-                   (o.amount * COALESCE(o.probability, 50) / 100.0) AS weighted_amount
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   COALESCE(d.amount, o.amount) AS amount, 
+                   LOWER(COALESCE(d.stage, o.stage, '')) AS stage,
+                   (COALESCE(d.amount, o.amount) * CASE LOWER(COALESCE(d.stage, o.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE COALESCE(o.probability, 50)
+                   END / 100.0) AS weighted_amount
             FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
             WHERE o.organization_id = :org {soft_delete_filter(opp_cols, 'o')}
             UNION ALL
             SELECT d.id, d.organization_id, d.owner_id, d.amount, LOWER(COALESCE(d.stage, '')) AS stage,
@@ -161,7 +171,7 @@ async def overview(conn: AsyncConnection, org: str, period: str, scoped_users: l
                    END / 100.0) AS weighted_amount
             FROM public.deals d
             WHERE d.organization_id = :org
-              AND (d.opportunity_id IS NULL OR d.opportunity_id NOT IN (SELECT sub_o.id FROM public.opportunities sub_o WHERE sub_o.organization_id = :org {soft_delete_filter(opp_cols, 'sub_o')}))
+              AND d.opportunity_id IS NULL
               {soft_delete_filter(deal_cols, 'd')}
               AND (d.status = 'open' OR d.status IS NULL)
               AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
@@ -392,9 +402,19 @@ async def pipeline_by_stage(conn: AsyncConnection, org: str, scoped_users: list 
 
     result = await conn.execute(text(f"""
         WITH pipeline_items AS (
-            SELECT o.id, o.organization_id, o.owner_id, o.amount, COALESCE(o.stage, 'Unspecified') AS stage,
-                   (o.amount * COALESCE(o.probability, 50) / 100.0) AS weighted_amount
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   COALESCE(d.amount, o.amount) AS amount, 
+                   COALESCE(d.stage, o.stage, 'Unspecified') AS stage,
+                   (COALESCE(d.amount, o.amount) * CASE LOWER(COALESCE(d.stage, o.stage, ''))
+                       WHEN 'negotiation' THEN 85
+                       WHEN 'proposal' THEN 75
+                       WHEN 'qualified' THEN 50
+                       WHEN 'discovery' THEN 40
+                       ELSE COALESCE(o.probability, 50)
+                   END / 100.0) AS weighted_amount
             FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
             WHERE o.organization_id = :org {soft_delete_filter(columns, 'o')}
             UNION ALL
             SELECT d.id, d.organization_id, d.owner_id, d.amount, COALESCE(d.stage, 'Unspecified') AS stage,
@@ -407,7 +427,7 @@ async def pipeline_by_stage(conn: AsyncConnection, org: str, scoped_users: list 
                    END / 100.0) AS weighted_amount
             FROM public.deals d
             WHERE d.organization_id = :org
-              AND (d.opportunity_id IS NULL OR d.opportunity_id NOT IN (SELECT sub_o.id FROM public.opportunities sub_o WHERE sub_o.organization_id = :org {soft_delete_filter(columns, 'sub_o')}))
+              AND d.opportunity_id IS NULL
               {soft_delete_filter(deal_cols, 'd')}
               AND (d.status = 'open' OR d.status IS NULL)
               AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
@@ -526,14 +546,17 @@ async def conversion_funnel(conn: AsyncConnection, org: str, period: str, scoped
         opp_params["scoped_users"] = formatted_users
     result = await conn.execute(text(f"""
         WITH pipeline_items AS (
-            SELECT o.id, o.organization_id, o.owner_id, LOWER(COALESCE(o.stage, '')) AS stage
+            SELECT o.id, o.organization_id, 
+                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
+                   LOWER(COALESCE(d.stage, o.stage, '')) AS stage
             FROM public.opportunities o
+            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
             WHERE o.organization_id = :org {soft_delete_filter(opp_cols, 'o')}
             UNION ALL
             SELECT d.id, d.organization_id, d.owner_id, LOWER(COALESCE(d.stage, '')) AS stage
             FROM public.deals d
             WHERE d.organization_id = :org
-              AND (d.opportunity_id IS NULL OR d.opportunity_id NOT IN (SELECT sub_o.id FROM public.opportunities sub_o WHERE sub_o.organization_id = :org {soft_delete_filter(opp_cols, 'sub_o')}))
+              AND d.opportunity_id IS NULL
               {soft_delete_filter(deal_cols, 'd')}
               AND (d.status = 'open' OR d.status IS NULL)
               AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')

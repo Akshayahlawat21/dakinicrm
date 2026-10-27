@@ -114,6 +114,7 @@ export default function TopBar() {
               {[
                 { type: 'lead', label: 'New Lead' },
                 { type: 'deal', label: 'New Deal' },
+                { type: 'account', label: 'New Account' },
                 { type: 'contact', label: 'New Contact' },
                 { type: 'task', label: 'New Task' },
                 { type: 'campaign', label: 'New Campaign' }

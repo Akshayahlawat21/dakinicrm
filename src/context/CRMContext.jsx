@@ -550,6 +550,8 @@ export function CRMProvider({ children }) {
         return { success: true, data: { ...contactItem, id: realId } };
       } else {
         console.warn('Backend rejected contact creation:', res.error);
+        alert(res.error?.message || 'Failed to create contact');
+        setContacts((prev) => prev.filter((c) => c.id !== tempId));
       }
     } catch (err) {
       console.warn('Gateway createContact sync skipped:', err);
@@ -561,7 +563,13 @@ export function CRMProvider({ children }) {
     // Instant removal on screen
     setContacts((prev) => prev.filter((c) => c.id !== contactId));
     try {
-      await gatewayApi.deleteContact(contactId);
+      const res = await gatewayApi.deleteContact(contactId);
+      if (res && res.success === false) {
+        console.warn('Backend rejected contact deletion:', res.error);
+        alert(res.error?.message || 'Failed to delete contact: permission denied');
+        fetchSupabaseData();
+        return;
+      }
       console.log(`%c[SUPABASE DELETE] 🗑️ Contact ${contactId} deleted`, 'color: #ef4444; font-weight: bold;');
     } catch (err) {
       console.warn('Gateway deleteContact sync skipped:', err);
@@ -597,6 +605,8 @@ export function CRMProvider({ children }) {
         return { success: true, data: { ...accItem, id: realId } };
       } else {
         console.warn('Backend rejected account creation:', res.error);
+        alert(res.error?.message || 'Failed to create account');
+        setAccounts((prev) => prev.filter((a) => a.id !== tempId));
       }
     } catch (err) {
       console.warn('Gateway createAccount sync skipped:', err);
@@ -608,7 +618,13 @@ export function CRMProvider({ children }) {
     // Instant removal on screen
     setAccounts((prev) => prev.filter((a) => a.id !== accountId));
     try {
-      await gatewayApi.deleteAccount(accountId);
+      const res = await gatewayApi.deleteAccount(accountId);
+      if (res && res.success === false) {
+        console.warn('Backend rejected account deletion:', res.error);
+        alert(res.error?.message || 'Failed to delete account: permission denied');
+        fetchSupabaseData();
+        return;
+      }
       console.log(`%c[SUPABASE DELETE] 🗑️ Account ${accountId} deleted`, 'color: #ef4444; font-weight: bold;');
     } catch (err) {
       console.warn('Gateway deleteAccount sync skipped:', err);

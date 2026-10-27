@@ -10,6 +10,7 @@ export default function QuickCreateModal() {
     setQuickCreateType,
     addLead,
     addDeal,
+    addAccount,
     addContact,
     addTask,
     addCampaign,
@@ -34,7 +35,10 @@ export default function QuickCreateModal() {
     campaignName: '',
     campaignType: 'Roadshow & In-Person',
     campaignBudget: '25000',
-    campaignStatus: 'Active'
+    campaignStatus: 'Active',
+    accountName: '',
+    website: '',
+    city: ''
   });
 
   const handleChange = (e) => {
@@ -65,6 +69,15 @@ export default function QuickCreateModal() {
         closeDate: '2026-11-30',
         owner: dynamicOwner,
         priority: 'High'
+      });
+    } else if (quickCreateType === 'account') {
+      addAccount({
+        name: formData.accountName || formData.name || formData.company || 'New Enterprise Account',
+        industry: formData.industry || 'Logistics & Tech',
+        website: formData.website || '',
+        phone: formData.phone || '',
+        city: formData.city || 'India',
+        address: formData.city || 'India',
       });
     } else if (quickCreateType === 'contact') {
       addContact({
@@ -100,8 +113,8 @@ export default function QuickCreateModal() {
             <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
               Create New Record
             </h3>
-            <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2 }}>
-              {['lead', 'deal', 'contact', 'task', 'campaign'].map((t) => (
+            <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2, flexWrap: 'wrap', gap: 2 }}>
+              {['lead', 'deal', 'account', 'contact', 'task', 'campaign'].map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -257,6 +270,83 @@ export default function QuickCreateModal() {
                     <option value="Proposal">Proposal</option>
                     <option value="Negotiation">Negotiation</option>
                   </select>
+                </div>
+              </>
+            )}
+
+            {quickCreateType === 'account' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Company / Account Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="e.g. Acme Corporation"
+                      className="input-field"
+                      value={formData.name}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Industry *
+                    </label>
+                    <select name="industry" className="input-field" value={formData.industry} onChange={handleChange}>
+                      <option value="Logistics">Logistics & Supply Chain</option>
+                      <option value="Technology">Technology & SaaS</option>
+                      <option value="Financial Services">Financial Services</option>
+                      <option value="Healthcare">Healthcare & Bio</option>
+                      <option value="Retail">Retail & E-commerce</option>
+                      <option value="Manufacturing">Manufacturing</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Website URL
+                    </label>
+                    <input
+                      type="text"
+                      name="website"
+                      placeholder="e.g. acmecorp.com"
+                      className="input-field"
+                      value={formData.website}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Phone
+                    </label>
+                    <input
+                      type="text"
+                      name="phone"
+                      placeholder="+1 (555) 000-0000"
+                      className="input-field"
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    Headquarters / Address
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    placeholder="e.g. San Francisco, CA / Bengaluru, India"
+                    className="input-field"
+                    value={formData.city}
+                    onChange={handleChange}
+                  />
                 </div>
               </>
             )}

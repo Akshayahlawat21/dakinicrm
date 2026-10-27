@@ -3,8 +3,7 @@
 [![React 18](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Supabase](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
-[![Test Suite](https://img.shields.io/badge/Tests-136%20Passing%20(100%25)-brightgreen?logo=pytest&logoColor=white)](https://pytest.org/)
-[![Architecture](https://img.shields.io/badge/Architecture-Multi--Tier%20Microservices-blueviolet)]()
+
 
 An enterprise-grade Customer Relationship Management (CRM) platform built with a high-performance **React 18 / Vite SPA**, a **FastAPI Layer 2 Edge & API Gateway**, a **FastAPI Layer 3 Application & Data Layer**, and a **FastAPI Layer 9 Analytics Service** backed by **Supabase PostgreSQL**.
 

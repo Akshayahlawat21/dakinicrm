@@ -25,6 +25,24 @@ import {
   RotateCcw
 } from 'lucide-react';
 
+// Real-world Today Reference (System date: 28 October 2026)
+const TODAY = new Date();
+
+// Helper to calculate Indian Financial Year Quarter:
+// Q1: Apr–Jun, Q2: Jul–Sep, Q3: Oct–Dec, Q4: Jan–Mar
+const getIndianFiscalQuarter = (dateObj) => {
+  const m = dateObj.getMonth(); // 0 = Jan ... 11 = Dec
+  const y = dateObj.getFullYear();
+  const nextYShort = String(y + 1).slice(-2);
+  const curYShort = String(y).slice(-2);
+  const prevYShort = String(y - 1).slice(-2);
+
+  if (m >= 3 && m <= 5) return `Q1 FY${curYShort}-${nextYShort} (Apr–Jun)`;
+  if (m >= 6 && m <= 8) return `Q2 FY${curYShort}-${nextYShort} (Jul–Sep)`;
+  if (m >= 9 && m <= 11) return `Q3 FY${curYShort}-${nextYShort} (Oct–Dec)`;
+  return `Q4 FY${prevYShort}-${curYShort} (Jan–Mar)`;
+};
+
 const INITIAL_EVENTS = [
   {
     id: 'evt-1',
@@ -32,8 +50,7 @@ const INITIAL_EVENTS = [
     company: "Aarav Patel Enterprises",
     time: "10:00 AM - 10:45 AM",
     hour: 10,
-    dayIndex: 4,
-    dayNumber: 10,
+    dayNumber: 28,
     monthIndex: 9,
     year: 2026,
     type: "meeting",
@@ -48,8 +65,7 @@ const INITIAL_EVENTS = [
     company: "TVS Mobility Solutions",
     time: "2:00 PM - 3:00 PM",
     hour: 14,
-    dayIndex: 4,
-    dayNumber: 10,
+    dayNumber: 28,
     monthIndex: 9,
     year: 2026,
     type: "meeting",
@@ -60,28 +76,11 @@ const INITIAL_EVENTS = [
   },
   {
     id: 'evt-3',
-    title: "Executive Follow-up with Priya Sharma",
-    company: "Acme Corp",
-    time: "11:30 AM - 12:00 PM",
-    hour: 11,
-    dayIndex: 2,
-    dayNumber: 8,
-    monthIndex: 9,
-    year: 2026,
-    type: "follow-up",
-    attendees: ["Priya Sharma (VP)", "Elena Rostova"],
-    desc: "Review procurement checklist and Docusign MSA execution steps.",
-    videoUrl: "https://meet.google.com/dak-acme-exec",
-    completed: false
-  },
-  {
-    id: 'evt-4',
     title: "Review SOC2 Security Docs",
     company: "HDFC Securities",
     time: "4:00 PM - 4:30 PM",
     hour: 16,
-    dayIndex: 4,
-    dayNumber: 10,
+    dayNumber: 28,
     monthIndex: 9,
     year: 2026,
     type: "task",
@@ -91,13 +90,27 @@ const INITIAL_EVENTS = [
     completed: false
   },
   {
+    id: 'evt-4',
+    title: "Executive Follow-up with Priya Sharma",
+    company: "Acme Corp",
+    time: "11:30 AM - 12:00 PM",
+    hour: 11,
+    dayNumber: 27,
+    monthIndex: 9,
+    year: 2026,
+    type: "follow-up",
+    attendees: ["Priya Sharma (VP)", "Elena Rostova"],
+    desc: "Review procurement checklist and Docusign MSA execution steps.",
+    videoUrl: "https://meet.google.com/dak-acme-exec",
+    completed: false
+  },
+  {
     id: 'evt-5',
     title: "Weekly Enterprise Pipeline Standup",
     company: "Dakini Sales Leadership",
     time: "9:00 AM - 9:45 AM",
     hour: 9,
-    dayIndex: 0,
-    dayNumber: 6,
+    dayNumber: 26,
     monthIndex: 9,
     year: 2026,
     type: "meeting",
@@ -112,8 +125,7 @@ const INITIAL_EVENTS = [
     company: "Reliance Logistics",
     time: "3:30 PM - 4:15 PM",
     hour: 15,
-    dayIndex: 3,
-    dayNumber: 9,
+    dayNumber: 29,
     monthIndex: 9,
     year: 2026,
     type: "review",
@@ -128,15 +140,14 @@ const INITIAL_EVENTS = [
     company: "Tata Consumer Digital",
     time: "1:00 PM - 2:00 PM",
     hour: 13,
-    dayIndex: 1,
-    dayNumber: 7,
+    dayNumber: 30,
     monthIndex: 9,
     year: 2026,
     type: "demo",
     attendees: ["Vikram Malhotra", "Solutions Architect"],
     desc: "Live walkthrough of Dakini autonomous lead scoring triggers.",
     videoUrl: "https://meet.google.com/dak-tata-sandbox",
-    completed: true
+    completed: false
   }
 ];
 
@@ -145,18 +156,30 @@ export default function CalendarPage() {
   const { leads, addTask } = useCRM();
 
   const [viewMode, setViewMode] = useState('Week'); // 'Day' | 'Week' | 'Month'
-  const [selectedDayIndex, setSelectedDayIndex] = useState(4); // Index 4 is Fri 10 Oct (Today)
   const [meetingAlert, setMeetingAlert] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Follow-ups' | 'Upcoming' | 'Completed' | 'Passed'
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Month navigation state (Month 9 is October, 0-indexed)
-  const [selectedMonthDate, setSelectedMonthDate] = useState(new Date(2026, 9, 1));
+  // Dynamic Current Week Start (Monday of current week)
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const day = TODAY.getDay();
+    const mondayOffset = (day + 6) % 7; // Monday = 0
+    const monday = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
+
+  // Selected Day index within the active week (0 to 6, default to Today's day of week)
+  const todayWeekIndex = (TODAY.getDay() + 6) % 7;
+  const [selectedDayIndex, setSelectedDayIndex] = useState(todayWeekIndex);
+
+  // Month navigation state
+  const [selectedMonthDate, setSelectedMonthDate] = useState(() => new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
 
   // Load events from localStorage or fallback
   const [events, setEvents] = useState(() => {
     try {
-      const saved = localStorage.getItem('dakini_calendar_events_v2');
+      const saved = localStorage.getItem('dakini_calendar_events_v3');
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.warn('Failed to parse saved calendar events', e);
@@ -167,7 +190,7 @@ export default function CalendarPage() {
   // Save to localStorage on any change
   useEffect(() => {
     try {
-      localStorage.setItem('dakini_calendar_events_v2', JSON.stringify(events));
+      localStorage.setItem('dakini_calendar_events_v3', JSON.stringify(events));
     } catch (e) {
       console.warn('Failed to save calendar events', e);
     }
@@ -177,24 +200,55 @@ export default function CalendarPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
   const [newType, setNewType] = useState('follow-up'); // 'follow-up' | 'meeting' | 'call' | 'demo' | 'task'
-  const [newDayIndex, setNewDayIndex] = useState(4);
+  const [newDayIndex, setNewDayIndex] = useState(todayWeekIndex);
   const [newHour, setNewHour] = useState(10);
   const [newDuration, setNewDuration] = useState('30m');
   const [newAttendees, setNewAttendees] = useState('Elena Rostova');
   const [newDesc, setNewDesc] = useState('');
   const [newSyncTask, setNewSyncTask] = useState(true);
 
-  const days = [
-    { day: "Mon", date: "6 Oct", fullDate: "Monday, 6 October 2026", dayNumber: 6 },
-    { day: "Tue", date: "7 Oct", fullDate: "Tuesday, 7 October 2026", dayNumber: 7 },
-    { day: "Wed", date: "8 Oct", fullDate: "Wednesday, 8 October 2026", dayNumber: 8 },
-    { day: "Thu", date: "9 Oct", fullDate: "Thursday, 9 October 2026", dayNumber: 9 },
-    { day: "Fri", date: "10 Oct", isToday: true, fullDate: "Friday, 10 October 2026 (Today)", dayNumber: 10 },
-    { day: "Sat", date: "11 Oct", fullDate: "Saturday, 11 October 2026", dayNumber: 11 },
-    { day: "Sun", date: "12 Oct", fullDate: "Sunday, 12 October 2026", dayNumber: 12 }
-  ];
+  // Dynamically generate the 7 days of the active week from currentWeekStart
+  const days = React.useMemo(() => {
+    const daysArr = [];
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const fullDayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-  // Month navigation actions
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), currentWeekStart.getDate() + i);
+      const isToday = (
+        d.getDate() === TODAY.getDate() &&
+        d.getMonth() === TODAY.getMonth() &&
+        d.getFullYear() === TODAY.getFullYear()
+      );
+
+      const monthShort = d.toLocaleString('en-IN', { month: 'short' });
+      const fullMonth = d.toLocaleString('en-IN', { month: 'long' });
+
+      daysArr.push({
+        dateObj: d,
+        day: dayNames[i],
+        date: `${d.getDate()} ${monthShort}`,
+        dayNumber: d.getDate(),
+        monthIndex: d.getMonth(),
+        year: d.getFullYear(),
+        isToday,
+        fullDate: `${fullDayNames[i]}, ${d.getDate()} ${fullMonth} ${d.getFullYear()}${isToday ? ' (Today)' : ''}`,
+        dayIndex: i
+      });
+    }
+    return daysArr;
+  }, [currentWeekStart]);
+
+  // Week navigation
+  const handlePrevWeek = () => {
+    setCurrentWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7));
+  };
+
+  // Month navigation
   const handlePrevMonth = () => {
     setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -203,34 +257,43 @@ export default function CalendarPage() {
     setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
+  // Jump to Today
   const handleJumpToToday = () => {
-    setSelectedMonthDate(new Date(2026, 9, 1));
-    setSelectedDayIndex(4);
-    setViewMode('Day');
+    const day = TODAY.getDay();
+    const mondayOffset = (day + 6) % 7;
+    const monday = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+
+    setCurrentWeekStart(monday);
+    setSelectedMonthDate(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
+    setSelectedDayIndex(mondayOffset);
+    setMeetingAlert(`Navigated to Today: ${TODAY.getDate()} ${TODAY.toLocaleString('en-IN', { month: 'short' })} ${TODAY.getFullYear()}! 📍`);
+    setTimeout(() => setMeetingAlert(null), 3000);
   };
 
-  const currentMonthYearLabel = selectedMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const currentQuarterLabel = `Q${Math.floor(selectedMonthDate.getMonth() / 3) + 1} FY${selectedMonthDate.getFullYear()}`;
+  const currentMonthYearLabel = selectedMonthDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+  const currentFiscalQuarterLabel = getIndianFiscalQuarter(selectedMonthDate);
 
-  // Dynamically compute monthDays grid for the selected month & year
-  const getDynamicMonthDays = (dateObj) => {
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth();
+  // Dynamic Month Days grid with Indian calendar leap year support
+  const monthDays = React.useMemo(() => {
+    const year = selectedMonthDate.getFullYear();
+    const month = selectedMonthDate.getMonth();
 
-    // First day of month (0 = Sun, 1 = Mon, ..., 6 = Sat)
+    // First day of month (0 = Sun ... 6 = Sat)
     const firstDayOfWeek = new Date(year, month, 1).getDay();
-    // Monday-first offset: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    // Monday-first offset
     const startOffset = (firstDayOfWeek + 6) % 7;
 
+    // JavaScript Date automatically accounts for leap years in February!
     const daysInCurrentMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    const prevMonthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'short' });
-    const nextMonthName = new Date(year, month + 1, 1).toLocaleString('default', { month: 'short' });
+    const prevMonthName = new Date(year, month - 1, 1).toLocaleString('en-IN', { month: 'short' });
+    const nextMonthName = new Date(year, month + 1, 1).toLocaleString('en-IN', { month: 'short' });
 
     const cells = [];
 
-    // Preceding days from previous month
+    // Preceding trailing days from previous month
     for (let i = startOffset - 1; i >= 0; i--) {
       cells.push({
         day: daysInPrevMonth - i,
@@ -243,7 +306,12 @@ export default function CalendarPage() {
 
     // Days in current month
     for (let d = 1; d <= daysInCurrentMonth; d++) {
-      const isToday = (year === 2026 && month === 9 && d === 10);
+      const isToday = (
+        year === TODAY.getFullYear() &&
+        month === TODAY.getMonth() &&
+        d === TODAY.getDate()
+      );
+
       cells.push({
         day: d,
         isCurrentMonth: true,
@@ -253,7 +321,7 @@ export default function CalendarPage() {
       });
     }
 
-    // Trailing days from next month to fill 35 or 42 grid cells
+    // Trailing days from next month to complete 35 or 42 grid slots
     const targetLength = cells.length > 35 ? 42 : 35;
     const remaining = targetLength - cells.length;
     for (let n = 1; n <= remaining; n++) {
@@ -267,22 +335,19 @@ export default function CalendarPage() {
     }
 
     return cells;
-  };
+  }, [selectedMonthDate]);
 
-  const monthDays = getDynamicMonthDays(selectedMonthDate);
-
-  // Helper: check if day of event has passed (relative to Today: Fri 10 Oct 2026)
+  // Helper: check if day of event has passed relative to Real-world Today
   const isEventPassed = (evt) => {
-    const evtYear = evt.year || 2026;
-    const evtMonth = evt.monthIndex !== undefined ? evt.monthIndex : 9;
-    if (evtYear < 2026) return true;
-    if (evtYear > 2026) return false;
-    if (evtMonth < 9) return true;
-    if (evtMonth > 9) return false;
-    if (evt.dayNumber !== undefined && evt.dayNumber !== null) {
-      return evt.dayNumber < 10;
-    }
-    return evt.dayIndex < 4;
+    if (evt.completed) return false;
+    const evtYear = evt.year || TODAY.getFullYear();
+    const evtMonth = evt.monthIndex !== undefined ? evt.monthIndex : TODAY.getMonth();
+    const evtDay = evt.dayNumber !== undefined ? evt.dayNumber : TODAY.getDate();
+
+    const evtDate = new Date(evtYear, evtMonth, evtDay);
+    const todayDate = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+
+    return evtDate < todayDate;
   };
 
   // Helper: toggle completion
@@ -327,13 +392,13 @@ export default function CalendarPage() {
   // Reset to sample defaults
   const handleResetDefaults = () => {
     setEvents(INITIAL_EVENTS);
-    setSelectedMonthDate(new Date(2026, 9, 1));
-    setMeetingAlert("Reset calendar schedule to default enterprise events.");
+    setSelectedMonthDate(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
+    setMeetingAlert("Reset calendar schedule to Indian real-world dates.");
     setTimeout(() => setMeetingAlert(null), 3000);
   };
 
   // Open modal with specific day / hour
-  const handleOpenAddModal = (dayIdx = selectedDayIndex, hourVal = 10, customDayNumber = null) => {
+  const handleOpenAddModal = (dayIdx = selectedDayIndex, hourVal = 10) => {
     setNewDayIndex(dayIdx);
     setNewHour(hourVal);
     setNewTitle('');
@@ -351,7 +416,7 @@ export default function CalendarPage() {
       return;
     }
 
-    const matchedDay = days[newDayIndex] || days[4];
+    const matchedDay = days[newDayIndex] || days[0];
     const hourLabel = newHour > 12 ? `${newHour - 12}:00 PM` : `${newHour}:00 ${newHour === 12 ? 'PM' : 'AM'}`;
     const endHour = newHour + (newDuration === '1h' ? 1 : 0);
     const endMinutes = newDuration === '30m' ? '30' : newDuration === '45m' ? '45' : '00';
@@ -363,10 +428,9 @@ export default function CalendarPage() {
       company: newCompany.trim() || 'Enterprise Client',
       time: `${hourLabel} - ${endHourLabel}`,
       hour: Number(newHour),
-      dayIndex: Number(newDayIndex),
       dayNumber: matchedDay.dayNumber,
-      monthIndex: selectedMonthDate.getMonth(),
-      year: selectedMonthDate.getFullYear(),
+      monthIndex: matchedDay.monthIndex,
+      year: matchedDay.year,
       type: newType,
       attendees: newAttendees ? newAttendees.split(',').map((s) => s.trim()) : ['Elena Rostova'],
       desc: newDesc.trim() || `Scheduled ${newType} with ${newCompany}`,
@@ -411,8 +475,19 @@ export default function CalendarPage() {
   };
 
   const filteredEvents = events.filter(filterEvent);
-  const currentSelectedDay = days[selectedDayIndex] || days[4];
-  const activeDayEvents = filteredEvents.filter((e) => e.dayIndex === selectedDayIndex);
+  const currentSelectedDay = days[selectedDayIndex] || days[0];
+
+  // Match events for selected day
+  const activeDayEvents = filteredEvents.filter((e) => {
+    const eYear = e.year || TODAY.getFullYear();
+    const eMonth = e.monthIndex !== undefined ? e.monthIndex : TODAY.getMonth();
+    const eDay = e.dayNumber;
+    return (
+      eYear === currentSelectedDay.year &&
+      eMonth === currentSelectedDay.monthIndex &&
+      eDay === currentSelectedDay.dayNumber
+    );
+  });
 
   // Overall counts for badge indicators
   const passedCount = events.filter((e) => isEventPassed(e) && !e.completed).length;
@@ -489,6 +564,9 @@ export default function CalendarPage() {
             <span className="badge badge-blue" style={{ fontSize: '0.75rem' }}>
               {events.length} Events Total
             </span>
+            <span className="badge badge-gray" style={{ fontSize: '0.75rem' }}>
+              Today: {TODAY.getDate()} {TODAY.toLocaleString('en-IN', { month: 'short' })} {TODAY.getFullYear()}
+            </span>
             {passedCount > 0 && (
               <span className="badge badge-amber" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <AlertTriangle size={12} /> {passedCount} Passed
@@ -496,7 +574,7 @@ export default function CalendarPage() {
             )}
           </div>
           <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-            Schedule client follow-ups, customer demos, and remove passed or completed items
+            Real-world Indian calendar scheduling, customer demos, and executive cadences
           </p>
         </div>
 
@@ -600,6 +678,13 @@ export default function CalendarPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button
+            onClick={handleJumpToToday}
+            className="btn btn-secondary btn-sm"
+            style={{ fontSize: '0.75rem', fontWeight: 600 }}
+          >
+            Jump to Today
+          </button>
+          <button
             onClick={handleResetDefaults}
             style={{
               background: 'none',
@@ -623,15 +708,66 @@ export default function CalendarPage() {
         <div className="crm-card" style={{ padding: 0, overflow: 'hidden' }}>
 
           {/* ========================================================
-              VIEW 1: WEEK VIEW (7-Column Layout with Interactive Cards)
+              VIEW 1: WEEK VIEW (Real-world Week Navigation & Slots)
              ======================================================== */}
           {viewMode === 'Week' && (
             <div>
-              {/* Days Header */}
+              {/* Week Navigation Header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 1.25rem',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
+                    title="Previous Week"
+                    onClick={handlePrevWeek}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
+                    title="Next Week"
+                    onClick={handleNextWeek}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginLeft: '0.5rem' }}>
+                    Week of {days[0].date} – {days[6].date} {days[6].year}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className="badge badge-blue">
+                    {getIndianFiscalQuarter(days[0].dateObj)}
+                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleJumpToToday}
+                  >
+                    Today ({TODAY.getDate()} {TODAY.toLocaleString('en-IN', { month: 'short' })})
+                  </button>
+                </div>
+              </div>
+
+              {/* Days Columns Header */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
                 {days.map((d, i) => {
-                  const dayEvts = filteredEvents.filter((e) => e.dayIndex === i);
-                  const isDayPassed = d.dayNumber < 10;
+                  const dayEvts = filteredEvents.filter((e) => {
+                    const eYear = e.year || TODAY.getFullYear();
+                    const eMonth = e.monthIndex !== undefined ? e.monthIndex : TODAY.getMonth();
+                    return eYear === d.year && eMonth === d.monthIndex && e.dayNumber === d.dayNumber;
+                  });
+
+                  const isPassed = new Date(d.year, d.monthIndex, d.dayNumber) < new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
 
                   return (
                     <div
@@ -641,7 +777,11 @@ export default function CalendarPage() {
                         padding: '0.85rem 0.5rem',
                         textAlign: 'center',
                         borderRight: i < 6 ? '1px solid #e2e8f0' : 'none',
-                        background: d.isToday ? '#eff6ff' : selectedDayIndex === i ? '#f1f5f9' : 'transparent',
+                        background: d.isToday
+                          ? '#eff6ff'
+                          : selectedDayIndex === i
+                          ? '#f1f5f9'
+                          : 'transparent',
                         cursor: 'pointer',
                         transition: 'background 0.15s ease'
                       }}
@@ -649,16 +789,21 @@ export default function CalendarPage() {
                       <div style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: d.isToday ? '#2563eb' : isDayPassed ? '#94a3b8' : '#64748b',
+                        color: d.isToday ? '#2563eb' : isPassed ? '#94a3b8' : '#64748b',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 3
                       }}>
                         {d.day}
-                        {isDayPassed && <span style={{ fontSize: '0.65rem', color: '#b45309' }}>•</span>}
+                        {d.isToday && (
+                          <span style={{ fontSize: '0.625rem', padding: '1px 4px', borderRadius: 3, background: '#2563eb', color: '#fff', fontWeight: 800 }}>
+                            TODAY
+                          </span>
+                        )}
+                        {isPassed && <span style={{ fontSize: '0.65rem', color: '#b45309' }}>•</span>}
                       </div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: d.isToday ? '#2563eb' : isDayPassed ? '#64748b' : '#0f172a' }}>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: d.isToday ? '#2563eb' : isPassed ? '#64748b' : '#0f172a' }}>
                         {d.date}
                       </div>
                       <div style={{ fontSize: '0.6875rem', color: dayEvts.length > 0 ? '#2563eb' : '#94a3b8', fontWeight: 600 }}>
@@ -672,8 +817,13 @@ export default function CalendarPage() {
               {/* Week Time Slots Columns */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minHeight: 520 }}>
                 {days.map((d, colIdx) => {
-                  const dayEvents = filteredEvents.filter((e) => e.dayIndex === colIdx);
-                  const isDayPassed = d.dayNumber < 10;
+                  const dayEvents = filteredEvents.filter((e) => {
+                    const eYear = e.year || TODAY.getFullYear();
+                    const eMonth = e.monthIndex !== undefined ? e.monthIndex : TODAY.getMonth();
+                    return eYear === d.year && eMonth === d.monthIndex && e.dayNumber === d.dayNumber;
+                  });
+
+                  const isPassed = new Date(d.year, d.monthIndex, d.dayNumber) < new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
 
                   return (
                     <div
@@ -683,7 +833,7 @@ export default function CalendarPage() {
                         padding: '0.5rem',
                         background: d.isToday
                           ? 'rgba(239, 246, 255, 0.5)'
-                          : isDayPassed
+                          : isPassed
                           ? '#fafafa'
                           : '#ffffff',
                         display: 'flex',
@@ -708,7 +858,7 @@ export default function CalendarPage() {
                           justifyContent: 'center',
                           gap: 4
                         }}
-                        title={`Add follow-up on ${d.day}`}
+                        title={`Add follow-up on ${d.day} ${d.date}`}
                       >
                         <Plus size={11} /> Add
                       </button>
@@ -814,7 +964,7 @@ export default function CalendarPage() {
           )}
 
           {/* ========================================================
-              VIEW 2: DAY VIEW (Hourly Breakdown with Quick Slots)
+              VIEW 2: DAY VIEW (Real-world Hourly Timeline)
              ======================================================== */}
           {viewMode === 'Day' && (
             <div>
@@ -832,7 +982,7 @@ export default function CalendarPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.35rem 0.5rem' }}
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
                     onClick={() => setSelectedDayIndex((prev) => (prev > 0 ? prev - 1 : 6))}
                     title="Previous Day"
                   >
@@ -840,7 +990,7 @@ export default function CalendarPage() {
                   </button>
                   <button
                     className="btn btn-secondary btn-sm"
-                    style={{ padding: '0.35rem 0.5rem' }}
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
                     onClick={() => setSelectedDayIndex((prev) => (prev < 6 ? prev + 1 : 0))}
                     title="Next Day"
                   >
@@ -852,7 +1002,7 @@ export default function CalendarPage() {
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       {activeDayEvents.length} {activeDayEvents.length === 1 ? 'event' : 'events'} scheduled
-                      {currentSelectedDay.dayNumber < 10 && ' • (Day Passed)'}
+                      {isEventPassed({ dayNumber: currentSelectedDay.dayNumber, monthIndex: currentSelectedDay.monthIndex, year: currentSelectedDay.year }) && ' • (Day Passed)'}
                     </div>
                   </div>
                 </div>
@@ -875,7 +1025,8 @@ export default function CalendarPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      {d.day}
+                      {d.day} {d.dayNumber}
+                      {d.isToday && ' •'}
                     </button>
                   ))}
                 </div>
@@ -1058,7 +1209,7 @@ export default function CalendarPage() {
           )}
 
           {/* ========================================================
-              VIEW 3: MONTH VIEW (Interactive Monthly Grid & Nav)
+              VIEW 3: MONTH VIEW (Indian Calendar & Leap Year Support)
              ======================================================== */}
           {viewMode === 'Month' && (
             <div>
@@ -1096,12 +1247,12 @@ export default function CalendarPage() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="badge badge-blue">{currentQuarterLabel}</span>
+                  <span className="badge badge-blue">{currentFiscalQuarterLabel}</span>
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={handleJumpToToday}
                   >
-                    Jump to Today (10 Oct 2026)
+                    Jump to Today ({TODAY.getDate()} {TODAY.toLocaleString('en-IN', { month: 'short' })})
                   </button>
                 </div>
               </div>
@@ -1115,34 +1266,33 @@ export default function CalendarPage() {
                 ))}
               </div>
 
-              {/* Month Grid Cells */}
+              {/* Month Grid Cells with accurate leap year / month boundaries */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e2e8f0' }}>
                 {monthDays.map((cell, idx) => {
                   const eventsOnThisDay = filteredEvents.filter((e) => {
                     if (!cell.isCurrentMonth) return false;
-                    const evtMonth = e.monthIndex !== undefined ? e.monthIndex : 9;
-                    const evtYear = e.year || 2026;
+                    const evtMonth = e.monthIndex !== undefined ? e.monthIndex : TODAY.getMonth();
+                    const evtYear = e.year || TODAY.getFullYear();
                     return evtYear === cell.year && evtMonth === cell.monthIndex && e.dayNumber === cell.day;
                   });
 
-                  const isPast = (cell.year < 2026) ||
-                                 (cell.year === 2026 && cell.monthIndex < 9) ||
-                                 (cell.year === 2026 && cell.monthIndex === 9 && cell.day < 10);
+                  const cellDate = new Date(cell.year, cell.monthIndex, cell.day);
+                  const todayDate = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+                  const isPast = cellDate < todayDate;
 
                   return (
                     <div
                       key={idx}
                       onClick={() => {
                         if (cell.isCurrentMonth) {
-                          if (cell.year === 2026 && cell.monthIndex === 9) {
-                            const matchedIdx = days.findIndex((d) => d.dayNumber === cell.day);
-                            if (matchedIdx !== -1) {
-                              setSelectedDayIndex(matchedIdx);
-                              setViewMode('Day');
-                              return;
-                            }
+                          // Jump to this week if it matches
+                          const matchedIdx = days.findIndex((d) => d.dayNumber === cell.day && d.monthIndex === cell.monthIndex && d.year === cell.year);
+                          if (matchedIdx !== -1) {
+                            setSelectedDayIndex(matchedIdx);
+                            setViewMode('Day');
+                            return;
                           }
-                          // Schedule follow-up on this specific day
+                          // Or open follow-up modal
                           handleOpenAddModal(selectedDayIndex, 10);
                         }
                       }}
@@ -1238,7 +1388,7 @@ export default function CalendarPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-                {viewMode === 'Day' ? `${currentSelectedDay.day} ${currentSelectedDay.date} Agenda` : "Today's Agenda"}
+                {viewMode === 'Day' ? `${currentSelectedDay.day} ${currentSelectedDay.date} Agenda` : `Agenda: ${currentSelectedDay.day} ${currentSelectedDay.date}`}
               </h3>
               <button
                 onClick={() => handleOpenAddModal(selectedDayIndex, 10)}

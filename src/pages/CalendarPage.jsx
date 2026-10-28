@@ -34,6 +34,8 @@ const INITIAL_EVENTS = [
     hour: 10,
     dayIndex: 4,
     dayNumber: 10,
+    monthIndex: 9,
+    year: 2026,
     type: "meeting",
     attendees: ["Aarav Patel (CTO)", "Marcus Vance"],
     desc: "Present freight telematics co-pilot and real-time routing API demo.",
@@ -48,6 +50,8 @@ const INITIAL_EVENTS = [
     hour: 14,
     dayIndex: 4,
     dayNumber: 10,
+    monthIndex: 9,
+    year: 2026,
     type: "meeting",
     attendees: ["Rajesh Venkatesh", "Elena Rostova"],
     desc: "Confirm AWS India data residency and SAP ERP sync latency.",
@@ -62,6 +66,8 @@ const INITIAL_EVENTS = [
     hour: 11,
     dayIndex: 2,
     dayNumber: 8,
+    monthIndex: 9,
+    year: 2026,
     type: "follow-up",
     attendees: ["Priya Sharma (VP)", "Elena Rostova"],
     desc: "Review procurement checklist and Docusign MSA execution steps.",
@@ -76,6 +82,8 @@ const INITIAL_EVENTS = [
     hour: 16,
     dayIndex: 4,
     dayNumber: 10,
+    monthIndex: 9,
+    year: 2026,
     type: "task",
     attendees: ["Sunita Rao (CISO)"],
     desc: "Cross-verify penetration test reports with compliance team.",
@@ -90,6 +98,8 @@ const INITIAL_EVENTS = [
     hour: 9,
     dayIndex: 0,
     dayNumber: 6,
+    monthIndex: 9,
+    year: 2026,
     type: "meeting",
     attendees: ["Elena Rostova", "Marcus Vance", "Engineering Lead"],
     desc: "Review Q4 enterprise deals, commit numbers, and AE quota pacing.",
@@ -104,6 +114,8 @@ const INITIAL_EVENTS = [
     hour: 15,
     dayIndex: 3,
     dayNumber: 9,
+    monthIndex: 9,
+    year: 2026,
     type: "review",
     attendees: ["Amit Verma", "Legal Counsel"],
     desc: "Address liability indemnity clauses and custom SLA guarantee.",
@@ -118,6 +130,8 @@ const INITIAL_EVENTS = [
     hour: 13,
     dayIndex: 1,
     dayNumber: 7,
+    monthIndex: 9,
+    year: 2026,
     type: "demo",
     attendees: ["Vikram Malhotra", "Solutions Architect"],
     desc: "Live walkthrough of Dakini autonomous lead scoring triggers.",
@@ -135,6 +149,9 @@ export default function CalendarPage() {
   const [meetingAlert, setMeetingAlert] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Follow-ups' | 'Upcoming' | 'Completed' | 'Passed'
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Month navigation state (Month 9 is October, 0-indexed)
+  const [selectedMonthDate, setSelectedMonthDate] = useState(new Date(2026, 9, 1));
 
   // Load events from localStorage or fallback
   const [events, setEvents] = useState(() => {
@@ -177,8 +194,91 @@ export default function CalendarPage() {
     { day: "Sun", date: "12 Oct", fullDate: "Sunday, 12 October 2026", dayNumber: 12 }
   ];
 
-  // Helper: check if day of event has passed (Today is Oct 10)
+  // Month navigation actions
+  const handlePrevMonth = () => {
+    setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleJumpToToday = () => {
+    setSelectedMonthDate(new Date(2026, 9, 1));
+    setSelectedDayIndex(4);
+    setViewMode('Day');
+  };
+
+  const currentMonthYearLabel = selectedMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const currentQuarterLabel = `Q${Math.floor(selectedMonthDate.getMonth() / 3) + 1} FY${selectedMonthDate.getFullYear()}`;
+
+  // Dynamically compute monthDays grid for the selected month & year
+  const getDynamicMonthDays = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+
+    // First day of month (0 = Sun, 1 = Mon, ..., 6 = Sat)
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    // Monday-first offset: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+    const startOffset = (firstDayOfWeek + 6) % 7;
+
+    const daysInCurrentMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const prevMonthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'short' });
+    const nextMonthName = new Date(year, month + 1, 1).toLocaleString('default', { month: 'short' });
+
+    const cells = [];
+
+    // Preceding days from previous month
+    for (let i = startOffset - 1; i >= 0; i--) {
+      cells.push({
+        day: daysInPrevMonth - i,
+        month: prevMonthName,
+        isCurrentMonth: false,
+        year: month === 0 ? year - 1 : year,
+        monthIndex: month === 0 ? 11 : month - 1
+      });
+    }
+
+    // Days in current month
+    for (let d = 1; d <= daysInCurrentMonth; d++) {
+      const isToday = (year === 2026 && month === 9 && d === 10);
+      cells.push({
+        day: d,
+        isCurrentMonth: true,
+        isToday,
+        year,
+        monthIndex: month
+      });
+    }
+
+    // Trailing days from next month to fill 35 or 42 grid cells
+    const targetLength = cells.length > 35 ? 42 : 35;
+    const remaining = targetLength - cells.length;
+    for (let n = 1; n <= remaining; n++) {
+      cells.push({
+        day: n,
+        month: nextMonthName,
+        isCurrentMonth: false,
+        year: month === 11 ? year + 1 : year,
+        monthIndex: month === 11 ? 0 : month + 1
+      });
+    }
+
+    return cells;
+  };
+
+  const monthDays = getDynamicMonthDays(selectedMonthDate);
+
+  // Helper: check if day of event has passed (relative to Today: Fri 10 Oct 2026)
   const isEventPassed = (evt) => {
+    const evtYear = evt.year || 2026;
+    const evtMonth = evt.monthIndex !== undefined ? evt.monthIndex : 9;
+    if (evtYear < 2026) return true;
+    if (evtYear > 2026) return false;
+    if (evtMonth < 9) return true;
+    if (evtMonth > 9) return false;
     if (evt.dayNumber !== undefined && evt.dayNumber !== null) {
       return evt.dayNumber < 10;
     }
@@ -227,12 +327,13 @@ export default function CalendarPage() {
   // Reset to sample defaults
   const handleResetDefaults = () => {
     setEvents(INITIAL_EVENTS);
+    setSelectedMonthDate(new Date(2026, 9, 1));
     setMeetingAlert("Reset calendar schedule to default enterprise events.");
     setTimeout(() => setMeetingAlert(null), 3000);
   };
 
   // Open modal with specific day / hour
-  const handleOpenAddModal = (dayIdx = selectedDayIndex, hourVal = 10) => {
+  const handleOpenAddModal = (dayIdx = selectedDayIndex, hourVal = 10, customDayNumber = null) => {
     setNewDayIndex(dayIdx);
     setNewHour(hourVal);
     setNewTitle('');
@@ -264,6 +365,8 @@ export default function CalendarPage() {
       hour: Number(newHour),
       dayIndex: Number(newDayIndex),
       dayNumber: matchedDay.dayNumber,
+      monthIndex: selectedMonthDate.getMonth(),
+      year: selectedMonthDate.getFullYear(),
       type: newType,
       attendees: newAttendees ? newAttendees.split(',').map((s) => s.trim()) : ['Elena Rostova'],
       desc: newDesc.trim() || `Scheduled ${newType} with ${newCompany}`,
@@ -296,45 +399,6 @@ export default function CalendarPage() {
     { hour: 16, label: "4:00 PM" },
     { hour: 17, label: "5:00 PM" },
     { hour: 18, label: "6:00 PM" }
-  ];
-
-  // Month grid for October 2026
-  const monthDays = [
-    { day: 28, isCurrentMonth: false, month: 'Sep' },
-    { day: 29, isCurrentMonth: false, month: 'Sep' },
-    { day: 30, isCurrentMonth: false, month: 'Sep' },
-    { day: 1, isCurrentMonth: true },
-    { day: 2, isCurrentMonth: true },
-    { day: 3, isCurrentMonth: true },
-    { day: 4, isCurrentMonth: true },
-    { day: 5, isCurrentMonth: true },
-    { day: 6, isCurrentMonth: true },
-    { day: 7, isCurrentMonth: true },
-    { day: 8, isCurrentMonth: true },
-    { day: 9, isCurrentMonth: true },
-    { day: 10, isCurrentMonth: true, isToday: true },
-    { day: 11, isCurrentMonth: true },
-    { day: 12, isCurrentMonth: true },
-    { day: 13, isCurrentMonth: true },
-    { day: 14, isCurrentMonth: true, extraTitle: "11:00 AM QBR Demo" },
-    { day: 15, isCurrentMonth: true },
-    { day: 16, isCurrentMonth: true },
-    { day: 17, isCurrentMonth: true },
-    { day: 18, isCurrentMonth: true },
-    { day: 19, isCurrentMonth: true, extraTitle: "3:00 PM Procurement Sync" },
-    { day: 20, isCurrentMonth: true },
-    { day: 21, isCurrentMonth: true },
-    { day: 22, isCurrentMonth: true },
-    { day: 23, isCurrentMonth: true, extraTitle: "10:30 AM Board Security Review" },
-    { day: 24, isCurrentMonth: true },
-    { day: 25, isCurrentMonth: true },
-    { day: 26, isCurrentMonth: true },
-    { day: 27, isCurrentMonth: true },
-    { day: 28, isCurrentMonth: true, extraTitle: "2:00 PM Final Sign-off" },
-    { day: 29, isCurrentMonth: true },
-    { day: 30, isCurrentMonth: true },
-    { day: 31, isCurrentMonth: true },
-    { day: 1, isCurrentMonth: false, month: 'Nov' }
   ];
 
   // Filtering events based on user selected filter
@@ -994,41 +1058,50 @@ export default function CalendarPage() {
           )}
 
           {/* ========================================================
-              VIEW 3: MONTH VIEW (October 2026 Grid with Events)
+              VIEW 3: MONTH VIEW (Interactive Monthly Grid & Nav)
              ======================================================== */}
           {viewMode === 'Month' && (
             <div>
-              {/* Month Header */}
+              {/* Month Header with Previous / Next Buttons */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.85rem 1.25rem',
                 borderBottom: '1px solid #e2e8f0',
-                background: '#f8fafc'
+                background: '#f8fafc',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.5rem' }} title="Previous Month">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
+                    title="Previous Month"
+                    onClick={handlePrevMonth}
+                  >
                     <ChevronLeft size={16} />
                   </button>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.5rem' }} title="Next Month">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '0.35rem 0.5rem', cursor: 'pointer' }}
+                    title="Next Month"
+                    onClick={handleNextMonth}
+                  >
                     <ChevronRight size={16} />
                   </button>
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginLeft: '0.5rem' }}>
-                    October 2026
+                    {currentMonthYearLabel}
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="badge badge-blue">Q4 FY2026</span>
+                  <span className="badge badge-blue">{currentQuarterLabel}</span>
                   <button
                     className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      setSelectedDayIndex(4);
-                      setViewMode('Day');
-                    }}
+                    onClick={handleJumpToToday}
                   >
-                    Jump to Today (10 Oct)
+                    Jump to Today (10 Oct 2026)
                   </button>
                 </div>
               </div>
@@ -1042,29 +1115,42 @@ export default function CalendarPage() {
                 ))}
               </div>
 
-              {/* Month 35 Cells */}
+              {/* Month Grid Cells */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e2e8f0' }}>
                 {monthDays.map((cell, idx) => {
-                  const eventsOnThisDay = filteredEvents.filter((e) => e.dayNumber === cell.day && cell.isCurrentMonth);
-                  const isPast = cell.isCurrentMonth && cell.day < 10;
+                  const eventsOnThisDay = filteredEvents.filter((e) => {
+                    if (!cell.isCurrentMonth) return false;
+                    const evtMonth = e.monthIndex !== undefined ? e.monthIndex : 9;
+                    const evtYear = e.year || 2026;
+                    return evtYear === cell.year && evtMonth === cell.monthIndex && e.dayNumber === cell.day;
+                  });
+
+                  const isPast = (cell.year < 2026) ||
+                                 (cell.year === 2026 && cell.monthIndex < 9) ||
+                                 (cell.year === 2026 && cell.monthIndex === 9 && cell.day < 10);
 
                   return (
                     <div
                       key={idx}
                       onClick={() => {
                         if (cell.isCurrentMonth) {
-                          const matchedIdx = days.findIndex((d) => d.dayNumber === cell.day);
-                          if (matchedIdx !== -1) {
-                            setSelectedDayIndex(matchedIdx);
+                          if (cell.year === 2026 && cell.monthIndex === 9) {
+                            const matchedIdx = days.findIndex((d) => d.dayNumber === cell.day);
+                            if (matchedIdx !== -1) {
+                              setSelectedDayIndex(matchedIdx);
+                              setViewMode('Day');
+                              return;
+                            }
                           }
-                          setViewMode('Day');
+                          // Schedule follow-up on this specific day
+                          handleOpenAddModal(selectedDayIndex, 10);
                         }
                       }}
                       style={{
                         minHeight: 90,
                         padding: '0.45rem',
                         borderRight: (idx + 1) % 7 !== 0 ? '1px solid #f1f5f9' : 'none',
-                        borderBottom: idx < 28 ? '1px solid #f1f5f9' : 'none',
+                        borderBottom: '1px solid #f1f5f9',
                         background: cell.isToday
                           ? '#eff6ff'
                           : isPast
@@ -1080,8 +1166,8 @@ export default function CalendarPage() {
                         <span style={{
                           fontSize: '0.75rem',
                           fontWeight: cell.isToday ? 800 : cell.isCurrentMonth ? 700 : 400,
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1091,6 +1177,12 @@ export default function CalendarPage() {
                         }}>
                           {cell.day}
                         </span>
+
+                        {cell.month && (
+                          <span style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600 }}>
+                            {cell.month}
+                          </span>
+                        )}
 
                         {eventsOnThisDay.length > 0 && (
                           <span style={{
@@ -1129,24 +1221,6 @@ export default function CalendarPage() {
                         {eventsOnThisDay.length > 2 && (
                           <div style={{ fontSize: '0.625rem', color: '#2563eb', fontWeight: 700 }}>
                             +{eventsOnThisDay.length - 2} more
-                          </div>
-                        )}
-
-                        {cell.extraTitle && (
-                          <div
-                            style={{
-                              fontSize: '0.625rem',
-                              padding: '2px 4px',
-                              borderRadius: 4,
-                              background: '#f1f5f9',
-                              color: '#475569',
-                              fontWeight: 600,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}
-                          >
-                            {cell.extraTitle}
                           </div>
                         )}
                       </div>

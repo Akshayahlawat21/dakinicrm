@@ -168,7 +168,7 @@
 
 .lead-detail-columns {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
+  grid-template-columns: 300px minmax(0, 1fr) 280px;
   gap: 1.25rem;
   align-items: start;
 }

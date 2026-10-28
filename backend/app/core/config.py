@@ -15,6 +15,10 @@ class AppSettings(BaseSettings):
         extra="ignore"
     )
 
+    # Layer 5 transcript-analysis service (server-to-server only)
+    AI_SERVICE_URL: str = "http://127.0.0.1:8005"
+    AI_INTERNAL_API_KEY: str = ""
+
     # Runtime
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
@@ -31,8 +35,8 @@ class AppSettings(BaseSettings):
     SYNC_DATABASE_URL: Optional[str] = None
 
     # Connection Pool Management
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_SIZE: int = 2
+    DB_MAX_OVERFLOW: int = 1
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
     DB_STATEMENT_TIMEOUT_MS: int = 15000

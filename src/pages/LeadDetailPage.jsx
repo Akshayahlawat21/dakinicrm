@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
-import LoadingSymbol from '../components/common/LoadingSymbol';
+import { analyzeTranscript } from '../services/aiApi';
 import {
   ChevronLeft,
   Phone,
   Mail,
-  Edit3,
   CheckCircle,
   Building2,
-  Calendar,
   Sparkles,
-  Send,
-  Plus,
-  Clock,
   FileText,
   Briefcase,
-  Share2,
   ArrowRight,
-  ShieldCheck
+  LoaderCircle,
+  AlertCircle,
+  CheckCircle2,
+  Lightbulb,
+  ClipboardList
 } from 'lucide-react';
 
 export default function LeadDetailPage() {
@@ -29,16 +27,16 @@ export default function LeadDetailPage() {
     navigateTo,
     setLeadToConvert,
     setIsConvertModalOpen,
-    addTask,
-    sendAgentMessage,
-    isLoadingData,
+    addTranscriptAnalysis,
     currentUser,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('Overview');
-  const [quickNote, setQuickNote] = useState('');
-  const [timelineNotes, setTimelineNotes] = useState([]);
-  const [copilotInput, setCopilotInput] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const [productName, setProductName] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisError, setAnalysisError] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const lead =
     (id && leads?.find((l) => l.id === id)) ||
@@ -58,26 +56,39 @@ export default function LeadDetailPage() {
       timeline: []
     };
 
-  const handleAddNote = () => {
-    if (!quickNote.trim()) return;
-    const authorName = currentUser?.name || 'Sales Representative';
-    setTimelineNotes([
-      {
-        id: `note-${Date.now()}`,
-        type: "note",
-        title: `Note logged by ${authorName}`,
-        description: quickNote,
-        time: "Just now"
-      },
-      ...timelineNotes
-    ]);
-    setQuickNote('');
+  useEffect(() => {
+    setTranscript('');
+    setProductName('');
+    setAnalysis(null);
+    setAnalysisError('');
+    setIsAnalyzing(false);
+  }, [id]);
+
+  const handleAnalyzeTranscript = async () => {
+    if (!transcript.trim() || isAnalyzing) return;
+    setIsAnalyzing(true);
+    setAnalysisError('');
+    setAnalysis(null);
+    try {
+      const outputs = await analyzeTranscript(transcript);
+      setAnalysis(outputs);
+      addTranscriptAnalysis(lead, transcript.trim(), outputs, productName);
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'Transcript analysis failed. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const handleCopilotSend = () => {
-    if (!copilotInput.trim()) return;
-    sendAgentMessage(`Regarding lead ${lead.name}: ${copilotInput}`);
-    setCopilotInput('');
+  const renderItems = (items) => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return <p style={{ color: '#64748b', fontSize: '0.875rem' }}>No specific points identified from this transcript.</p>;
+    }
+    return (
+      <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'grid', gap: '0.45rem', color: '#334155', fontSize: '0.875rem' }}>
+        {items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
+      </ul>
+    );
   };
 
   return (
@@ -204,116 +215,146 @@ export default function LeadDetailPage() {
             ))}
           </div>
 
-          {/* Score breakdown card */}
-          <div className="crm-card score-breakdown-card">
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.15rem' }}>
-              Score breakdown
-            </h3>
-
-            <div className="score-bar-row">
-              <span className="score-bar-label">Website demo</span>
-              <div className="score-bar-track">
-                <div className="score-bar-fill" style={{ width: `${lead.scoreBreakdown?.websiteDemo || 95}%` }} />
-              </div>
-            </div>
-
-            <div className="score-bar-row">
-              <span className="score-bar-label">Email engagement</span>
-              <div className="score-bar-track">
-                <div className="score-bar-fill" style={{ width: `${lead.scoreBreakdown?.emailEngagement || 80}%` }} />
-              </div>
-            </div>
-
-            <div className="score-bar-row">
-              <span className="score-bar-label">Company fit</span>
-              <div className="score-bar-track">
-                <div className="score-bar-fill" style={{ width: `${lead.scoreBreakdown?.companyFit || 90}%` }} />
-              </div>
-            </div>
-
-            <div className="score-bar-row">
-              <span className="score-bar-label">Source quality</span>
-              <div className="score-bar-track">
-                <div className="score-bar-fill" style={{ width: `${lead.scoreBreakdown?.sourceQuality || 85}%` }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Timeline Card */}
-          <div className="crm-card" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem' }}>
-              Timeline
-            </h3>
-
-            {/* Custom Notes added by user */}
-            {timelineNotes.map((note) => (
-              <div key={note.id} className="timeline-item">
-                <div className="timeline-icon-node" style={{ background: '#2563eb', color: '#fff' }}>
-                  <FileText size={16} />
-                </div>
-                <div className="timeline-content-card highlight-blue">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700, color: '#1e3a8a' }}>{note.title}</span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{note.time}</span>
+          {activeTab === 'Overview' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <section className="crm-card transcript-card" style={{ padding: '1.35rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={21} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Call Transcript</h2>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Paste the salesperson and customer conversation below.</p>
+                    </div>
                   </div>
-                  <p style={{ color: '#334155' }}>{note.description}</p>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>V1 · Session only</span>
                 </div>
-              </div>
-            ))}
 
-            {/* Default Mock Timeline from Spec */}
-            {lead.timeline?.map((item) => (
-              <div key={item.id} className="timeline-item">
-                <div className={`timeline-icon-node ${item.type === 'ai' ? 'ai-node' : ''}`}>
-                  {item.type === 'ai' ? <Sparkles size={16} /> : <Clock size={16} />}
-                </div>
-                <div className={`timeline-content-card ${item.type === 'ai' ? 'highlight-blue' : ''}`}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700, color: item.type === 'ai' ? '#1e3a8a' : '#0f172a' }}>
-                      {item.title}
-                    </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.time}</span>
-                  </div>
-                  <p style={{ color: '#334155', lineHeight: 1.45 }}>{item.description}</p>
-                </div>
-              </div>
-            ))}
+                <label style={{ display: 'grid', gap: '0.35rem', margin: '0.9rem 0 0.65rem', color: '#334155', fontSize: '0.82rem', fontWeight: 700 }}>
+                  Product discussed <span style={{ color: '#64748b', fontWeight: 400 }}>(optional for V1 dashboard filtering)</span>
+                  <input
+                    value={productName}
+                    onChange={(event) => setProductName(event.target.value)}
+                    placeholder="Enter product name (e.g. CRM Software)"
+                    maxLength={120}
+                    style={{ width: '100%', padding: '0.7rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: 9, background: '#fff', color: '#0f172a' }}
+                  />
+                </label>
 
-            {/* Quick Action Input Bar at bottom */}
-            <div style={{ marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <input
-                  type="text"
-                  placeholder="Type a quick note or meeting update..."
-                  className="input-field"
-                  value={quickNote}
-                  onChange={(e) => setQuickNote(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                <textarea
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  placeholder={"Salesperson: Hello, how can I help you?\nCustomer: I would like to know more about your product..."}
+                  rows={8}
+                  maxLength={80000}
+                  aria-label="Call transcript"
+                  style={{
+                    width: '100%', resize: 'vertical', minHeight: 180, padding: '0.9rem',
+                    border: '1px solid #cbd5e1', borderRadius: 10, background: '#fff',
+                    color: '#0f172a', lineHeight: 1.6, outlineColor: '#2563eb'
+                  }}
                 />
-                <button className="btn btn-primary btn-sm" onClick={handleAddNote}>
-                  Post
-                </button>
-              </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary btn-sm" onClick={handleAddNote}>
-                  <Plus size={13} /> Add note
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => addTask(`Follow-up call with ${lead.name || 'Lead'}`, lead.company || lead.name || 'Enterprise Corp', 'High')}
-                >
-                  <Phone size={13} /> Log call
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => addTask(`Prepare proposal for ${lead.company || lead.name || 'Enterprise Corp'}`, lead.company || lead.name || 'Enterprise Corp', 'High')}
-                >
-                  <Calendar size={13} /> Create task
-                </button>
-              </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{transcript.length.toLocaleString()} / 80,000 characters</span>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-secondary" onClick={() => { setTranscript(''); setAnalysis(null); setAnalysisError(''); }} disabled={isAnalyzing || (!transcript && !analysis)}>
+                      Clear
+                    </button>
+                    <button className="btn btn-primary" onClick={handleAnalyzeTranscript} disabled={!transcript.trim() || isAnalyzing}>
+                      {isAnalyzing ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      {isAnalyzing ? 'Analyzing…' : 'Analyze with AI'}
+                    </button>
+                  </div>
+                </div>
+
+                {analysisError && (
+                  <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginTop: '1rem', padding: '0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 9, color: '#991b1b', fontSize: '0.85rem' }}>
+                    <AlertCircle size={17} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>{analysisError}</span>
+                  </div>
+                )}
+              </section>
+
+              <section className="crm-card" style={{ padding: '1.35rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ede9fe', color: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Sparkles size={21} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>AI Analysis Results</h2>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Summary and improvements for {lead.name || 'this lead'}.</p>
+                    </div>
+                  </div>
+                  {analysis && <span className="badge badge-green"><CheckCircle2 size={13} style={{ marginRight: 4 }} /> Analysis complete</span>}
+                </div>
+
+                {!analysis && !isAnalyzing && (
+                  <div style={{ textAlign: 'center', padding: '1.6rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
+                    <ClipboardList size={28} style={{ margin: '0 auto 0.55rem', color: '#94a3b8' }} />
+                    <p style={{ fontWeight: 700, color: '#475569', marginBottom: 3 }}>Your call report will appear here</p>
+                    <p style={{ fontSize: '0.82rem' }}>Paste a transcript and click Analyze with AI.</p>
+                  </div>
+                )}
+
+                {isAnalyzing && (
+                  <div style={{ textAlign: 'center', padding: '1.6rem', color: '#475569' }}>
+                    <LoaderCircle size={25} className="animate-spin" style={{ margin: '0 auto 0.5rem', color: '#2563eb' }} />
+                    <p style={{ fontWeight: 700 }}>Analyzing conversation…</p>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Layer 5 is preparing the summary and improvements.</p>
+                  </div>
+                )}
+
+                {analysis && (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    <div style={{ border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 10, padding: '1rem' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#1d4ed8', marginBottom: '0.55rem' }}>
+                        <FileText size={17} /> Summary
+                      </h3>
+                      <p style={{ color: '#1e293b', lineHeight: 1.65, fontSize: '0.9rem' }}>{analysis.summary?.call_summary || 'No summary was returned.'}</p>
+                      {[
+                        ['Positive feedback', analysis.summary?.positive_feedback],
+                        ['Negative feedback / concerns', analysis.summary?.negative_feedback],
+                        ['Customer needs', analysis.summary?.customer_needs],
+                        ['Buying signals', analysis.summary?.buying_signals],
+                      ].map(([label, items]) => (
+                        Array.isArray(items) && items.length > 0 ? (
+                          <div key={label} style={{ marginTop: '0.8rem' }}>
+                            <p style={{ fontWeight: 700, color: '#334155', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
+                            {renderItems(items)}
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+
+                    <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: 10, padding: '1rem' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#c2410c', marginBottom: '0.65rem' }}>
+                        <Lightbulb size={18} /> Improvements
+                      </h3>
+                      {[
+                        ['Conversion blockers', analysis.improvements?.conversion_blockers],
+                        ['Sales recommendations', analysis.improvements?.sales_recommendations],
+                        ['Product improvements', analysis.improvements?.product_improvements],
+                        ['Next steps', analysis.improvements?.next_steps],
+                      ].map(([label, items]) => (
+                        <div key={label} style={{ marginTop: '0.75rem' }}>
+                          <p style={{ fontWeight: 700, color: '#7c2d12', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
+                          {renderItems(items)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
-          </div>
+          ) : (
+            <div className="crm-card" style={{ padding: '1.5rem' }}>
+              <h3 style={{ marginBottom: '0.5rem' }}>{activeTab}</h3>
+              <p style={{ color: '#64748b', fontSize: '0.875rem' }}>This section is outside the transcript-analysis V1 scope. Use Overview for the call transcript and AI report.</p>
+            </div>
+          )}
         </div>
 
         {/* =========================================================================
@@ -350,69 +391,6 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          {/* Contextual Dakini Copilot Card */}
-          <div className="crm-card" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%)', border: '1.5px solid #bfdbfe' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: 28, height: 28, borderRadius: 6, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Sparkles size={16} />
-                </div>
-                <span style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#0f172a' }}>Dakini</span>
-              </div>
-              <span className="badge badge-blue">Lead Copilot</span>
-            </div>
-
-            <div style={{ background: '#ffffff', borderRadius: 10, padding: '0.85rem', border: '1px solid #dbeafe', fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45, marginBottom: '0.85rem' }}>
-              <p>
-                <strong>{lead.name || 'Lead Record'}</strong> is already converted. His score of <strong>{lead.score || 85}</strong> comes mostly from the website demo request.
-              </p>
-              <p style={{ marginTop: '0.35rem', color: '#1e40af', fontWeight: 600 }}>
-                Next step: book a discovery call with {lead.owner || 'Assigned Representative'}.
-              </p>
-            </div>
-
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.45rem' }}>
-              Suggested
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.85rem' }}>
-              {[
-                "Draft a follow-up email",
-                "Call with the voice agent",
-                "Why this score?"
-              ].map((sugg) => (
-                <button
-                  key={sugg}
-                  className="suggested-prompt-btn"
-                  style={{ background: '#ffffff', fontSize: '0.75rem' }}
-                  onClick={() => sendAgentMessage(`For ${lead.name}: ${sugg}`)}
-                >
-                  <span>{sugg}</span>
-                  <ArrowRight size={13} color="#2563eb" />
-                </button>
-              ))}
-            </div>
-
-            {/* Copilot Mini Input */}
-            <div className="agent-input-container" style={{ background: '#ffffff' }}>
-              <input
-                type="text"
-                placeholder="Ask anything..."
-                className="agent-chat-input"
-                style={{ fontSize: '0.75rem' }}
-                value={copilotInput}
-                onChange={(e) => setCopilotInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCopilotSend()}
-              />
-              <button
-                className="btn btn-primary btn-icon-only"
-                style={{ width: 28, height: 28 }}
-                onClick={handleCopilotSend}
-              >
-                <Send size={13} />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

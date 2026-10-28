@@ -50,6 +50,8 @@ export function CRMProvider({ children }) {
   // const [campaigns, setCampaigns] = useState(initialCampaigns);
   // const [tasks, setTasks] = useState(initialTasks);
   const [leads, setLeads] = useState([]);
+  // V1 transcript analyses are session-only (no database persistence).
+  const [transcriptAnalyses, setTranscriptAnalyses] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [deals, setDeals] = useState([]);
@@ -742,6 +744,21 @@ export function CRMProvider({ children }) {
   };
 
 
+  const addTranscriptAnalysis = (lead, transcript, outputs, productName = '') => {
+    const record = {
+      id: `transcript-analysis-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      leadId: String(lead?.id || ''),
+      leadName: lead?.name || 'Unknown lead',
+      company: lead?.company || '',
+      productName: (productName || '').trim() || 'Unassigned',
+      transcript,
+      outputs,
+      createdAt: new Date().toISOString(),
+    };
+    setTranscriptAnalyses((previous) => [record, ...previous]);
+    return record;
+  };
+
   const convertLead = async (lead, dealName, dealAmount) => {
     // Dynamic converter name based on logged-in user
     const converterName = currentUser?.name || 'Sales Representative';
@@ -888,6 +905,8 @@ export function CRMProvider({ children }) {
         setIsNotificationsOpen,
         leads,
         setLeads,
+        transcriptAnalyses,
+        addTranscriptAnalysis,
         addLead,
         deleteLeads,
         deleteLead,

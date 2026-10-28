@@ -15,6 +15,7 @@ import {
   Mail,
   Calendar,
   BarChart3,
+  MessageSquareText,
   Zap,
   Bot,
   Settings,
@@ -55,6 +56,7 @@ export default function Sidebar() {
       title: "Insights & Engine",
       items: [
         { id: "reports", label: "Reports & Analytics", icon: BarChart3 },
+        { id: "customer-feedback", label: "Customer Feedback", icon: MessageSquareText },
         { id: "automations", label: "Automations", icon: Zap }
       ]
     },

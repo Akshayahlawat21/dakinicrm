@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { X, Check, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import CountryPhoneInput from '../common/CountryPhoneInput';
 
 const INITIAL_FORM_DATA = {
   name: '',
@@ -624,16 +625,12 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Phone
-                    </label>
-                    <input
-                      type="text"
+                    <CountryPhoneInput
+                      label="Phone"
                       name="phone"
-                      placeholder="+1 (555) 000-0000"
-                      className="input-field"
                       value={formData.phone}
                       onChange={handleChange}
+                      placeholder="(555) 000-0000"
                     />
                   </div>
                 </div>
@@ -1296,16 +1293,12 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Phone
-                    </label>
-                    <input
-                      type="text"
+                    <CountryPhoneInput
+                      label="Phone"
                       name="phone"
-                      placeholder="+1 (555) 000-0000"
-                      className="input-field"
                       value={formData.phone}
                       onChange={handleChange}
+                      placeholder="(555) 000-0000"
                     />
                   </div>
                 </div>
@@ -1418,16 +1411,12 @@ export default function QuickCreateModal() {
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
+                  <CountryPhoneInput
+                    label="Phone Number"
                     name="phone"
-                    placeholder="+1 (555) 000-0000"
-                    className="input-field"
                     value={formData.phone}
                     onChange={handleChange}
+                    placeholder="(555) 000-0000"
                   />
                 </div>
 

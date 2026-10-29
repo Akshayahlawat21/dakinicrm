@@ -253,3 +253,128 @@ class DealService:
             resource_id=deal.id,
         )
         return True
+
+    async def check_duplicate_deal(
+        self,
+        ctx: RequestContext,
+        account_id: Optional[str | uuid.UUID] = None,
+        company: Optional[str] = None,
+        name: Optional[str] = None,
+        opportunity_reference: Optional[str] = None,
+        product_name: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Duplicate Deal Advisor (Warn, Don't Automatically Block).
+        1. Checks for an existing Deal with the same Account and an ACTIVE sales opportunity.
+        2. Status must be 'open' (stages like Qualified, Proposal, Negotiation).
+        3. Historical deals (Closed Won / Closed Lost) represent past purchases or previous lost cycles;
+           they NEVER trigger duplicate warnings, preserving full history and permitting legitimate repeat purchases!
+        4. If a distinct opportunity_reference or separate purchase indicator is present, duplicates are not flagged.
+        5. RBAC Protection: Redacts sensitive details if caller is unauthorized to view the matched deal.
+        """
+        if opportunity_reference and opportunity_reference.strip():
+            # Reliable business identifier provided to denote a distinct opportunity/order
+            return {
+                "is_duplicate_warning": False,
+                "is_distinct_opportunity": True,
+            }
+
+        acc_uuid = None
+        if account_id:
+            try:
+                acc_uuid = uuid.UUID(str(account_id))
+            except (ValueError, TypeError):
+                acc_uuid = None
+
+        if not acc_uuid and company:
+            from backend.app.data.repositories.account_repository import AccountRepository
+            acc_repo = AccountRepository(self.session)
+            acc = await acc_repo.get_by_name(company, ctx.tenant_id)
+            if acc:
+                acc_uuid = acc.id
+
+        if not acc_uuid:
+            return None
+
+        from sqlalchemy import select
+        from backend.app.data.models.user import User
+
+        # Query active, open deals for this account in this tenant
+        stmt = (
+            select(Deal)
+            .where(
+                Deal.organization_id == ctx.tenant_uuid,
+                Deal.account_id == acc_uuid,
+                Deal.deleted_at.is_(None),
+                Deal.status == "open",
+                ~Deal.stage.in_(["Won", "Lost", "Closed Won", "Closed Lost"]),
+            )
+            .order_by(Deal.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        active_deals = list(res.scalars().all())
+
+        if not active_deals:
+            return None
+
+        target_name = (name or product_name or "").strip().lower()
+        target_words = [w for w in target_name.split() if len(w) > 3]
+
+        for d in active_deals:
+            d_name = d.name.lower()
+            is_match = (
+                d_name == target_name
+                or any(w in d_name for w in target_words)
+                or (product_name and product_name.lower().strip() in d_name)
+                or len(active_deals) == 1
+            )
+            if is_match:
+                # Check RBAC visibility for caller
+                eff_owner = await self.deal_repo.get_effective_owner_id(d)
+                is_authorized = False
+
+                if ctx.is_owner:
+                    is_authorized = True
+                elif ctx.is_manager:
+                    if not eff_owner or eff_owner == ctx.user_uuid:
+                        is_authorized = True
+                    else:
+                        mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+                        if mgr_team:
+                            is_authorized = await self.team_repo.is_user_in_team(
+                                eff_owner, mgr_team.id, ctx.tenant_id
+                            )
+                elif ctx.is_salesperson:
+                    is_authorized = (eff_owner == ctx.user_uuid)
+
+                # If unauthorized user (e.g. salesperson probing another rep's deal), do not leak details
+                if not is_authorized:
+                    return {
+                        "is_duplicate_warning": True,
+                        "is_restricted": True,
+                        "warning_message": (
+                            "An active deal already exists for this account under another sales representative. "
+                            "Contact your sales manager to coordinate or confirm a separate opportunity."
+                        ),
+                    }
+
+                owner_user = await self.session.get(User, eff_owner) if eff_owner else None
+                owner_name = owner_user.name if owner_user else "Unassigned"
+
+                return {
+                    "is_duplicate_warning": True,
+                    "is_restricted": False,
+                    "existing_deal_id": str(d.id),
+                    "existing_deal_name": d.name,
+                    "existing_stage": d.stage,
+                    "existing_amount": float(d.amount),
+                    "existing_owner": owner_name,
+                    "existing_created_at": d.created_at.isoformat() if d.created_at else None,
+                    "warning_message": (
+                        f"An active Deal '{d.name}' (${float(d.amount):,.0f}, Stage: {d.stage}, Owner: {owner_name}) "
+                        f"already exists for this account. If this is a legitimate repeat purchase, "
+                        f"separate subscription, or add-on license, confirm as a separate opportunity to proceed."
+                    ),
+                }
+
+        return None

@@ -16,6 +16,9 @@ class DealCreateRequest(BaseModel):
     stage: Optional[str] = "Qualified"
     currency: Optional[str] = "USD"
     opportunity_id: Optional[str] = None
+    opportunity_reference: Optional[str] = None
+    product_id: Optional[str] = None
+    product_name: Optional[str] = None
 
     def get_name(self) -> str:
         if self.name and self.name.strip():

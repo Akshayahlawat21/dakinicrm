@@ -11,7 +11,7 @@
     "gateway:test": "pytest gateway/tests -v",
     "backend": "python backend/run.py",
     "backend:test": "pytest backend/tests -v",
-    "analytics": "python -m uvicorn app.main:app --app-dir analytics --host 127.0.0.1 --port 8090 --reload",
+    "analytics": "python analytics/run.py",
     "analytics:test": "pytest analytics/tests -o pythonpath=analytics -v"
   },
   "dependencies": {

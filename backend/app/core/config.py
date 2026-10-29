@@ -1,22 +1,22 @@
 import os
-from typing import Optional, List
+from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppSettings(BaseSettings):
     """
-    Layer 3 Application & Layer 6 Data Layer Configuration.
-    Loaded from environment variables or .env file.
+    Centralized configuration management for Layer 3 Application Backend.
+    Reads environment variables from .env file or system environment.
     """
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
+        case_sensitive=True,
         extra="ignore"
     )
 
-    # Layer 5 transcript-analysis service (server-to-server only)
-    AI_SERVICE_URL: str = "http://127.0.0.1:8005"
+    AI_SERVICE_URL: str = "http://localhost:8001"
     AI_INTERNAL_API_KEY: str = ""
 
     # Runtime
@@ -34,9 +34,9 @@ class AppSettings(BaseSettings):
     )
     SYNC_DATABASE_URL: Optional[str] = None
 
-    # Connection Pool Management
-    DB_POOL_SIZE: int = 2
-    DB_MAX_OVERFLOW: int = 1
+    # Connection Pool Management (Optimized for Supabase Session Pooler limit 15)
+    DB_POOL_SIZE: int = 4
+    DB_MAX_OVERFLOW: int = 3
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
     DB_STATEMENT_TIMEOUT_MS: int = 15000
@@ -57,10 +57,12 @@ class AppSettings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080"
     ]
+
+    # Layer 9 Analytics integration
+    ANALYTICS_SERVICE_URL: str = "http://localhost:8090"
+    ANALYTICS_TIMEOUT_SECONDS: int = 5
 
     @property
     def is_production(self) -> bool:

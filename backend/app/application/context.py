@@ -3,6 +3,24 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+KNOWN_UUID_ALIASES = {
+    "tenant_enterprise_01": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+    "dakini-enterprise": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+    "default": uuid.UUID("b4b76cde-a5e0-5ffb-9670-2df601cd5eef"),
+    "usr_elena": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+    "usr_elena.rostova": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+    "elena.rostova@dakini.ai": uuid.UUID("e7e81b6a-d30e-5270-87f1-260879092306"),
+    "usr_marcus": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+    "usr_marcus.vance": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+    "marcus.vance@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330002"),
+    "usr_dev": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+    "usr_dev.singhania": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+    "dev.singhania@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330003"),
+    "usr_asha": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+    "usr_asha.nair": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+    "asha.nair@dakini.ai": uuid.UUID("33333333-3333-3333-3333-333333330004"),
+}
+
 @dataclass(frozen=True)
 class RequestContext:
     """
@@ -40,15 +58,20 @@ class RequestContext:
 
     @property
     def user_uuid(self) -> uuid.UUID:
+        s_val = str(self.user_id).strip()
+        if s_val in KNOWN_UUID_ALIASES:
+            return KNOWN_UUID_ALIASES[s_val]
         try:
-            return uuid.UUID(str(self.user_id))
+            return uuid.UUID(s_val)
         except ValueError:
-            # Fallback namespace UUID if external id format like 'usr_elena'
-            return uuid.uuid5(uuid.NAMESPACE_DNS, str(self.user_id))
+            return uuid.uuid5(uuid.NAMESPACE_DNS, s_val)
 
     @property
     def tenant_uuid(self) -> uuid.UUID:
+        s_val = str(self.tenant_id).strip()
+        if s_val in KNOWN_UUID_ALIASES:
+            return KNOWN_UUID_ALIASES[s_val]
         try:
-            return uuid.UUID(str(self.tenant_id))
+            return uuid.UUID(s_val)
         except ValueError:
-            return uuid.uuid5(uuid.NAMESPACE_DNS, str(self.tenant_id))
+            return uuid.uuid5(uuid.NAMESPACE_DNS, s_val)

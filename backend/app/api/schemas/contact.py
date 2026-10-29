@@ -16,6 +16,17 @@ class ContactCreateRequest(BaseModel):
     phone: Optional[str] = None
     title: Optional[str] = None
     department: Optional[str] = None
+    allow_separate_contact: Optional[bool] = False
+
+
+class ContactDuplicateCheckResponse(BaseModel):
+    is_duplicate_warning: bool
+    existing_contact_id: Optional[str] = None
+    existing_contact_name: Optional[str] = None
+    existing_company: Optional[str] = None
+    existing_email: Optional[str] = None
+    existing_title: Optional[str] = None
+    warning_message: Optional[str] = None
 
 
 class ContactResponse(BaseModel):
@@ -23,6 +34,8 @@ class ContactResponse(BaseModel):
 
     id: str
     account_id: str
+    account: Optional[str] = None
+    account_name: Optional[str] = None
     first_name: str
     last_name: str
     email: Optional[str] = None

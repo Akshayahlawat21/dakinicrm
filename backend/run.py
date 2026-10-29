@@ -30,7 +30,7 @@ def main():
         "backend.app.main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=False,
+        reload=True,
         loop=loop_setting,
     )
 

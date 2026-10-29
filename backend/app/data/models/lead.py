@@ -26,10 +26,19 @@ class Lead(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="New", nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    company: Mapped[str | None] = mapped_column(String(100), nullable=True)
     email: Mapped[str | None] = mapped_column(String(150), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     industry: Mapped[str | None] = mapped_column(String(50), nullable=True)
     score: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("products.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    interested_product: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Relationships
     assigned_user: Mapped["User"] = relationship("User", foreign_keys=[assigned_to])

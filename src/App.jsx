@@ -1,3 +1,4 @@
+import ErrorBoundary from './components/common/ErrorBoundary';
 import React from 'react';
 import {
   BrowserRouter,
@@ -26,6 +27,7 @@ import LeadDetailPage from './pages/LeadDetailPage';
 import AccountsPage from './pages/AccountsPage';
 import ContactsPage from './pages/ContactsPage';
 import DealsPage from './pages/DealsPage';
+import CustomersPage from './pages/CustomersPage';
 import CampaignsPage from './pages/CampaignsPage';
 import TasksPage from './pages/TasksPage';
 import InboxPage from './pages/InboxPage';
@@ -69,7 +71,9 @@ function AppLayout() {
 
         {/* Dynamic Page Content Viewport */}
         <main className="content-viewport">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -127,6 +131,7 @@ function AppRoutes() {
         <Route path="/lead-detail" element={<LeadDetailPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/deals" element={<DealsPage />} />
+        <Route path="/customers" element={<CustomersPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
@@ -146,9 +151,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <CRMProvider>
-        <AppRoutes />
-      </CRMProvider>
+      <ErrorBoundary>
+        <CRMProvider>
+          <AppRoutes />
+        </CRMProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

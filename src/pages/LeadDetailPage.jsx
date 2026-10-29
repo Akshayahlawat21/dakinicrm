@@ -195,6 +195,15 @@ export default function LeadDetailPage() {
                 {lead.company || lead.name || 'Enterprise Corp'}
               </span>
             </div>
+
+            {lead.interested_product && (
+              <div className="lead-meta-row">
+                <span className="lead-meta-label">Interested Product</span>
+                <span className="lead-meta-value" style={{ color: '#1d4ed8', fontWeight: 700 }}>
+                  📦 {lead.interested_product}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

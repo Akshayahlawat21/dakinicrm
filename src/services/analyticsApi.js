@@ -2,6 +2,13 @@ const ANALYTICS_BASE_URL = (import.meta.env.VITE_ANALYTICS_BASE_URL || '/analyti
 const GATEWAY_MODE = ANALYTICS_BASE_URL.startsWith('/v1/analytics') || /^https?:.*\/v1\/analytics$/.test(ANALYTICS_BASE_URL);
 const DIRECT_MODE = !GATEWAY_MODE;
 
+const _analyticsCache = new Map();
+const CACHE_TTL_MS = 60000; // 60 seconds
+
+export function clearAnalyticsCache() {
+  _analyticsCache.clear();
+}
+
 function readStoredUser() {
   try {
     return JSON.parse(localStorage.getItem('dakini_user_profile') || 'null');
@@ -49,7 +56,15 @@ function reportPath(path) {
   return GATEWAY_MODE ? `/reports/${path}` : `/v1/reports/${path}`;
 }
 
-async function analyticsRequest(path) {
+async function analyticsRequest(path, bypassCache = false) {
+  const now = Date.now();
+  if (!bypassCache && _analyticsCache.has(path)) {
+    const entry = _analyticsCache.get(path);
+    if (now - entry.timestamp < CACHE_TTL_MS) {
+      return entry.data;
+    }
+  }
+
   const response = await fetch(`${ANALYTICS_BASE_URL}${path}`, {
     method: 'GET',
     headers: requestHeaders(),
@@ -65,18 +80,20 @@ async function analyticsRequest(path) {
       : payload?.error?.message || `Analytics request failed (${response.status})`;
     throw new Error(detail);
   }
+  _analyticsCache.set(path, { timestamp: now, data: payload });
   return payload;
 }
 
 export const analyticsApi = {
-  getOverview: (period = 'month') => analyticsRequest(`${reportPath('overview')}?period=${encodeURIComponent(period)}`),
-  getRevenueTrend: (months = 6) => analyticsRequest(`${reportPath('revenue-trend')}?months=${months}`),
-  getPipelineByStage: () => analyticsRequest(reportPath('pipeline-by-stage')),
-  getLeadSources: (period = 'last_30_days') => analyticsRequest(`${reportPath('lead-sources')}?period=${encodeURIComponent(period)}`),
-  getConversionFunnel: (period = 'last_30_days') => analyticsRequest(`${reportPath('conversion-funnel')}?period=${encodeURIComponent(period)}`),
-  getActivityPerformance: (period = 'last_30_days') => analyticsRequest(`${reportPath('activity-performance')}?period=${encodeURIComponent(period)}`),
-  getQuotaLeaderboard: (period = 'month') => analyticsRequest(`${reportPath('quota-leaderboard')}?period=${encodeURIComponent(period)}`),
-  getTargetPace: (period = 'quarter') => analyticsRequest(`${reportPath('target-pace')}?period=${encodeURIComponent(period)}`),
+  clearCache: clearAnalyticsCache,
+  getOverview: (period = 'month', bypass = false) => analyticsRequest(`${reportPath('overview')}?period=${encodeURIComponent(period)}`, bypass),
+  getRevenueTrend: (months = 6, bypass = false) => analyticsRequest(`${reportPath('revenue-trend')}?months=${months}`, bypass),
+  getPipelineByStage: (bypass = false) => analyticsRequest(reportPath('pipeline-by-stage'), bypass),
+  getLeadSources: (period = 'last_30_days', bypass = false) => analyticsRequest(`${reportPath('lead-sources')}?period=${encodeURIComponent(period)}`, bypass),
+  getConversionFunnel: (period = 'last_30_days', bypass = false) => analyticsRequest(`${reportPath('conversion-funnel')}?period=${encodeURIComponent(period)}`, bypass),
+  getActivityPerformance: (period = 'last_30_days', bypass = false) => analyticsRequest(`${reportPath('activity-performance')}?period=${encodeURIComponent(period)}`, bypass),
+  getQuotaLeaderboard: (period = 'month', bypass = false) => analyticsRequest(`${reportPath('quota-leaderboard')}?period=${encodeURIComponent(period)}`, bypass),
+  getTargetPace: (period = 'quarter', bypass = false) => analyticsRequest(`${reportPath('target-pace')}?period=${encodeURIComponent(period)}`, bypass),
   async downloadCsv(report, period = 'month', months = 6) {
     const response = await fetch(
       `${ANALYTICS_BASE_URL}${reportPath('export.csv')}?report=${encodeURIComponent(report)}&period=${encodeURIComponent(period)}&months=${months}`,

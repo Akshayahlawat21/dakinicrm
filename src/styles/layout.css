@@ -198,6 +198,7 @@
   gap: 1.25rem;
   flex: 1;
   max-width: 520px;
+  min-width: 220px;
 }
 
 .topbar-search-trigger {
@@ -213,6 +214,13 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.topbar-search-trigger span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .topbar-search-trigger:hover {
   background: #ffffff;
@@ -224,6 +232,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .topbar-action-icon {
@@ -295,6 +304,17 @@
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
+}
+
+@media (max-width: 1360px) {
+  .crm-agent-dock {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    box-shadow: -6px 0 25px rgba(0, 0, 0, 0.15);
+  }
 }
 
 @keyframes slideLeft {

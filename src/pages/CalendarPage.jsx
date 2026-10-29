@@ -1133,17 +1133,7 @@ export default function CalendarPage() {
                                       <span>{evt.completed ? 'Completed ✓' : 'Mark Done'}</span>
                                     </button>
 
-                                    {/* Video call link */}
-                                    {evt.videoUrl && !evt.completed && (
-                                      <button
-                                        className="btn btn-secondary btn-sm"
-                                        onClick={() => handleJoinCall(evt)}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                                      >
-                                        <Video size={13} />
-                                        <span>Join Video</span>
-                                      </button>
-                                    )}
+
 
                                     {/* Remove / Delete Button */}
                                     <button
@@ -1525,17 +1515,7 @@ export default function CalendarPage() {
                       <Clock size={11} /> {evt.time}
                     </div>
 
-                    {/* Join Video Bridge if meeting */}
-                    {evt.videoUrl && !evt.completed && (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        style={{ marginTop: '0.65rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
-                        onClick={() => handleJoinCall(evt)}
-                      >
-                        <Video size={13} />
-                        <span>Join Video Bridge</span>
-                      </button>
-                    )}
+
                   </div>
                 );
               })

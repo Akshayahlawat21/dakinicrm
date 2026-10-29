@@ -356,6 +356,13 @@ export const gatewayApi = {
     });
   },
 
+  async updateTaskStatus(taskId, status) {
+    return gatewayFetch('/tasks/' + taskId + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
   /**
    * Teams resource
    */

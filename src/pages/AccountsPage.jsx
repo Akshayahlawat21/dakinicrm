@@ -26,7 +26,9 @@ export default function AccountsPage() {
     setIsQuickCreateOpen,
     setQuickCreateType,
     isLoadingData,
-    currentUser
+    currentUser,
+    isAgentDockOpen,
+    setIsAgentDockOpen
   } = useCRM();
 
   const getAccountContacts = (acc) => {
@@ -174,7 +176,7 @@ export default function AccountsPage() {
                 return (
                   <tr
                     key={acc.id || `acc-${displayName}`}
-                    onClick={() => setSelectedAccount(acc)}
+                    onClick={() => { setSelectedAccount(acc); if (window.innerWidth < 1280) setIsAgentDockOpen(false); }}
                     style={{ cursor: 'pointer' }}
                   >
                     <td>
@@ -298,15 +300,17 @@ export default function AccountsPage() {
           style={{
             position: 'fixed',
             top: 64,
-            right: 0,
+            right: isAgentDockOpen ? 360 : 0,
             bottom: 0,
             width: 440,
+            maxWidth: 'calc(100vw - 380px)',
             background: '#ffffff',
             borderLeft: '1px solid #e2e8f0',
             boxShadow: '-4px 0 25px rgba(0,0,0,0.1)',
             zIndex: 45,
             display: 'flex',
             flexDirection: 'column',
+            transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             animation: 'slideLeft 0.2s ease',
           }}
         >

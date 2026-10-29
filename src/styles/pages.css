@@ -168,16 +168,11 @@
 
 .lead-detail-columns {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 280px;
-  gap: 1.25rem;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.5rem;
   align-items: start;
 }
-@media (max-width: 1280px) {
-  .lead-detail-columns {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media (max-width: 850px) {
+@media (max-width: 1080px) {
   .lead-detail-columns {
     grid-template-columns: 1fr;
   }

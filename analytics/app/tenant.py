@@ -1,9 +1,16 @@
-
+import time
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.config import get_settings
+
+_ORG_CACHE: dict[str, tuple[str, float]] = {}
+_ORG_CACHE_TTL = 300.0  # 5 minutes
+
+
+def clear_org_cache() -> None:
+    _ORG_CACHE.clear()
 
 
 async def resolve_organization_id(
@@ -15,6 +22,11 @@ async def resolve_organization_id(
     # Apply an explicitly configured tenant slug mapping, if available.
     if tenant_id:
         tenant_id = settings.tenant_slug_map.get(tenant_id, tenant_id)
+
+    if tenant_id and tenant_id in _ORG_CACHE:
+        cached_id, timestamp = _ORG_CACHE[tenant_id]
+        if time.time() - timestamp < _ORG_CACHE_TTL:
+            return cached_id
 
     result = await conn.execute(
         text("""
@@ -38,5 +50,8 @@ async def resolve_organization_id(
             status_code=404,
             detail="Organization not found for tenant",
         )
+
+    if tenant_id:
+        _ORG_CACHE[tenant_id] = (org_id, time.time())
 
     return org_id

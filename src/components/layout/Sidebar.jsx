@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { currentTab, navigateTo, sidebarCollapsed, setSidebarCollapsed, leads, deals, tasks, approvals } = useCRM();
+  const { currentTab, navigateTo, sidebarCollapsed, setSidebarCollapsed, leads, deals, tasks, approvals, unreadEmailCount } = useCRM();
 
   const wonDealsCount = (deals || []).filter((d) => {
     const s = String(d?.stage || '').toLowerCase().trim();
@@ -55,7 +55,7 @@ export default function Sidebar() {
       title: "Engagement",
       items: [
         { id: "tasks", label: "Tasks & To-Dos", icon: CheckSquare, count: tasks.filter(t => !t.completed).length },
-        { id: "inbox", label: "Inbox", icon: Mail, count: 1 },
+        { id: "inbox", label: "Inbox", icon: Mail, count: unreadEmailCount > 0 ? unreadEmailCount : undefined },
         { id: "calendar", label: "Calendar", icon: Calendar }
       ]
     },

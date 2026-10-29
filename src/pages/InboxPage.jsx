@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import {
@@ -20,12 +20,15 @@ import {
   Tag,
   Clock,
   Trash2,
-  Edit3
+  Edit3,
+  CheckCircle2,
+  MailPlus,
+  MailCheck
 } from 'lucide-react';
 
 export default function InboxPage() {
   const navigate = useNavigate();
-  const { emails, currentUser, setIsAgentDockOpen, sendAgentMessage } = useCRM();
+  const { emails, currentUser, setIsAgentDockOpen, sendAgentMessage, unreadEmailCount, markEmailAsRead, markEmailAsUnread, receiveIncomingEmail, deleteEmail } = useCRM();
 
   const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'drafts' | 'templates'
   const [selectedInboxId, setSelectedInboxId] = useState(emails[0]?.id || 'email-001');
@@ -37,6 +40,8 @@ export default function InboxPage() {
   const [replyText, setReplyText] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [actionAlert, setActionAlert] = useState(null);
+
+
 
   // Template test variable overrides
   const [templateVars, setTemplateVars] = useState({
@@ -302,6 +307,16 @@ Sales Director | Dakini AI CRM`
   const currentDraft = draftsList.find((e) => e.id === selectedDraftId) || draftsList[0];
   const currentTemplate = salesTemplates.find((t) => t.id === selectedTemplateId) || salesTemplates[0];
 
+  // Automatically mark currently opened inbox email as read after brief delay
+  useEffect(() => {
+    if (activeFolder === 'inbox' && currentInboxEmail && currentInboxEmail.unread) {
+      const timer = setTimeout(() => {
+        markEmailAsRead(currentInboxEmail.id);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedInboxId, activeFolder, currentInboxEmail?.id, currentInboxEmail?.unread]);
+
   // Draft editing state
   const [draftSubject, setDraftSubject] = useState(currentDraft?.subject || '');
   const [draftBody, setDraftBody] = useState(currentDraft?.body || '');
@@ -373,18 +388,59 @@ Sales Director | Dakini AI CRM`
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
-            Inbox & Communication
-          </h1>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-            Email conversations and sales cadence templates automatically synced with Salesforce CRM
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Inbox & Communication
+            </h1>
+            {unreadEmailCount > 0 ? (
+              <span style={{
+                background: '#eff6ff',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                padding: '2px 9px',
+                borderRadius: 12,
+                fontSize: '0.75rem',
+                fontWeight: 700
+              }}>
+                {unreadEmailCount} Unread
+              </span>
+            ) : (
+              <span style={{
+                background: '#f1f5f9',
+                color: '#64748b',
+                padding: '2px 9px',
+                borderRadius: 12,
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}>
+                All caught up
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 4 }}>
+            Live bidirectional email communications with autonomous AI lead enrichment
           </p>
         </div>
 
-        <button
-          className="btn btn-primary"
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {/* Simulate Inbound Email Button */}
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              const newMail = receiveIncomingEmail();
+              showToast(`📨 New inbound email received from ${newMail.from.split('<')[0].trim()}! Unread badge count went up (+1).`);
+            }}
+            title="Simulate receiving an inbound email to test badge increment"
+            style={{ borderColor: '#bfdbfe', color: '#1d4ed8' }}
+          >
+            <MailPlus size={15} color="#2563eb" />
+            <span>Simulate Inbound Email (+1)</span>
+          </button>
+
+          <button
+            className="btn btn-primary"
           onClick={() => {
             setActiveFolder('drafts');
             const blankDraft = {
@@ -406,7 +462,8 @@ Sales Director | Dakini AI CRM`
         >
           <Edit3 size={15} />
           <span>Compose New Email</span>
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* 3-Pane Email Layout */}
@@ -427,7 +484,15 @@ Sales Director | Dakini AI CRM`
             >
               <Inbox size={16} />
               <span>Inbox</span>
-              <span className="nav-item-badge">{emails.length}</span>
+              {unreadEmailCount > 0 ? (
+                <span className="nav-item-badge" style={{ background: '#2563eb', color: '#ffffff', fontWeight: 700 }}>
+                  {unreadEmailCount}
+                </span>
+              ) : (
+                <span className="nav-item-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                  {emails.length}
+                </span>
+              )}
             </button>
 
             {/* Sent */}
@@ -502,29 +567,83 @@ Sales Director | Dakini AI CRM`
           {/* FOLDER 1: INBOX LIST */}
           {activeFolder === 'inbox' && (
             <div>
-              {emails.map((em) => (
-                <div
-                  key={em.id}
-                  className={`inbox-thread-item ${selectedInboxId === em.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedInboxId(em.id);
-                    setIsReplying(false);
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
-                      {em.from.split('<')[0].trim()}
-                    </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{em.date}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {em.subject}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {em.snippet}
-                  </div>
+              {emails.length === 0 ? (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem' }}>
+                  No emails in inbox.
                 </div>
-              ))}
+              ) : (
+                emails.map((em) => (
+                  <div
+                    key={em.id}
+                    className={`inbox-thread-item ${selectedInboxId === em.id ? 'active' : ''}`}
+                    style={{
+                      borderLeft: selectedInboxId === em.id ? '3.5px solid #2563eb' : (em.unread ? '3.5px solid #60a5fa' : '3.5px solid transparent'),
+                      backgroundColor: em.unread ? '#f0f7ff' : (selectedInboxId === em.id ? '#f8fafc' : 'transparent'),
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease'
+                    }}
+                    onClick={() => {
+                      setSelectedInboxId(em.id);
+                      setIsReplying(false);
+                      if (em.unread) {
+                        markEmailAsRead(em.id);
+                        showToast(`Opened email from ${em.from.split('<')[0].trim()}. Unread count decreased (-1).`);
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        {em.unread && (
+                          <span
+                            title="Unread"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: '#2563eb',
+                              display: 'inline-block',
+                              flexShrink: 0
+                            }}
+                          />
+                        )}
+                        <span style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: em.unread ? 800 : 600,
+                          color: em.unread ? '#0f172a' : '#334155',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {em.from.split('<')[0].trim()}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        color: em.unread ? '#2563eb' : '#64748b',
+                        fontWeight: em.unread ? 700 : 400,
+                        flexShrink: 0,
+                        marginLeft: 4
+                      }}>
+                        {em.date}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      fontWeight: em.unread ? 700 : 500,
+                      color: em.unread ? '#1d4ed8' : '#2563eb',
+                      marginBottom: 4,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {em.subject}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: em.unread ? '#475569' : '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {em.snippet}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
@@ -676,9 +795,42 @@ Sales Director | Dakini AI CRM`
 
               {/* Message Header */}
               <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-                  {currentInboxEmail.subject}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    {currentInboxEmail.subject}
+                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    {currentInboxEmail.unread ? (
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: 6 }}>
+                        ● Unread
+                      </span>
+                    ) : (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.6875rem', padding: '3px 8px', height: 26 }}
+                        onClick={() => {
+                          markEmailAsUnread(currentInboxEmail.id);
+                          showToast('Email marked as unread. Badge count went up (+1).');
+                        }}
+                        title="Mark this email as unread to test badge count increase"
+                      >
+                        <Mail size={12} />
+                        <span>Mark Unread (+1)</span>
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: '0.6875rem', padding: '3px 8px', height: 26, color: '#ef4444' }}
+                      onClick={() => {
+                        deleteEmail(currentInboxEmail.id);
+                        showToast('Email removed from inbox.');
+                      }}
+                      title="Delete email"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: '0.8125rem' }}>
                     <strong style={{ color: '#0f172a' }}>From:</strong> {currentInboxEmail.from}

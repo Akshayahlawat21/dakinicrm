@@ -52,15 +52,19 @@ export default function SettingsPage() {
     { id: 'agent-permissions', label: 'Dakini Agent Permissions', icon: ShieldCheck }
   ];
 
-  const handleSave = (e) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (e) => {
     e.preventDefault();
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim() || 'Elena Rostova';
+    setIsSaving(true);
     if (updateUserProfile) {
-      updateUserProfile({
+      await updateUserProfile({
         name: fullName,
         email: email.trim()
       });
     }
+    setIsSaving(false);
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
   };

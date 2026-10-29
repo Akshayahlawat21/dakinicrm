@@ -7,11 +7,12 @@ import {
   Clock,
   Sparkles,
   AlertCircle,
-  Tag
+  Tag,
+  Trash2
 } from 'lucide-react';
 
 export default function TasksPage() {
-  const { tasks, toggleTask, addTask } = useCRM();
+  const { tasks = [], toggleTask, addTask, deleteTask } = useCRM();
   const [quickInput, setQuickInput] = useState('');
   const [recordChip, setRecordChip] = useState('Acme Corp');
 
@@ -22,9 +23,11 @@ export default function TasksPage() {
     }
   };
 
-  const overdueTasks = tasks.filter((t) => t.dueDate === 'Yesterday' || t.priority === 'Urgent');
-  const todayTasks = tasks.filter((t) => t.dueDate === 'Today');
-  const tomorrowTasks = tasks.filter((t) => t.dueDate === 'Tomorrow');
+  const overdueTasks = tasks.filter((t) => !t.completed && (t.dueDate === 'Yesterday' || String(t.priority).toLowerCase() === 'urgent'));
+  const todayTasks = tasks.filter((t) => !t.completed && t.dueDate === 'Today');
+  const tomorrowTasks = tasks.filter((t) => !t.completed && t.dueDate === 'Tomorrow');
+  const upcomingTasks = tasks.filter((t) => !t.completed && !['Yesterday', 'Today', 'Tomorrow'].includes(t.dueDate) && String(t.priority).toLowerCase() !== 'urgent');
+  const completedTasks = tasks.filter((t) => t.completed);
 
   const renderTaskGroup = (title, taskList, isRed = false) => {
     if (taskList.length === 0) return null;
@@ -93,9 +96,31 @@ export default function TasksPage() {
                 <span className="badge badge-gray" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Tag size={11} /> {tsk.record}
                 </span>
-                <span className={`badge ${isRed ? 'badge-red' : 'badge-blue'}`}>
-                  {tsk.time}
-                </span>
+                {tsk.time && (
+                  <span className={`badge ${isRed ? 'badge-red' : 'badge-blue'}`}>
+                    {tsk.time}
+                  </span>
+                )}
+                {deleteTask && (
+                  <button
+                    onClick={() => deleteTask(tsk.id)}
+                    title="Delete task"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: 4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: 4
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -119,13 +144,13 @@ export default function TasksPage() {
       </div>
 
       {/* Quick-add Line at top (as requested in spec) */}
-      <div className="crm-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="crm-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <Plus size={18} color="#2563eb" />
         <input
           type="text"
           placeholder="Quick-add task: type description and press Enter..."
           className="input-field"
-          style={{ border: 'none', boxShadow: 'none', padding: '0.35rem 0', fontSize: '0.9375rem' }}
+          style={{ border: 'none', boxShadow: 'none', padding: '0.35rem 0', fontSize: '0.9375rem', flex: 1, minWidth: 200 }}
           value={quickInput}
           onChange={(e) => setQuickInput(e.target.value)}
           onKeyDown={handleQuickAdd}
@@ -159,6 +184,16 @@ export default function TasksPage() {
       {renderTaskGroup("Overdue", overdueTasks, true)}
       {renderTaskGroup("Today", todayTasks)}
       {renderTaskGroup("Tomorrow", tomorrowTasks)}
+      {renderTaskGroup("Upcoming & Open Tasks", upcomingTasks)}
+      {renderTaskGroup("Completed", completedTasks)}
+
+      {tasks.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+          <CheckSquare size={40} color="#cbd5e1" style={{ margin: '0 auto 1rem' }} />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>No Tasks Yet</h3>
+          <p style={{ fontSize: '0.875rem' }}>Use the quick-add line above to add a new task or follow-up.</p>
+        </div>
+      )}
     </div>
   );
 }

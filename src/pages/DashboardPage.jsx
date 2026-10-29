@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 
 
+let _dashboardMemoryCache = null;
+
 export default function DashboardPage() {
   const {
     navigateTo,
@@ -44,14 +46,21 @@ export default function DashboardPage() {
 
   const [period, setPeriod] = useState('This month');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [analytics, setAnalytics] = useState({ overview: null, revenue: [], pipeline: [], team: [], targetPace: [] });
+  const [analytics, setAnalytics] = useState(() => _dashboardMemoryCache?.data || { overview: null, revenue: [], pipeline: [], team: [], targetPace: [] });
   const [analyticsError, setAnalyticsError] = useState('');
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(() => !_dashboardMemoryCache?.data);
   const periodKey = ({ 'This week': 'week', 'This month': 'month', 'This quarter': 'quarter', 'Year to date': 'ytd' })[period] || 'month';
 
-  const loadAnalytics = useCallback(async () => {
+  const loadAnalytics = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh && _dashboardMemoryCache?.periodKey === periodKey && (Date.now() - _dashboardMemoryCache.time < 60000)) {
+      setAnalytics(_dashboardMemoryCache.data);
+      setAnalyticsLoading(false);
+      return;
+    }
     setIsRefreshing(true);
-    setAnalyticsLoading(true);
+    if (!_dashboardMemoryCache?.data) {
+      setAnalyticsLoading(true);
+    }
     setAnalyticsError('');
     try {
       const results = await Promise.allSettled([
@@ -62,13 +71,15 @@ export default function DashboardPage() {
         analyticsApi.getTargetPace(periodKey)
       ]);
       const [overviewRes, revenueRes, pipelineRes, teamRes, targetPaceRes] = results;
-      setAnalytics({
+      const nextData = {
         overview: overviewRes.status === 'fulfilled' ? overviewRes.value : null,
         revenue: revenueRes.status === 'fulfilled' && Array.isArray(revenueRes.value?.data) ? revenueRes.value.data : [],
         pipeline: pipelineRes.status === 'fulfilled' && Array.isArray(pipelineRes.value?.data) ? pipelineRes.value.data : [],
         team: teamRes.status === 'fulfilled' && Array.isArray(teamRes.value?.data) ? teamRes.value.data : [],
         targetPace: targetPaceRes.status === 'fulfilled' && Array.isArray(targetPaceRes.value?.data) ? targetPaceRes.value.data : []
-      });
+      };
+      setAnalytics(nextData);
+      _dashboardMemoryCache = { periodKey, time: Date.now(), data: nextData };
       if (overviewRes.status === 'rejected') {
         setAnalyticsError(overviewRes.reason instanceof Error ? overviewRes.reason.message : 'Unable to load analytics overview.');
       }
@@ -94,7 +105,10 @@ export default function DashboardPage() {
   const revenueLabel = overview.closed_won_revenue == null && Object.keys(overview.closed_won_revenue_by_currency || {}).length > 1
     ? 'Multiple currencies'
     : money(overview.closed_won_revenue, wonCurrency(overview.closed_won_currency));
-  const handleRefresh = () => { loadAnalytics(); };
+  const handleRefresh = () => {
+    analyticsApi.clearCache();
+    loadAnalytics(true);
+  };
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -422,7 +436,21 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {tasks.slice(0, 3).map((tsk) => (
+          {tasks.filter((t) => !t.completed).length === 0 ? (
+            <div style={{
+              padding: '1.25rem',
+              textAlign: 'center',
+              color: '#059669',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              background: '#ecfdf5',
+              borderRadius: 8,
+              border: '1px solid #a7f3d0'
+            }}>
+              ✓ All priority tasks completed!
+            </div>
+          ) : (
+            tasks.filter((t) => !t.completed).slice(0, 3).map((tsk) => (
             <div
               key={tsk.id}
               style={{
@@ -462,7 +490,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
     </div>

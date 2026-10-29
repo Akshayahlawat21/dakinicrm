@@ -36,6 +36,7 @@ export default function LeadsPage() {
     setQuickPreviewLead,
     isLoadingData,
     currentUser,
+    isAgentDockOpen,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('All');
@@ -725,15 +726,17 @@ export default function LeadsPage() {
           style={{
             position: 'fixed',
             top: 64,
-            right: 0,
+            right: isAgentDockOpen ? 360 : 0,
             bottom: 0,
             width: 380,
+            maxWidth: 'calc(100vw - 380px)',
             background: '#ffffff',
             borderLeft: '1px solid #e2e8f0',
             boxShadow: '-4px 0 20px rgba(0,0,0,0.08)',
             zIndex: 45,
             display: 'flex',
             flexDirection: 'column',
+            transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
             animation: 'slideLeft 0.2s ease'
           }}
         >

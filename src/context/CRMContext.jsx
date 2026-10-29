@@ -380,9 +380,12 @@ export function CRMProvider({ children }) {
     navigate('/login', { replace: true });
   };
 
-  const updateUserProfile = (updates) => {
+  const updateUserProfile = async (updates) => {
+    let targetUserId = currentUser?.id;
+
     setCurrentUser((prev) => {
       const updated = { ...(prev || {}), ...updates };
+      targetUserId = targetUserId || updated.id;
       try {
         localStorage.setItem('dakini_user_profile', JSON.stringify(updated));
       } catch (err) {
@@ -390,6 +393,20 @@ export function CRMProvider({ children }) {
       }
       return updated;
     });
+
+    if (targetUserId) {
+      try {
+        const payload = {};
+        if (updates.name) payload.name = updates.name;
+        if (updates.role_name || updates.role) payload.role_name = updates.role_name || updates.role;
+        if (updates.status) payload.status = updates.status;
+
+        await gatewayApi.updateUser(targetUserId, payload);
+        console.log(`%c[SUPABASE USER UPDATE] ✅ User ${targetUserId} profile saved to Supabase: '${updates.name}'`, 'color: #059669; font-weight: bold;');
+      } catch (err) {
+        console.warn('Could not sync user profile to Supabase backend:', err);
+      }
+    }
   };
 
   // Layer 2 Gateway Health & Connection State
@@ -588,10 +605,10 @@ export function CRMProvider({ children }) {
           prev.map((l) =>
             ids.includes(l.id)
               ? {
-                  ...l,
-                  assigned_to: assigneeId,
-                  owner: resolvedName,
-                }
+                ...l,
+                assigned_to: assigneeId,
+                owner: resolvedName,
+              }
               : l
           )
         );
@@ -884,10 +901,25 @@ export function CRMProvider({ children }) {
     }
   };
 
-  const toggleTask = (taskId) => {
+  const toggleTask = async (taskId) => {
+    let nextStatus = 'completed';
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t))
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const nextCompleted = !t.completed;
+          nextStatus = nextCompleted ? 'completed' : 'scheduled';
+          return { ...t, completed: nextCompleted };
+        }
+        return t;
+      })
     );
+
+    try {
+      await gatewayApi.updateTaskStatus(taskId, nextStatus);
+      console.log(`%c[SUPABASE UPDATE] Task ${taskId} status set to '${nextStatus}' in Supabase`, 'color: #059669; font-weight: bold;');
+    } catch (err) {
+      console.warn('Gateway updateTaskStatus sync error:', err);
+    }
   };
 
   const deleteTask = async (taskId) => {
@@ -899,6 +931,82 @@ export function CRMProvider({ children }) {
     } catch (err) {
       console.warn('Gateway deleteTask sync skipped:', err);
     }
+  };
+
+  // =========================================================================
+  // DYNAMIC INBOX STATE MANAGEMENT
+  // =========================================================================
+  const unreadEmailCount = emails.filter((e) => e.unread).length;
+
+  const markEmailAsRead = (emailId) => {
+    setEmails((prev) =>
+      prev.map((e) => (e.id === emailId ? { ...e, unread: false } : e))
+    );
+  };
+
+  const markEmailAsUnread = (emailId) => {
+    setEmails((prev) =>
+      prev.map((e) => (e.id === emailId ? { ...e, unread: true } : e))
+    );
+  };
+
+  const receiveIncomingEmail = (customEmail = {}) => {
+    const samplePool = [
+      {
+        from: "Aditi Rao <aditi.rao@infosys.com>",
+        subject: "Inbound RFP: Enterprise AI Sales Engine (FY27 Rollout)",
+        snippet: "Hi Elena, we are evaluating Dakini AI CRM for our 1,200 sales executives across APAC...",
+        body: "Hi Elena,\n\nWe recently attended your product showcase on autonomous AI lead enrichment.\n\nOur procurement steering committee at Infosys would like to schedule a formal RFP kickoff call next Tuesday at 2:00 PM IST.\n\nCould your enterprise solutions team send over your SOC2 Type II audit summary, Tokyo & Mumbai data residency specs, and an MSA draft?\n\nBest regards,\nAditi Rao\nVP of Digital Transformation | Infosys Ltd"
+      },
+      {
+        from: "Karan Mehta <karan.m@wipro.com>",
+        subject: "Pilot Agreement & Infosec Checklist Approved",
+        snippet: "Elena, our CISO infosec council has cleared Dakini AI for a 60-day enterprise trial...",
+        body: "Hi Elena,\n\nGreat news — our security council cleared the cloud architecture review for Dakini AI.\n\nWe are ready to start onboarding the 50 pilot accounts in our logistics and retail division starting this Monday.\n\nPlease share the dedicated sandbox API keys and solution architect contact details.\n\nWarm regards,\nKaran Mehta\nDirector of Enterprise Sales | Wipro"
+      },
+      {
+        from: "Vikram Singhania <vikram.s@tcs.com>",
+        subject: "Urgent: Revised MSA Addendum for Supabase Cloud DB",
+        snippet: "Hi Elena, please find the countersigned clause on AWS India regional latency...",
+        body: "Hi Elena,\n\nOur legal counsel has finalized the addendum regarding AWS regional hosting and uptime SLA.\n\nWe have countersigned the document on DocuSign. Looking forward to scheduling the kickoff session with Dev and Marcus.\n\nBest regards,\nVikram Singhania\nSenior Legal Counsel | Tata Consultancy Services"
+      },
+      {
+        from: "Siddharth Jain <siddharth@flipkart.com>",
+        subject: "Webhook API Ingestion Benchmark & High Concurrency Test",
+        snippet: "Hi Elena, our engineering leads ran 10k webhook events through Dakini gateway...",
+        body: "Hi Elena,\n\nOur engineering team ran benchmark tests against your Layer 2 Gateway yesterday night.\n\nZero dropped frames and sub-40ms latency across 10,000 webhook events. We are extremely impressed with the architecture.\n\nCan we arrange a quick commercial wrap-up call tomorrow afternoon?\n\nThanks,\nSiddharth Jain\nVP Engineering | Flipkart Logistics"
+      }
+    ];
+
+    const pick = samplePool[Math.floor(Math.random() * samplePool.length)];
+    const sender = customEmail.from || pick.from;
+    const senderName = sender.split('<')[0].trim();
+    const domainMatch = sender.match(/@([a-zA-Z0-9.-]+)/);
+    const company = domainMatch ? domainMatch[1].split('.')[0].toUpperCase() : 'Enterprise Partner';
+
+    const newEmail = {
+      id: "email-" + Date.now(),
+      from: sender,
+      subject: customEmail.subject || pick.subject,
+      date: "Just now",
+      snippet: customEmail.snippet || pick.snippet,
+      folder: "inbox",
+      unread: true,
+      linkedRecord: customEmail.linkedRecord || {
+        type: "Lead",
+        name: senderName,
+        company: company
+      },
+      body: customEmail.body || pick.body,
+      ...customEmail
+    };
+
+    setEmails((prev) => [newEmail, ...prev]);
+    return newEmail;
+  };
+
+  const deleteEmail = (emailId) => {
+    setEmails((prev) => prev.filter((e) => e.id !== emailId));
   };
 
   const approveItem = (id) => {
@@ -1072,10 +1180,10 @@ export function CRMProvider({ children }) {
         prev.map((c) =>
           c.id === existingContact.id
             ? {
-                ...c,
-                phone: c.phone && c.phone !== '—' ? c.phone : contactPhone,
-                title: c.title && c.title !== 'Decision Maker' ? c.title : contactTitle,
-              }
+              ...c,
+              phone: c.phone && c.phone !== '—' ? c.phone : contactPhone,
+              title: c.title && c.title !== 'Decision Maker' ? c.title : contactTitle,
+            }
             : c
         )
       );
@@ -1493,6 +1601,11 @@ export function CRMProvider({ children }) {
         fetchProducts,
         addProduct,
         emails,
+        unreadEmailCount,
+        markEmailAsRead,
+        markEmailAsUnread,
+        receiveIncomingEmail,
+        deleteEmail,
         approvals,
         approveItem,
         agents,

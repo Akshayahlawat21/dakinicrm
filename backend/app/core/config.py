@@ -30,9 +30,9 @@ class AppSettings(BaseSettings):
     )
     SYNC_DATABASE_URL: Optional[str] = None
 
-    # Connection Pool Management
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
+    # Connection Pool Management (Optimized for Supabase Session Pooler limit 15)
+    DB_POOL_SIZE: int = 4
+    DB_MAX_OVERFLOW: int = 3
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
     DB_STATEMENT_TIMEOUT_MS: int = 15000

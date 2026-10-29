@@ -62,7 +62,7 @@ async def authenticate_user(
             is_valid = True
             # Opportunistically upgrade mock password to real bcrypt hash
             user.hashed_password = hash_password(body.password)
-            await session.flush()
+            await session.commit()
 
     if not is_valid:
         raise UnauthorizedError("Invalid email/login ID or password", code="INVALID_CREDENTIALS")

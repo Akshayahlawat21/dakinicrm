@@ -72,6 +72,36 @@ async def list_deals(
     )
 
 
+@router.get("/check-duplicate", response_model=StandardResponse[dict])
+async def check_duplicate_deal(
+    company: Optional[str] = Query(None),
+    account_id: Optional[str] = Query(None),
+    name: Optional[str] = Query(None),
+    opportunity_reference: Optional[str] = Query(None),
+    product_name: Optional[str] = Query(None),
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Checks for similar active deals to warn before creating duplicates.
+    Legitimate repeat purchases and historical deals are permitted and never blocked.
+    """
+    service = DealService(session)
+    result = await service.check_duplicate_deal(
+        ctx=ctx,
+        account_id=account_id,
+        company=company,
+        name=name,
+        opportunity_reference=opportunity_reference,
+        product_name=product_name,
+    )
+    return StandardResponse(
+        status="success",
+        data=result or {"is_duplicate_warning": False},
+        correlation_id=ctx.correlation_id,
+    )
+
+
 @router.post("", response_model=StandardResponse[DealResponse], status_code=201)
 async def create_deal(
     body: DealCreateRequest,
@@ -81,14 +111,24 @@ async def create_deal(
     service = DealService(session)
     account_id = body.account_id
     if not account_id:
+        from backend.app.data.repositories.account_repository import AccountRepository
         from backend.app.application.services.account_service import AccountService
+        acc_repo = AccountRepository(session)
         acc_service = AccountService(session)
-        accounts, _ = await acc_service.list_accounts(ctx, limit=1)
-        if accounts:
-            account_id = accounts[0].id
+        if body.company and body.company.strip():
+            existing_acc = await acc_repo.get_by_name(body.company.strip(), ctx.tenant_id)
+            if existing_acc:
+                account_id = existing_acc.id
+            else:
+                acc = await acc_service.create_account(ctx, name=body.company.strip())
+                account_id = acc.id
         else:
-            acc = await acc_service.create_account(ctx, name=body.company or "Default Enterprise")
-            account_id = acc.id
+            accounts, _ = await acc_service.list_accounts(ctx, limit=1)
+            if accounts:
+                account_id = accounts[0].id
+            else:
+                acc = await acc_service.create_account(ctx, name="Default Enterprise")
+                account_id = acc.id
     deal_amount = body.get_amount()
 
     deal = await service.create_deal(
@@ -100,11 +140,10 @@ async def create_deal(
         currency=body.currency or "USD",
         opportunity_id=body.opportunity_id,
     )
-    await session.commit()
-
     from backend.app.data.models.user import User
     creator = await session.get(User, ctx.user_uuid) if ctx.user_uuid else None
     owner_name = creator.name if creator else None
+    await session.commit()
 
     print(f"\n[SUPABASE DB CREATE] >> Successfully created Deal '{deal.name}' in Supabase (ID: {deal.id}, Amount: ${deal.amount}, Stage: {deal.stage})", flush=True)
     return StandardResponse(
@@ -196,11 +235,18 @@ async def delete_deal(
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
+    from backend.app.application.exceptions import ForbiddenError
+    from backend.app.data.exceptions import RecordNotFoundError
+
     service = DealService(session)
     try:
         await service.delete_deal(ctx, deal_id)
         await session.commit()
         print(f"\n[SUPABASE DB DELETE] >> Successfully deleted Deal (ID: {deal_id}) from Supabase PostgreSQL", flush=True)
+    except ForbiddenError:
+        raise
+    except RecordNotFoundError:
+        pass
     except Exception as exc:
         print(f"\n[SUPABASE DB DELETE] >> Deal '{deal_id}' acknowledged: {exc}", flush=True)
 

@@ -106,6 +106,7 @@ class ContactRepository(BaseRepository[Contact]):
         skip: int = 0,
         limit: int = 50,
         filters: Optional[Dict[str, Any]] = None,
+        exclude_contact_ids: Optional[Any] = None,
     ) -> tuple[List[Contact], int]:
         tenant_uuid = self._parse_uuid(tenant_id)
         if not account_ids:
@@ -117,6 +118,8 @@ class ContactRepository(BaseRepository[Contact]):
             Contact.deleted_at.is_(None),
             Account.deleted_at.is_(None),
         ]
+        if exclude_contact_ids is not None:
+            base_filter.append(~Contact.id.in_(exclude_contact_ids))
         if filters:
             for field, val in filters.items():
                 if hasattr(Contact, field) and val is not None:
@@ -129,3 +132,35 @@ class ContactRepository(BaseRepository[Contact]):
         stmt = select(Contact).join(Account, Account.id == Contact.account_id).where(*base_filter).order_by(Contact.created_at.desc()).offset(skip).limit(limit)
         res = await self.session.execute(stmt)
         return list(res.scalars().all()), total
+
+    async def get_by_normalized_email(
+        self,
+        tenant_id: str | uuid.UUID,
+        email: str,
+        account_id: Optional[str | uuid.UUID] = None,
+    ) -> Optional[Contact]:
+        """
+        Finds an existing non-deleted contact matching the normalized email.
+        Optionally scoped to a specific account.
+        """
+        if not email or not email.strip():
+            return None
+        tenant_uuid = self._parse_uuid(tenant_id)
+        clean_email = email.lower().strip()
+        conditions = [
+            Account.organization_id == tenant_uuid,
+            func.lower(Contact.email) == clean_email,
+            Contact.deleted_at.is_(None),
+            Account.deleted_at.is_(None),
+        ]
+        if account_id:
+            conditions.append(Contact.account_id == self._parse_uuid(account_id))
+
+        stmt = (
+            select(Contact)
+            .join(Account, Account.id == Contact.account_id)
+            .where(*conditions)
+            .order_by(Contact.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().first()

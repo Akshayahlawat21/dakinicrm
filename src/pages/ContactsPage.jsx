@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function ContactsPage() {
-  const { contacts = [], deleteContact, setIsQuickCreateOpen, setQuickCreateType, setIsAgentDockOpen, sendAgentMessage, isLoadingData, currentUser } = useCRM();
+  const { contacts = [], accounts = [], deleteContact, setIsQuickCreateOpen, setQuickCreateType, setIsAgentDockOpen, sendAgentMessage, isLoadingData, currentUser } = useCRM();
 
   const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'owner').toLowerCase();
   const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
@@ -110,9 +110,10 @@ export default function ContactsPage() {
             <tbody>
               {filteredContacts.map((contact) => {
                 const displayName = getContactName(contact);
-                const displayAccount = contact.account || contact.company || 'Enterprise Corp';
+                const matchedAccount = accounts.find((a) => (contact.account_id && String(a.id) === String(contact.account_id)) || (contact.account && a.name.toLowerCase() === contact.account.toLowerCase()));
+                const displayAccount = matchedAccount ? matchedAccount.name : (contact.account || contact.account_name || contact.company || 'Enterprise Account');
                 const displayTitle = contact.title || 'Decision Maker';
-                const displayIndustry = contact.industry || 'Logistics & Tech';
+                const displayIndustry = contact.industry || matchedAccount?.industry || 'Logistics & Tech';
                 const displayEmail = contact.email || '—';
                 const displayPhone = contact.phone || '—';
 

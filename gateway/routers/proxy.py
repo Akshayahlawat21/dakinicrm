@@ -35,6 +35,7 @@ REGISTERED_RESOURCES: Set[str] = {
     "automations",
     "notifications",
     "approvals",
+    "products",
     "export",
     "import",
 }
@@ -96,6 +97,17 @@ def get_mock_data_for_resource(resource: str, method: str) -> dict:
                     "value": 48000,
                     "stage": "Discovery",
                 }
+            ],
+        }
+    elif resource == "products":
+        return {
+            "status": "success",
+            "source": "gateway_dev_mock_fallback",
+            "data": [
+                {"id": "99999999-9999-9999-9999-999999990001", "name": "Dakini AI Sales Platform — Enterprise Core", "sku": "DAK-CORE-ENT"},
+                {"id": "99999999-9999-9999-9999-999999990002", "name": "Fleet Telematics Real-Time AI Connector", "sku": "DAK-TELE-01"},
+                {"id": "99999999-9999-9999-9999-999999990003", "name": "Autonomous Lead Scoring & Enrichment Engine", "sku": "DAK-LEAD-AI"},
+                {"id": "99999999-9999-9999-9999-999999990004", "name": "Enterprise Dedicated Multi-Region Security Pack", "sku": "DAK-SEC-01"},
             ],
         }
     elif resource == "agent":

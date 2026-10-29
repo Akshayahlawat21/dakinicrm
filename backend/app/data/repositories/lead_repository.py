@@ -12,18 +12,36 @@ class LeadRepository(BaseRepository[Lead]):
     def __init__(self, session: AsyncSession):
         super().__init__(Lead, session)
 
-    async def get_by_email(self, email: str, tenant_id: str | uuid.UUID) -> Optional[Lead]:
+    async def get_by_email(self, email: str, tenant_id: str | uuid.UUID, status: Optional[str] = None) -> Optional[Lead]:
+        tenant_uuid = self._parse_uuid(tenant_id)
+        conditions = [
+            func.lower(func.trim(Lead.email)) == email.lower().strip(),
+            Lead.organization_id == tenant_uuid,
+            Lead.deleted_at.is_(None),
+        ]
+        if status:
+            conditions.append(Lead.status == status)
+        stmt = (
+            select(Lead)
+            .where(*conditions)
+            .order_by(Lead.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().first()
+
+    async def list_by_email(self, email: str, tenant_id: str | uuid.UUID) -> List[Lead]:
         tenant_uuid = self._parse_uuid(tenant_id)
         stmt = (
             select(Lead)
             .where(
-                Lead.email == email.lower().strip(),
+                func.lower(func.trim(Lead.email)) == email.lower().strip(),
                 Lead.organization_id == tenant_uuid,
                 Lead.deleted_at.is_(None),
             )
+            .order_by(Lead.created_at.desc())
         )
         res = await self.session.execute(stmt)
-        return res.scalar_one_or_none()
+        return list(res.scalars().all())
 
     async def list_scoped_by_assignees(
         self,

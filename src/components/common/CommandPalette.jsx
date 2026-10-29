@@ -9,7 +9,8 @@ import {
   CheckSquare,
   Sparkles,
   ArrowRight,
-  X
+  X,
+  BadgeCheck
 } from 'lucide-react';
 
 export default function CommandPalette() {
@@ -48,6 +49,7 @@ export default function CommandPalette() {
 
     if (!query.trim()) {
       return [
+        { type: 'action', title: 'Won Customers Directory', icon: BadgeCheck, action: () => navigateTo('customers') },
         { type: 'action', title: 'Open Active Pipeline Kanban', icon: Handshake, action: () => navigateTo('deals') },
         { type: 'action', title: `View All Leads (${safeLeads.length})`, icon: UserCheck, action: () => navigateTo('leads') },
         { type: 'action', title: 'Open Dakini AI Copilot', icon: Sparkles, action: () => setIsAgentDockOpen(true) },

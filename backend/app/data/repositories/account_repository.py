@@ -55,7 +55,44 @@ class AccountRepository(BaseRepository[Account]):
         )
         act_accs = (await self.session.execute(act_stmt)).scalars().all()
 
-        return {acc_id for acc_id in (list(deal_accs) + list(act_accs)) if acc_id is not None}
+        from backend.app.data.models.lead import Lead, LeadConversion
+        lead_conv_stmt = (
+            select(LeadConversion.account_id)
+            .join(Lead, Lead.id == LeadConversion.lead_id)
+            .where(
+                Lead.organization_id == tenant_uuid,
+                Lead.deleted_at.is_(None),
+                Lead.assigned_to.in_(user_ids),
+                LeadConversion.account_id.is_not(None),
+            )
+        )
+        lead_accs = (await self.session.execute(lead_conv_stmt)).scalars().all()
+
+        from backend.app.data.models.audit import AuditLog
+        from backend.app.data.models.contact import Contact
+        created_acc_stmt = select(AuditLog.resource_id).where(
+            AuditLog.organization_id == tenant_uuid,
+            AuditLog.resource_type == "account",
+            AuditLog.action == "CREATE",
+            AuditLog.user_id.in_(user_ids),
+        )
+        created_accs = (await self.session.execute(created_acc_stmt)).scalars().all()
+
+        created_con_stmt = (
+            select(Contact.account_id)
+            .join(AuditLog, AuditLog.resource_id == Contact.id)
+            .where(
+                AuditLog.organization_id == tenant_uuid,
+                AuditLog.resource_type == "contact",
+                AuditLog.action == "CREATE",
+                AuditLog.user_id.in_(user_ids),
+                Contact.deleted_at.is_(None),
+            )
+        )
+        con_accs = (await self.session.execute(created_con_stmt)).scalars().all()
+
+        all_acc_candidates = list(deal_accs) + list(act_accs) + list(lead_accs) + list(created_accs) + list(con_accs)
+        return {acc_id for acc_id in all_acc_candidates if acc_id is not None}
 
     async def list_scoped_by_ids(
         self,

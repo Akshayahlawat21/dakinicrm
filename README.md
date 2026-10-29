@@ -56,7 +56,7 @@ The application runs as 4 coordinated microservices:
 | **Layer 2** | Edge / API Gateway | `8080` | [http://localhost:8080](http://localhost:8080) | [http://localhost:8080/docs](http://localhost:8080/docs) | [http://localhost:8080/health](http://localhost:8080/health) |
 | **Layer 3** | Application API | `8000` | [http://localhost:8000](http://localhost:8000) | [http://localhost:8000/docs](http://localhost:8000/docs) | [http://localhost:8000/health](http://localhost:8000/health) |
 | **Layer 9** | Analytics API | `8090` | [http://localhost:8090](http://localhost:8090) | [http://localhost:8090/docs](http://localhost:8090/docs) | [http://localhost:8090/health](http://localhost:8090/health) |
-
+| **Layer 5** | AI api | '8050' | [http://localhost:8050](http://localhost:8050) | [http://localhost:8050/docs](http://localhost:8050/docs) | [http://localhost:8050/health](http://localhost:8050/health) |
 ---
 
 ## ⚡ Prerequisites

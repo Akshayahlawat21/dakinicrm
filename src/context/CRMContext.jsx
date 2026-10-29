@@ -39,6 +39,7 @@ export function CRMProvider({ children }) {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateType, setQuickCreateType] = useState('lead');
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [leadToConvert, setLeadToConvert] = useState(null);
   const convertingLeadsRef = useRef(new Set());
@@ -1557,6 +1558,8 @@ export function CRMProvider({ children }) {
         setIsQuickCreateOpen,
         quickCreateType,
         setQuickCreateType,
+        showTypeSelector,
+        setShowTypeSelector,
         isConvertModalOpen,
         setIsConvertModalOpen,
         leadToConvert,

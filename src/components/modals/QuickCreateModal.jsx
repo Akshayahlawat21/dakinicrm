@@ -26,12 +26,22 @@ const INITIAL_FORM_DATA = {
   city: ''
 };
 
+const ENTITY_CONFIG = {
+  account: { title: 'Create New Account', button: 'Save Account' },
+  deal: { title: 'Create New Deal', button: 'Save Deal' },
+  lead: { title: 'Create New Lead', button: 'Save Lead' },
+  contact: { title: 'Create New Contact', button: 'Save Contact' },
+  task: { title: 'Create New Task', button: 'Save Task' },
+  campaign: { title: 'Create New Campaign', button: 'Save Campaign' }
+};
+
 export default function QuickCreateModal() {
   const {
     isQuickCreateOpen,
     setIsQuickCreateOpen,
     quickCreateType,
     setQuickCreateType,
+    showTypeSelector = false,
     addLead,
     addDeal,
     deals = [],
@@ -51,6 +61,10 @@ export default function QuickCreateModal() {
   } = useCRM();
 
   // Form & error states (must be declared before any conditional return)
+  const currentConfig = ENTITY_CONFIG[quickCreateType] || {
+    title: 'Create New Record',
+    button: 'Save Record'
+  };
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [dealPurchaseType, setDealPurchaseType] = useState('New Opportunity');
   const [confirmedDuplicate, setConfirmedDuplicate] = useState(false);
@@ -499,28 +513,30 @@ export default function QuickCreateModal() {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
-              Create New Record
+              {currentConfig.title}
             </h3>
-            <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2, flexWrap: 'wrap', gap: 2 }}>
-              {['lead', 'deal', 'account', 'contact', 'task', 'campaign'].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  style={{
-                    padding: '0.2rem 0.6rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'capitalize',
-                    borderRadius: 6,
-                    background: quickCreateType === t ? '#2563eb' : 'transparent',
-                    color: quickCreateType === t ? '#ffffff' : '#64748b'
-                  }}
-                  onClick={() => handleTypeChange(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+            {showTypeSelector && (
+              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2, flexWrap: 'wrap', gap: 2 }}>
+                {['lead', 'deal', 'account', 'contact', 'task', 'campaign'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    style={{
+                      padding: '0.2rem 0.6rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      textTransform: 'capitalize',
+                      borderRadius: 6,
+                      background: quickCreateType === t ? '#2563eb' : 'transparent',
+                      color: quickCreateType === t ? '#ffffff' : '#64748b'
+                    }}
+                    onClick={() => handleTypeChange(t)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={() => !isSubmitting && setIsQuickCreateOpen(false)}
@@ -1625,7 +1641,7 @@ export default function QuickCreateModal() {
                   ) : (
                     <>
                       <Check size={16} />
-                      <span>Save Record</span>
+                      <span>{currentConfig.button}</span>
                     </>
                   )}
                 </button>

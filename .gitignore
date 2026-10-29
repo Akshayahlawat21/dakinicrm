@@ -62,3 +62,5 @@ ENV/
 *.db
 *.sqlite3
 .layer9-integration-backup/
+zips/
+*.zip

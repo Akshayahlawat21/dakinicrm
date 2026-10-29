@@ -64,5 +64,17 @@ class AppSettings(BaseSettings):
     ANALYTICS_SERVICE_URL: str = "http://localhost:8090"
     ANALYTICS_TIMEOUT_SECONDS: int = 5
 
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() in ("production", "prod", "staging")
+
+    @property
+    def is_sqlite(self) -> bool:
+        return "sqlite" in self.DATABASE_URL.lower()
+
+    @property
+    def is_postgres(self) -> bool:
+        return "postgres" in self.DATABASE_URL.lower()
+
 
 settings = AppSettings()

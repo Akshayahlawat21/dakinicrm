@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useCRM } from '../context/CRMContext';
 import LoadingSymbol from '../components/common/LoadingSymbol';
+import AssignOwnerModal from '../components/modals/AssignOwnerModal';
 import {
   Plus,
   Filter,
@@ -42,8 +43,14 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [isAssignOwnerOpen, setIsAssignOwnerOpen] = useState(false);
+  const [leadIdToAssign, setLeadIdToAssign] = useState(null);
   const [importNotification, setImportNotification] = useState(null);
   const fileInputRef = useRef(null);
+
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -66,7 +73,7 @@ export default function LeadsPage() {
             id: `lead-import-${Date.now()}-${idx}`,
             name: item.name || 'Imported Lead',
             company: item.company || 'Unknown Company',
-            title: item.title || 'Prospect',
+            title: item.title || '',
             status: item.status || 'New',
             score: Number(item.score) || 75,
             email: item.email || `lead${idx}@imported.com`,
@@ -99,7 +106,7 @@ export default function LeadsPage() {
                 id: `lead-csv-${Date.now()}-${idx}`,
                 name: cols[0] || `Imported Lead ${idx + 1}`,
                 company: cols[1] || 'Imported Corp',
-                title: cols[2] || 'Decision Maker',
+                title: cols[2] || '',
                 status: cols[3] || 'New',
                 score: Number(cols[4]) || 80,
                 email: cols[5] || `lead${idx}@imported.com`,
@@ -388,8 +395,17 @@ export default function LeadsPage() {
             <span>{selectedLeadIds.length} leads selected</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button className="btn btn-secondary btn-sm" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
-              Assign Owner
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={() => {
+                setLeadIdToAssign(null);
+                setIsAssignOwnerOpen(true);
+              }}
+              title="Assign selected leads to a team member"
+            >
+              <UserCheck size={13} />
+              <span>Assign Owner</span>
             </button>
             <button className="btn btn-secondary btn-sm" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
               <Mail size={13} />
@@ -440,6 +456,8 @@ export default function LeadsPage() {
                   />
                 </th>
                 <th>Name & Title</th>
+                <th>Interested Product</th>
+                <th>Source</th>
                 <th>Company</th>
                 <th>Status</th>
                 <th>Lead Score</th>
@@ -487,13 +505,72 @@ export default function LeadsPage() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                          {lead.name.split(' ').map((n) => n[0]).join('')}
+                          {(lead.name || 'Lead').split(' ').filter(Boolean).map((n) => n[0] || '').join('')}
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: '#0f172a', textDecoration: 'none' }} className="lead-name-link">{lead.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.title}</div>
+                          {lead.title ? <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.title}</div> : null}
                         </div>
                       </div>
+                    </td>
+                    <td>
+                      {lead.interested_product ? (
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: 6,
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            border: '1px solid #bfdbfe',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            maxWidth: 170,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={lead.interested_product}
+                        >
+                          📦 {lead.interested_product}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: 6,
+                          background:
+                            (lead.source || '').toLowerCase().includes('linkedin') ? '#eff6ff' :
+                            (lead.source || '').toLowerCase().includes('google') ? '#fef2f2' :
+                            (lead.source || '').toLowerCase().includes('referral') ? '#f0fdf4' :
+                            '#f8fafc',
+                          color:
+                            (lead.source || '').toLowerCase().includes('linkedin') ? '#1d4ed8' :
+                            (lead.source || '').toLowerCase().includes('google') ? '#b91c1c' :
+                            (lead.source || '').toLowerCase().includes('referral') ? '#15803d' :
+                            '#475569',
+                          border: '1px solid',
+                          borderColor:
+                            (lead.source || '').toLowerCase().includes('linkedin') ? '#bfdbfe' :
+                            (lead.source || '').toLowerCase().includes('google') ? '#fecaca' :
+                            (lead.source || '').toLowerCase().includes('referral') ? '#bbf7d0' :
+                            '#e2e8f0',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {lead.source || 'Website'}
+                      </span>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600, color: '#334155' }}>{lead.company}</div>
@@ -527,9 +604,38 @@ export default function LeadsPage() {
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 500 }}>
-                        {lead.owner}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 600 }}>
+                          {lead.owner}
+                        </span>
+                        {(isOwner || isManager) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLeadIdToAssign(lead.id);
+                              setIsAssignOwnerOpen(true);
+                            }}
+                            title={`Reassign owner for ${lead.name}`}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#64748b',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              borderRadius: 4,
+                              display: 'flex',
+                              alignItems: 'center',
+                              opacity: 0.6,
+                              transition: 'opacity 0.2s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+                          >
+                            <UserCheck size={13} color="#2563eb" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.lastContact}</span>
@@ -592,7 +698,12 @@ export default function LeadsPage() {
                         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.source}</span>
                       </div>
                       <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a' }}>{lead.name}</h4>
-                      <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.5rem' }}>{lead.company}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem' }}>{lead.company}</div>
+                      {lead.interested_product && (
+                        <div style={{ fontSize: '0.6875rem', color: '#1d4ed8', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>📦 {lead.interested_product}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
                         <span>{lead.owner}</span>
                         <ChevronRight size={14} />
@@ -636,10 +747,10 @@ export default function LeadsPage() {
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#fff', fontSize: '1.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem auto' }}>
-                {quickPreviewLead.name.split(' ').map(n => n[0]).join('')}
+                {(quickPreviewLead?.name || 'Lead').split(' ').filter(Boolean).map(n => n[0] || '').join('')}
               </div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>{quickPreviewLead.name}</h2>
-              <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>{quickPreviewLead.title}</div>
+              {quickPreviewLead.title ? <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>{quickPreviewLead.title}</div> : null}
               <div style={{ marginTop: '0.5rem' }}>
                 <span className="badge badge-blue">Lead Score: {quickPreviewLead.score}</span>
               </div>
@@ -650,6 +761,12 @@ export default function LeadsPage() {
                 <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Company</span>
                 <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.company}</div>
               </div>
+              {quickPreviewLead.interested_product && (
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Interested Product</span>
+                  <div style={{ fontWeight: 600, color: '#1d4ed8' }}>📦 {quickPreviewLead.interested_product}</div>
+                </div>
+              )}
               <div>
                 <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Email</span>
                 <div style={{ fontWeight: 600, color: '#2563eb' }}>{quickPreviewLead.email}</div>
@@ -662,6 +779,25 @@ export default function LeadsPage() {
                 <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Owner</span>
                 <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.owner}</div>
               </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Lead Source</span>
+                <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.source || 'Website'}</div>
+              </div>
+              {quickPreviewLead.website && (
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Website</span>
+                  <div style={{ fontWeight: 600, color: '#2563eb' }}>
+                    <a
+                      href={quickPreviewLead.website.startsWith('http') ? quickPreviewLead.website : `https://${quickPreviewLead.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: '#2563eb', textDecoration: 'none' }}
+                    >
+                      {quickPreviewLead.website}
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -687,6 +823,20 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+
+      {/* Assign Lead Owner Modal */}
+      <AssignOwnerModal
+        isOpen={isAssignOwnerOpen}
+        onClose={() => {
+          setIsAssignOwnerOpen(false);
+          setLeadIdToAssign(null);
+        }}
+        selectedLeadIds={leadIdToAssign ? [leadIdToAssign] : selectedLeadIds}
+        onSuccess={() => {
+          setSelectedLeadIds([]);
+          setLeadIdToAssign(null);
+        }}
+      />
     </div>
   );
 }

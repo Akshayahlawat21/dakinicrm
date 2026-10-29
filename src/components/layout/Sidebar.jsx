@@ -21,11 +21,17 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  BadgeCheck
 } from 'lucide-react';
 
 export default function Sidebar() {
   const { currentTab, navigateTo, sidebarCollapsed, setSidebarCollapsed, leads, deals, tasks, approvals } = useCRM();
+
+  const wonDealsCount = (deals || []).filter((d) => {
+    const s = String(d?.stage || '').toLowerCase().trim();
+    return s === 'won' || s.includes('won') || s === 'closed won' || s === 'closed_won';
+  }).length;
 
   const navSections = [
     {
@@ -41,7 +47,8 @@ export default function Sidebar() {
         { id: "contacts", label: "Contacts", icon: Users },
         { id: "leads", label: "Leads", icon: UserCheck, count: leads.length },
         { id: "campaigns", label: "Campaigns", icon: Megaphone },
-        { id: "deals", label: "Deals & Pipeline", icon: Handshake, count: deals.length }
+        { id: "deals", label: "Deals & Pipeline", icon: Handshake, count: deals.length },
+        { id: "customers", label: "Customers", icon: BadgeCheck, count: wonDealsCount }
       ]
     },
     {

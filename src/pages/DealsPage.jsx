@@ -25,12 +25,41 @@ export default function DealsPage() {
     setQuickCreateType,
     accounts,
     navigateTo,
-    isLoadingData
+    isLoadingData,
+    currentUser,
   } = useCRM();
 
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+  const canDeleteDeals = isOwner || isManager;
 
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const [permissionError, setPermissionError] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const stages = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"];
+
+  const handleDeleteDeal = async (deal) => {
+    if (!deal || isDeleting) return;
+
+    if (!canDeleteDeals) {
+      setPermissionError("You don't have permission to delete deals. Only Owners and Managers are authorized to delete deals from the active pipeline.");
+      return;
+    }
+
+    if (window.confirm(`Delete opportunity "${deal.name}"?`)) {
+      setIsDeleting(true);
+      setPermissionError(null);
+      const res = await deleteDeal(deal.id);
+      setIsDeleting(false);
+
+      if (res && res.success === false) {
+        setPermissionError(res.error?.message || "You don't have permission to delete this deal.");
+      } else {
+        setSelectedDeal(null);
+      }
+    }
+  };
 
   const normalizeStage = (stg) => {
     if (!stg) return 'Qualified';
@@ -94,6 +123,49 @@ export default function DealsPage() {
         </div>
       </div>
 
+      {/* User Friendly Permission Alert */}
+      {permissionError && (
+        <div
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.85rem 1.15rem',
+            borderRadius: 10,
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#991b1b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.08)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <AlertTriangle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong style={{ fontSize: '0.875rem' }}>Permission Denied:</strong>{' '}
+              <span style={{ fontSize: '0.85rem' }}>{permissionError}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setPermissionError(null)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#991b1b',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              lineHeight: 1,
+              padding: '0 4px',
+            }}
+            title="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Selected Deal Stage Path Chevron (Salesforce Path Component) */}
       {selectedDeal && (
         <div className="crm-card" style={{ marginBottom: '1.5rem', background: '#ffffff' }}>
@@ -107,16 +179,17 @@ export default function DealsPage() {
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
                 className="btn btn-outline btn-sm"
-                style={{ color: '#ef4444', borderColor: '#fca5a5' }}
-                onClick={() => {
-                  if (window.confirm(`Delete opportunity "${selectedDeal.name}"?`)) {
-                    deleteDeal(selectedDeal.id);
-                    setSelectedDeal(null);
-                  }
+                style={{
+                  color: canDeleteDeals ? '#ef4444' : '#94a3b8',
+                  borderColor: canDeleteDeals ? '#fca5a5' : '#cbd5e1',
+                  cursor: canDeleteDeals ? 'pointer' : 'not-allowed',
+                  opacity: canDeleteDeals ? 1 : 0.65,
                 }}
-                title="Delete Opportunity"
+                disabled={isDeleting}
+                onClick={() => handleDeleteDeal(selectedDeal)}
+                title={canDeleteDeals ? "Delete Opportunity" : "Permission Denied: Only Owners and Managers can delete deals"}
               >
-                <Trash2 size={14} /> Delete
+                <Trash2 size={14} /> {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
               <button
                 className="btn btn-primary btn-sm"

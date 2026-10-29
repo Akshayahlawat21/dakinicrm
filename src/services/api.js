@@ -203,6 +203,28 @@ export const gatewayApi = {
     });
   },
 
+  async checkDuplicateLead(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return gatewayFetch(`/leads/check-duplicate?${query}`, { method: 'GET' });
+  },
+
+  async assignLeads(leadIds, assigneeId) {
+    return gatewayFetch('/leads/assign', {
+      method: 'POST',
+      body: JSON.stringify({
+        lead_ids: Array.isArray(leadIds) ? leadIds : [leadIds],
+        assignee_id: assigneeId,
+      }),
+    });
+  },
+
+  async assignLead(leadId, assigneeId) {
+    return gatewayFetch(`/leads/${leadId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ assignee_id: assigneeId }),
+    });
+  },
+
   /**
    * E3: Deals resource
    */
@@ -228,8 +250,31 @@ export const gatewayApi = {
     return gatewayFetch(`/deals/${dealId}`, { method: 'DELETE' });
   },
 
+  async checkDuplicateDeal(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return gatewayFetch(`/deals/check-duplicate?${query}`, { method: 'GET' });
+  },
+
+  async cleanupStaleLeads(retentionDays = 30) {
+    return gatewayFetch(`/leads/cleanup-stale?retention_days=${retentionDays}`, { method: 'POST' });
+  },
+
   async deleteTask(taskId) {
     return gatewayFetch(`/tasks/${taskId}`, { method: 'DELETE' });
+  },
+
+  /**
+   * Products resource (Live Supabase DB)
+   */
+  async getProducts() {
+    return gatewayFetch('/products', { method: 'GET' });
+  },
+
+  async createProduct(productData) {
+    return gatewayFetch('/products', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
   },
 
   /**
@@ -250,6 +295,11 @@ export const gatewayApi = {
     return gatewayFetch(`/accounts/${accountId}`, { method: 'DELETE' });
   },
 
+  async checkDuplicateAccount(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return gatewayFetch(`/accounts/check-duplicate?${query}`, { method: 'GET' });
+  },
+
   /**
    * Contacts resource (Live Supabase DB)
    */
@@ -266,6 +316,11 @@ export const gatewayApi = {
 
   async deleteContact(contactId) {
     return gatewayFetch(`/contacts/${contactId}`, { method: 'DELETE' });
+  },
+
+  async checkDuplicateContact(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return gatewayFetch(`/contacts/check-duplicate?${query}`, { method: 'GET' });
   },
 
 

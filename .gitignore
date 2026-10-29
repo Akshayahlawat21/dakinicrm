@@ -64,3 +64,6 @@ ENV/
 .layer9-integration-backup/
 zips/
 *.zip
+
+scratch/
+

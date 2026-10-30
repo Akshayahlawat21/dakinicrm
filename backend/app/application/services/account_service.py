@@ -6,6 +6,7 @@ from backend.app.application.permissions import PermissionService
 from backend.app.application.exceptions import BadRequestError, NotFoundError, ForbiddenError, ConflictError
 from backend.app.data.models.account import Account
 from backend.app.data.repositories.account_repository import AccountRepository
+from backend.app.data.repositories.base import phones_match
 from backend.app.data.repositories.team_repository import TeamRepository
 from backend.app.data.repositories.user_repository import UserRepository
 from backend.app.data.repositories.audit_repository import AuditLogRepository
@@ -86,37 +87,48 @@ class AccountService:
         self,
         ctx: RequestContext,
         name: Optional[str] = None,
+        phone: Optional[str] = None,
         industry: Optional[str] = None,
         location: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Context-Scoped Account Duplicate Check:
-        - When a salesperson creates an account for a new company, even if that company
-          already exists in the Owner's records, it is NOT considered a duplicate because
-          it is the first record for that company in the salesperson's context.
-        - However, if the SAME salesperson tries to create another account with the same
-          company name again in their context, that is flagged as a potential duplicate.
+        - Warns if phone number matches an existing account in caller's context.
+        - Warns if (company name + industry + location) match in caller's context.
         - For Owners, all accounts across the organization are checked.
+        - For non-owners, scoped to authorized accounts.
         """
         clean_name = name.strip() if name and name.strip() else None
+        clean_phone = phone.strip() if phone and phone.strip() else None
         clean_industry = industry.strip() if industry and industry.strip() else None
         clean_location = location.strip() if location and location.strip() else None
 
-        # Give warning if all 3 match: company name + industry + location
-        if not clean_name or not clean_industry or not clean_location:
+        # Give warning if phone matches, OR if all 3 match: company name + industry + location
+        if not clean_phone and (not clean_name or not clean_industry or not clean_location):
             return None
 
         from sqlalchemy import select, func
-        stmt = (
-            select(Account)
-            .where(
-                Account.organization_id == ctx.tenant_uuid,
-                Account.deleted_at.is_(None),
-                func.lower(func.trim(Account.name)) == clean_name.lower(),
+        candidates_by_id = {}
+
+        if clean_phone:
+            phone_matches = await self.account_repo.list_by_phone(clean_phone, ctx.tenant_id)
+            for acc in phone_matches:
+                candidates_by_id[acc.id] = acc
+
+        if clean_name and clean_industry and clean_location:
+            stmt = (
+                select(Account)
+                .where(
+                    Account.organization_id == ctx.tenant_uuid,
+                    Account.deleted_at.is_(None),
+                    func.lower(func.trim(Account.name)) == clean_name.lower(),
+                )
             )
-        )
-        res = await self.session.execute(stmt)
-        candidates = res.scalars().all()
+            res = await self.session.execute(stmt)
+            for acc in res.scalars().all():
+                candidates_by_id[acc.id] = acc
+
+        candidates = list(candidates_by_id.values())
 
         # Context scoping: For non-owners (Salesperson / Manager), only accounts ALREADY
         # in their authorized context are considered duplicates.
@@ -130,16 +142,32 @@ class AccountService:
         if not candidates:
             return None
 
+        scope_name = "your organization" if ctx.is_owner else "your accounts"
+
         for acc in candidates:
-            # Match industry if provided
-            if clean_industry:
+            # 1. Phone match check
+            if clean_phone and phones_match(clean_phone, acc.phone):
+                return {
+                    "is_duplicate_warning": True,
+                    "existing_account_id": str(acc.id),
+                    "existing_account_name": acc.name,
+                    "existing_phone": acc.phone,
+                    "existing_industry": acc.industry,
+                    "existing_location": acc.address or clean_location,
+                    "warning_message": (
+                        f"An active account with phone '{acc.phone}' ('{acc.name}') already exists in {scope_name}."
+                    ),
+                }
+
+            # 2. Company name + industry + location check
+            if clean_name and clean_industry and clean_location:
+                # Match industry
                 acc_ind = (acc.industry or "").strip().lower()
                 req_ind = clean_industry.lower()
                 if not (req_ind == acc_ind or req_ind in acc_ind or acc_ind in req_ind):
                     continue
 
-            # Match location if provided
-            if clean_location:
+                # Match location
                 acc_address = (acc.address or "").strip()
                 norm_loc = clean_location.lower()
                 norm_addr = acc_address.lower() if acc_address else ""
@@ -155,17 +183,17 @@ class AccountService:
                 if not is_loc_match:
                     continue
 
-            scope_name = "your organization" if ctx.is_owner else "your accounts"
-            return {
-                "is_duplicate_warning": True,
-                "existing_account_id": str(acc.id),
-                "existing_account_name": acc.name,
-                "existing_industry": acc.industry,
-                "existing_location": acc.address or clean_location,
-                "warning_message": (
-                    f"An active account matching '{acc.name}' in '{acc.industry}' at '{acc.address or clean_location}' already exists in {scope_name}."
-                ),
-            }
+                return {
+                    "is_duplicate_warning": True,
+                    "existing_account_id": str(acc.id),
+                    "existing_account_name": acc.name,
+                    "existing_phone": acc.phone,
+                    "existing_industry": acc.industry,
+                    "existing_location": acc.address or clean_location,
+                    "warning_message": (
+                        f"An active account matching '{acc.name}' in '{acc.industry}' at '{acc.address or clean_location}' already exists in {scope_name}."
+                    ),
+                }
         return None
 
     async def create_account(
@@ -188,6 +216,7 @@ class AccountService:
             dup = await self.check_duplicate_account(
                 ctx=ctx,
                 name=clean_name,
+                phone=phone,
                 industry=industry,
                 location=address,
             )

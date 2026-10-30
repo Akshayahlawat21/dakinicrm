@@ -3,7 +3,7 @@ from typing import Optional, List, Set
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.data.models.account import Account
-from backend.app.data.repositories.base import BaseRepository
+from backend.app.data.repositories.base import BaseRepository, phones_match
 
 
 class AccountRepository(BaseRepository[Account]):
@@ -24,6 +24,40 @@ class AccountRepository(BaseRepository[Account]):
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def list_by_phone(self, phone: str, tenant_id: str | uuid.UUID) -> List[Account]:
+        if not phone or not phone.strip():
+            return []
+        import re
+        tenant_uuid = self._parse_uuid(tenant_id)
+        digits = re.sub(r'[^0-9]', '', phone)
+
+        conditions = [
+            Account.organization_id == tenant_uuid,
+            Account.phone.is_not(None),
+            Account.deleted_at.is_(None),
+        ]
+
+        if len(digits) >= 4:
+            last4 = digits[-4:]
+            conditions.append(
+                or_(
+                    Account.phone.ilike(f"%{last4}%"),
+                    func.trim(Account.phone) == phone.strip()
+                )
+            )
+        else:
+            conditions.append(func.trim(Account.phone) == phone.strip())
+
+        stmt = (
+            select(Account)
+            .where(*conditions)
+            .order_by(Account.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        candidates = list(res.scalars().all())
+        return [a for a in candidates if phones_match(phone, a.phone)]
+
 
     async def get_authorized_account_ids_for_users(
         self, tenant_id: str | uuid.UUID, user_ids: List[uuid.UUID]

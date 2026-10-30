@@ -137,19 +137,22 @@ export default function QuickCreateModal() {
     let active = true;
     const hasName = Boolean(formData.name && formData.name.trim().length >= 2);
     const hasEmail = Boolean(formData.email && formData.email.trim().includes('@'));
+    const hasPhone = Boolean(formData.phone && formData.phone.trim().length >= 7);
+    const hasContact = hasEmail || hasPhone;
     const hasProduct = Boolean(
       (formData.interestedProduct && formData.interestedProduct.trim().length > 0) ||
       formData.productId
     );
 
-    // Give warning only if all 3 are present: name + email + interested product
-    if (quickCreateType === 'lead' && hasName && hasEmail && hasProduct) {
+    // Give warning if name + contact info (email or phone) + interested product are present
+    if (quickCreateType === 'lead' && hasName && hasContact && hasProduct) {
       const timer = setTimeout(async () => {
         try {
           if (checkDuplicateLead) {
             const res = await checkDuplicateLead({
               name: formData.name.trim() || undefined,
               email: formData.email.trim() || undefined,
+              phone: formData.phone.trim() || undefined,
               company: formData.company.trim() || undefined,
               title: formData.title.trim() || undefined,
               interested_product: formData.interestedProduct?.trim() || undefined,
@@ -179,6 +182,7 @@ export default function QuickCreateModal() {
     quickCreateType,
     formData.name,
     formData.email,
+    formData.phone,
     formData.company,
     formData.title,
     formData.interestedProduct,
@@ -219,20 +223,23 @@ export default function QuickCreateModal() {
     }
   }, [quickCreateType, formData.company, formData.name, dealPurchaseType, checkDuplicateDeal]);
 
-  // Live duplicate checking for Accounts: warn when company name + industry match (+ location)
+  // Live duplicate checking for Accounts: warn when phone matches OR (company name + industry match)
   useEffect(() => {
     let active = true;
     const accountName = (formData.name || formData.accountName || '').trim();
+    const accountPhone = (formData.phone || '').trim();
     const hasName = Boolean(accountName.length >= 2);
     const hasIndustry = Boolean((formData.industry || '').trim());
+    const hasPhone = Boolean(accountPhone.length >= 7);
 
-    if (quickCreateType === 'account' && hasName && hasIndustry) {
+    if (quickCreateType === 'account' && ((hasName && hasIndustry) || hasPhone)) {
       const timer = setTimeout(async () => {
         try {
           if (checkDuplicateAccount) {
             const res = await checkDuplicateAccount({
-              name: accountName,
-              industry: formData.industry.trim(),
+              name: accountName || undefined,
+              phone: accountPhone || undefined,
+              industry: formData.industry?.trim() || undefined,
               location: (formData.city || '').trim() || undefined,
             });
             const actualRes = res?.data !== undefined ? res.data : res;
@@ -259,31 +266,36 @@ export default function QuickCreateModal() {
     quickCreateType,
     formData.name,
     formData.accountName,
+    formData.phone,
     formData.industry,
     formData.city,
     checkDuplicateAccount,
   ]);
 
-  // Live duplicate checking for Contacts: warn ONLY if name + company + email match (+ optional job title)
+  // Live duplicate checking for Contacts: warn if name + company + (email OR phone) match (+ optional job title)
   useEffect(() => {
     let active = true;
     const contactName = (formData.name || '').trim();
     const contactCompany = (formData.company || '').trim();
     const contactEmail = (formData.email || '').trim();
+    const contactPhone = (formData.phone || '').trim();
     const contactTitle = (formData.title || '').trim();
 
     const hasName = Boolean(contactName.length >= 2);
     const hasCompany = Boolean(contactCompany.length >= 2);
     const hasEmail = Boolean(contactEmail.includes('@'));
+    const hasPhone = Boolean(contactPhone.length >= 7);
+    const hasContactChannel = hasEmail || hasPhone;
 
-    if (quickCreateType === 'contact' && hasName && hasCompany && hasEmail) {
+    if (quickCreateType === 'contact' && hasName && hasCompany && hasContactChannel) {
       const timer = setTimeout(async () => {
         try {
           if (checkDuplicateContact) {
             const res = await checkDuplicateContact({
               name: contactName,
               company: contactCompany,
-              email: contactEmail,
+              email: contactEmail || undefined,
+              phone: contactPhone || undefined,
               title: contactTitle || undefined,
             });
             const actualRes = res?.data !== undefined ? res.data : res;
@@ -311,6 +323,7 @@ export default function QuickCreateModal() {
     formData.name,
     formData.company,
     formData.email,
+    formData.phone,
     formData.title,
     checkDuplicateContact,
   ]);
@@ -390,20 +403,50 @@ export default function QuickCreateModal() {
 
     try {
       if (quickCreateType === 'lead') {
+        const cleanName = formData.name?.trim();
+        const cleanCompany = formData.company?.trim();
+        const cleanPhone = formData.phone?.trim();
+        const cleanProduct = formData.interestedProduct?.trim() || formData.productId;
+
+        if (!cleanName) {
+          setErrorMsg('Lead Name is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanCompany) {
+          setErrorMsg('Company is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 7) {
+          setErrorMsg('Phone number is required (minimum 7 digits).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanProduct) {
+          setErrorMsg('Interested Product is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
         const hasAllThree = Boolean(
-          formData.name?.trim() &&
-          formData.email?.trim() &&
-          (formData.interestedProduct?.trim() || formData.productId)
+          cleanName &&
+          (formData.email?.trim() || cleanPhone) &&
+          cleanProduct
         );
 
-        // Enforce duplicate check before saving if all 3 match (name + email + product)
+        // Enforce duplicate check before saving if all match (name + email/phone + product)
         let dupCheck = leadDuplicateWarning;
         if (!dupCheck && checkDuplicateLead && hasAllThree) {
           try {
             const checkRes = await checkDuplicateLead({
-              name: formData.name.trim() || undefined,
+              name: cleanName || undefined,
               email: formData.email.trim() || undefined,
-              company: formData.company.trim() || undefined,
+              phone: cleanPhone || undefined,
+              company: cleanCompany || undefined,
               title: formData.title.trim() || undefined,
               interested_product: formData.interestedProduct?.trim() || undefined,
               product_id: formData.productId || undefined,
@@ -425,12 +468,12 @@ export default function QuickCreateModal() {
         }
 
         const res = await addLead({
-          name: formData.name.trim() || 'New Prospect',
-          company: formData.company.trim() || 'Enterprise Corp',
+          name: cleanName,
+          company: cleanCompany,
           title: formData.title.trim() || '',
           website: formData.website.trim() || null,
           email: formData.email.trim(),
-          phone: formData.phone.trim() || '+1 555-019-2831',
+          phone: cleanPhone,
           industry: formData.industry,
           owner: dynamicOwner,
           source: formData.source.trim() || 'LinkedIn Ad',
@@ -454,32 +497,102 @@ export default function QuickCreateModal() {
         const ok = await executeSaveDeal(confirmedDuplicate);
         if (!ok) return;
       } else if (quickCreateType === 'account') {
-        if (accountDuplicateWarning && !confirmSeparateAccount) {
-          setErrorMsg(accountDuplicateWarning.warning_message || 'Please confirm creating a separate account or use the existing account.');
+        const cleanName = (formData.accountName || formData.name || formData.company || '').trim();
+        const cleanPhone = (formData.phone || '').trim();
+
+        if (!cleanName) {
+          setErrorMsg('Account name is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 7) {
+          setErrorMsg('Phone number is required for account (minimum 7 digits).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        let dupCheck = accountDuplicateWarning;
+        if (!dupCheck && checkDuplicateAccount) {
+          try {
+            const checkRes = await checkDuplicateAccount({
+              name: cleanName,
+              phone: cleanPhone,
+              industry: formData.industry?.trim() || undefined,
+              location: (formData.city || '').trim() || undefined,
+            });
+            dupCheck = checkRes?.data !== undefined ? checkRes.data : checkRes;
+          } catch (e) {
+            console.warn('Pre-submit account duplicate check skipped:', e);
+          }
+        }
+
+        if (dupCheck?.is_duplicate_warning && !confirmSeparateAccount) {
+          setAccountDuplicateWarning(dupCheck);
+          setErrorMsg(dupCheck.warning_message || 'Please confirm creating a separate account or use the existing account.');
           setIsSubmitting(false);
           return;
         }
         await addAccount({
-          name: formData.accountName.trim() || formData.name.trim() || formData.company.trim() || 'New Enterprise Account',
+          name: cleanName,
           industry: formData.industry || 'Logistics & Tech',
           website: formData.website.trim() || '',
-          phone: formData.phone.trim() || '',
+          phone: cleanPhone,
           city: formData.city.trim() || '',
           address: formData.city.trim() || '',
           allow_separate_account: confirmSeparateAccount,
         });
       } else if (quickCreateType === 'contact') {
-        if (contactDuplicateWarning && !confirmSeparateContact) {
-          setErrorMsg(contactDuplicateWarning.warning_message || 'Please confirm creating a separate contact or use the existing contact.');
+        const cleanName = (formData.name || '').trim();
+        const cleanCompany = (formData.company || '').trim();
+        const cleanPhone = (formData.phone || '').trim();
+
+        if (!cleanName) {
+          setErrorMsg('Contact name is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanCompany) {
+          setErrorMsg('Company name is required.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 7) {
+          setErrorMsg('Phone number is required for contact (minimum 7 digits).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        let dupCheck = contactDuplicateWarning;
+        if (!dupCheck && checkDuplicateContact) {
+          try {
+            const checkRes = await checkDuplicateContact({
+              name: cleanName,
+              company: cleanCompany,
+              email: formData.email.trim() || undefined,
+              phone: cleanPhone,
+              title: formData.title.trim() || undefined,
+            });
+            dupCheck = checkRes?.data !== undefined ? checkRes.data : checkRes;
+          } catch (e) {
+            console.warn('Pre-submit contact duplicate check skipped:', e);
+          }
+        }
+
+        if (dupCheck?.is_duplicate_warning && !confirmSeparateContact) {
+          setContactDuplicateWarning(dupCheck);
+          setErrorMsg(dupCheck.warning_message || 'Please confirm creating a separate contact or use the existing contact.');
           setIsSubmitting(false);
           return;
         }
         await addContact({
-          name: formData.name.trim() || 'New Contact',
-          account: formData.company.trim() || 'Enterprise Corp',
+          name: cleanName,
+          account: cleanCompany,
           title: formData.title.trim() || '',
           email: formData.email.trim() || '',
-          phone: formData.phone.trim() || '',
+          phone: cleanPhone,
           industry: formData.industry,
           allow_separate_contact: confirmSeparateContact,
         });
@@ -569,7 +682,7 @@ export default function QuickCreateModal() {
                 <AlertCircle size={18} style={{ color: '#dc2626', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#991b1b', marginBottom: 2 }}>
-                    Duplicate Record Conflict
+                    {leadDuplicateWarning || dealDuplicateWarning || accountDuplicateWarning ? 'Duplicate Record Conflict' : 'Validation Error'}
                   </div>
                   <div style={{ fontSize: '0.8125rem', color: '#b91c1c', lineHeight: 1.4 }}>
                     {errorMsg}
@@ -631,6 +744,7 @@ export default function QuickCreateModal() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="(555) 000-0000"
+                      required={true}
                     />
                   </div>
                 </div>
@@ -914,12 +1028,13 @@ export default function QuickCreateModal() {
                   </div>
                   <div ref={productDropdownRef} style={{ position: 'relative' }}>
                     <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Interested Product
+                      Interested Product <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <input
                         type="text"
                         name="interestedProduct"
+                        required
                         placeholder="Select or type new product..."
                         className="input-field"
                         style={{ paddingRight: '2.25rem', cursor: 'text' }}
@@ -1299,6 +1414,7 @@ export default function QuickCreateModal() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="(555) 000-0000"
+                      required={true}
                     />
                   </div>
                 </div>
@@ -1417,6 +1533,7 @@ export default function QuickCreateModal() {
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="(555) 000-0000"
+                    required={true}
                   />
                 </div>
 

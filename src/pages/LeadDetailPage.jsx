@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { analyzeTranscript } from '../services/aiApi';
@@ -16,7 +16,15 @@ import {
   AlertCircle,
   CheckCircle2,
   Lightbulb,
-  ClipboardList
+  ClipboardList,
+  Calendar,
+  Clock,
+  Plus,
+  Tag,
+  MessageSquare,
+  User,
+  ListTodo,
+  StickyNote,
 } from 'lucide-react';
 
 export default function LeadDetailPage() {
@@ -29,17 +37,28 @@ export default function LeadDetailPage() {
     setIsConvertModalOpen,
     addTranscriptAnalysis,
     currentUser,
+    products = [],
+    tasks = [],
+    addTask,
+    transcriptAnalyses = [],
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('Overview');
   const [transcript, setTranscript] = useState('');
-  const [productName, setProductName] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Quick Activity Logging state
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [newActivityType, setNewActivityType] = useState('call');
+  const [newActivitySubject, setNewActivitySubject] = useState('');
+  const [newActivityNotes, setNewActivityNotes] = useState('');
+  const [newActivityPriority, setNewActivityPriority] = useState('Medium');
+  const [isSavingActivity, setIsSavingActivity] = useState(false);
+
   const lead =
-    (id && leads?.find((l) => l.id === id)) ||
+    (id && leads?.find((l) => String(l.id) === String(id))) ||
     selectedLead ||
     leads[0] || {
       id: 'lead-loading',
@@ -52,17 +71,136 @@ export default function LeadDetailPage() {
       email: 'lead@enterprise.com',
       phone: '+91 98000 00000',
       owner: currentUser?.name || 'Sales Representative',
+      interested_product: '',
       scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
       timeline: []
     };
 
+  // Pre-fill Product Discussed automatically from the Lead's Interested Product in DB
+  const [productName, setProductName] = useState(
+    lead?.interested_product || lead?.interestedProduct || lead?.product || ''
+  );
+
   useEffect(() => {
     setTranscript('');
-    setProductName('');
+    const dbProduct = lead?.interested_product || lead?.interestedProduct || lead?.product || '';
+    setProductName(dbProduct);
     setAnalysis(null);
     setAnalysisError('');
     setIsAnalyzing(false);
-  }, [id]);
+    setShowLogForm(false);
+    setNewActivitySubject(`Call with ${lead?.name || "Lead"}`);
+  }, [id, lead?.id, lead?.interested_product, lead?.interestedProduct, lead?.product, lead?.name]);
+
+  // Keep productName in sync if lead data finishes loading from Supabase DB asynchronously
+  useEffect(() => {
+    const dbProduct = lead?.interested_product || lead?.interestedProduct || lead?.product || '';
+    if (dbProduct && !productName) {
+      setProductName(dbProduct);
+    }
+  }, [lead?.interested_product, lead?.interestedProduct, lead?.product, productName]);
+
+  // Role determination for RBAC
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+
+  // RBAC-scoped activities for this person
+  const leadActivities = useMemo(() => {
+    const list = [];
+    const leadIdStr = String(lead?.id || '');
+    const leadNameClean = (lead?.name || '').toLowerCase().trim();
+    const leadCompanyClean = (lead?.company || '').toLowerCase().trim();
+    const myName = (currentUser?.name || '').toLowerCase().trim();
+    const myId = String(currentUser?.id || '');
+
+    // 1. Call Transcripts & Analyses for this lead
+    transcriptAnalyses.forEach((c) => {
+      const matchLead =
+        (c.leadId && String(c.leadId) === leadIdStr) ||
+        (c.leadName && c.leadName.toLowerCase().trim() === leadNameClean);
+
+      if (matchLead) {
+        // RBAC check
+        let isAllowed = isOwner;
+        if (!isAllowed && isManager) {
+          isAllowed = true; // In manager's team scope
+        }
+        if (!isAllowed) {
+          // Salesperson check
+          const analystMatch = c.analyzedBy && String(c.analyzedBy) === myId;
+          const ownerMatch = c.owner && c.owner.toLowerCase().trim() === myName;
+          const leadAssignedMatch = lead.assigned_to && String(lead.assigned_to) === myId;
+          const leadOwnerMatch = lead.owner && lead.owner.toLowerCase().trim() === myName;
+          isAllowed = analystMatch || ownerMatch || leadAssignedMatch || leadOwnerMatch;
+        }
+
+        if (isAllowed) {
+          list.push({
+            id: c.id,
+            type: 'call',
+            subject: `Call with ${c.leadName || lead.name}`,
+            product: c.productName || lead.interested_product || 'General Inquiry',
+            sentiment: c.sentiment || 'neutral',
+            outcome: c.callOutcome || c.outputs?.call_outcome || 'Call Completed',
+            summary: c.outputs?.summary?.call_summary || c.outputs?.call_summary || 'Call transcript analyzed.',
+            timestamp: c.createdAt || new Date().toISOString(),
+            rep: c.analystName || c.owner || lead.owner || 'Sales Rep',
+          });
+        }
+      }
+    });
+
+    // 2. Tasks related to this lead
+    tasks.forEach((t) => {
+      const rec = (t.record || '').toLowerCase().trim();
+      const title = (t.title || '').toLowerCase().trim();
+      const matchLead =
+        (rec && (rec === leadNameClean || rec === leadCompanyClean)) ||
+        title.includes(leadNameClean);
+
+      if (matchLead) {
+        // RBAC check
+        let isAllowed = isOwner;
+        if (!isAllowed && isManager) isAllowed = true;
+        if (!isAllowed) {
+          const ownerMatch = t.owner && t.owner.toLowerCase().trim() === myName;
+          const leadOwnerMatch = lead.owner && lead.owner.toLowerCase().trim() === myName;
+          isAllowed = ownerMatch || leadOwnerMatch;
+        }
+
+        if (isAllowed) {
+          list.push({
+            id: t.id,
+            type: 'task',
+            subject: t.title,
+            priority: t.priority || 'Medium',
+            completed: t.completed,
+            dueDate: t.dueDate || 'Upcoming',
+            timestamp: t.dueDate || new Date().toISOString(),
+            rep: t.owner || lead.owner || 'Sales Rep',
+          });
+        }
+      }
+    });
+
+    // 3. Lead Timeline events
+    if (Array.isArray(lead.timeline)) {
+      lead.timeline.forEach((tl) => {
+        list.push({
+          id: tl.id || `tl-${Math.random()}`,
+          type: tl.type || 'timeline',
+          subject: tl.title || 'Timeline Event',
+          summary: tl.description || '',
+          timestamp: tl.time || 'Past',
+          rep: lead.owner || 'System',
+        });
+      });
+    }
+
+    // Sort newest first
+    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [transcriptAnalyses, tasks, lead, currentUser, isOwner, isManager]);
 
   const handleAnalyzeTranscript = async () => {
     if (!transcript.trim() || isAnalyzing) return;
@@ -72,11 +210,50 @@ export default function LeadDetailPage() {
     try {
       const outputs = await analyzeTranscript(transcript);
       setAnalysis(outputs);
-      addTranscriptAnalysis(lead, transcript.trim(), outputs, productName);
+      await addTranscriptAnalysis(
+        lead,
+        transcript.trim(),
+        outputs,
+        productName || lead.interested_product || ''
+      );
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : 'Transcript analysis failed. Please try again.');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateQuickActivity = async (e) => {
+    e.preventDefault();
+    if (!newActivitySubject.trim() || isSavingActivity) return;
+    setIsSavingActivity(true);
+    try {
+      if (newActivityType === 'call') {
+        // Ingest call activity & analysis into database
+        await addTranscriptAnalysis(
+          lead,
+          newActivityNotes || `Salesperson completed call regarding ${productName || lead.interested_product || 'product'}.`,
+          {
+            summary: {
+              call_summary: newActivityNotes || `Completed outbound call on ${new Date().toLocaleDateString()}.`,
+              positive_feedback: [],
+              negative_feedback: [],
+            },
+            call_outcome: 'completed',
+            sentiment: 'neutral',
+          },
+          productName || lead.interested_product || ''
+        );
+      } else {
+        // Create task activity in DB
+        await addTask(newActivitySubject, lead.company || lead.name, newActivityPriority);
+      }
+      setShowLogForm(false);
+      setNewActivityNotes('');
+    } catch (err) {
+      console.warn('Failed to save activity:', err);
+    } finally {
+      setIsSavingActivity(false);
     }
   };
 
@@ -128,11 +305,9 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      {/* 3-Column Salesforce Architecture (Exact layout from Screenshot 1) */}
+      {/* 3-Column Layout */}
       <div className="lead-detail-columns">
-        {/* =========================================================================
-            COLUMN 1: Profile & Meta Card
-            ========================================================================= */}
+        {/* COLUMN 1: Profile & Meta Card */}
         <div className="crm-card lead-profile-card">
           <div className="lead-profile-avatar">
             {(lead.name || 'Lead Record').split(' ').map((n) => n[0]).join('')}
@@ -207,24 +382,28 @@ export default function LeadDetailPage() {
           </div>
         </div>
 
-        {/* =========================================================================
-            COLUMN 2: Score Breakdown, Tabs & Interactive Timeline
-            ========================================================================= */}
+        {/* COLUMN 2: Tabs & Interactive Panel */}
         <div>
           {/* Sub Navigation Tabs */}
           <div className="tab-group" style={{ marginBottom: '1rem' }}>
-            {['Overview', 'Signals', 'Activity', 'Notes', 'Documents'].map((t) => (
+            {['Overview', 'Activity', 'Signals', 'Notes', 'Documents'].map((t) => (
               <button
                 key={t}
                 className={`tab-btn ${activeTab === t ? 'active' : ''}`}
                 onClick={() => setActiveTab(t)}
               >
                 {t}
+                {t === 'Activity' && leadActivities.length > 0 && (
+                  <span style={{ marginLeft: 6, fontSize: '0.7rem', padding: '1px 6px', borderRadius: 999, background: '#dbeafe', color: '#1d4ed8', fontWeight: 800 }}>
+                    {leadActivities.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-          {activeTab === 'Overview' ? (
+          {/* TAB 1: OVERVIEW (Call Transcript & AI Analysis) */}
+          {activeTab === 'Overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <section className="crm-card transcript-card" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
@@ -237,11 +416,11 @@ export default function LeadDetailPage() {
                       <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Paste the salesperson and customer conversation below.</p>
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>V1 · Session only</span>
                 </div>
 
+                {/* Product Discussed for this lead */}
                 <label style={{ display: 'grid', gap: '0.35rem', margin: '0.9rem 0 0.65rem', color: '#334155', fontSize: '0.82rem', fontWeight: 700 }}>
-                  Product discussed <span style={{ color: '#64748b', fontWeight: 400 }}>(optional for V1 dashboard filtering)</span>
+                  <span>Product discussed</span>
                   <input
                     value={productName}
                     onChange={(event) => setProductName(event.target.value)}
@@ -358,19 +537,263 @@ export default function LeadDetailPage() {
                 )}
               </section>
             </div>
-          ) : (
-            <div className="crm-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ marginBottom: '0.5rem' }}>{activeTab}</h3>
-              <p style={{ color: '#64748b', fontSize: '0.875rem' }}>This section is outside the transcript-analysis V1 scope. Use Overview for the call transcript and AI report.</p>
+          )}
+
+          {/* TAB 2: ACTIVITY (All interactions with this person in RBAC scope) */}
+          {activeTab === 'Activity' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <section className="crm-card" style={{ padding: '1.35rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                      Interactions & Activity
+                    </h2>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      All recorded calls, tasks, and touchpoints with {lead.name} in your organization scope.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 999, background: '#f1f5f9', color: '#475569', fontWeight: 700 }}>
+                      {isOwner ? 'Scope: Owner (All Reps)' : isManager ? 'Scope: Manager (Team)' : 'Scope: Salesperson (My Records)'}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setShowLogForm((prev) => !prev)}
+                    >
+                      <Plus size={14} /> {showLogForm ? 'Cancel' : 'Log Activity'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Activity Logging Form */}
+                {showLogForm && (
+                  <form onSubmit={handleCreateQuickActivity} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                      Log New Activity with {lead.name}
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                        Activity Type
+                        <select
+                          value={newActivityType}
+                          onChange={(e) => setNewActivityType(e.target.value)}
+                          style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                        >
+                          <option value="call">📞 Phone Call</option>
+                          <option value="task">✓ Task / Follow-up</option>
+                          <option value="meeting">📅 Meeting</option>
+                          <option value="note">📝 Note</option>
+                        </select>
+                      </label>
+
+                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                        Subject
+                        <input
+                          type="text"
+                          value={newActivitySubject}
+                          onChange={(e) => setNewActivitySubject(e.target.value)}
+                          placeholder="e.g. Discovery Call with Client"
+                          required
+                          style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                        />
+                      </label>
+
+                      {newActivityType === 'task' && (
+                        <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                          Priority
+                          <select
+                            value={newActivityPriority}
+                            onChange={(e) => setNewActivityPriority(e.target.value)}
+                            style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                          >
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                          </select>
+                        </label>
+                      )}
+                    </div>
+
+                    <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '0.75rem' }}>
+                      Notes / Outcome
+                      <textarea
+                        value={newActivityNotes}
+                        onChange={(e) => setNewActivityNotes(e.target.value)}
+                        placeholder="Details of the discussion, next steps, or customer feedback..."
+                        rows={3}
+                        style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                      />
+                    </label>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowLogForm(false)}>
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn btn-primary btn-sm" disabled={isSavingActivity}>
+                        {isSavingActivity ? 'Saving…' : 'Save to Timeline'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Activity Feed */}
+                {leadActivities.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
+                    <Calendar size={32} style={{ margin: '0 auto 0.6rem', color: '#94a3b8' }} />
+                    <p style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>No activities recorded yet for {lead.name}</p>
+                    <p style={{ fontSize: '0.82rem' }}>Log a phone call or use the Overview tab to analyze a transcript.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '0.85rem' }}>
+                    {leadActivities.map((act) => (
+                      <div
+                        key={act.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.85rem',
+                          padding: '0.9rem',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 10,
+                          background: act.type === 'call' ? '#f0fdf4' : '#fff',
+                        }}
+                      >
+                        {/* Type Icon */}
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: act.type === 'call' ? '#dcfce7' : act.type === 'task' ? '#eff6ff' : '#f1f5f9',
+                            color: act.type === 'call' ? '#15803d' : act.type === 'task' ? '#2563eb' : '#475569',
+                          }}
+                        >
+                          {act.type === 'call' ? <Phone size={18} /> : act.type === 'task' ? <CheckCircle size={18} /> : <Clock size={18} />}
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+                                {act.subject}
+                              </span>
+                              {act.product && (
+                                <span style={{ fontSize: '0.72rem', background: '#eff6ff', color: '#1d4ed8', padding: '2px 7px', borderRadius: 6, fontWeight: 700 }}>
+                                  📦 {act.product}
+                                </span>
+                              )}
+                              {act.sentiment && (
+                                <span
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '2px 7px',
+                                    borderRadius: 6,
+                                    fontWeight: 700,
+                                    background: act.sentiment === 'positive' ? '#dcfce7' : act.sentiment === 'negative' ? '#fee2e2' : '#f1f5f9',
+                                    color: act.sentiment === 'positive' ? '#15803d' : act.sentiment === 'negative' ? '#b91c1c' : '#475569',
+                                  }}
+                                >
+                                  {act.sentiment}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              {new Date(act.timestamp).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          {act.summary && (
+                            <p style={{ color: '#334155', fontSize: '0.85rem', lineHeight: 1.5, marginTop: 4 }}>
+                              {act.summary}
+                            </p>
+                          )}
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, fontSize: '0.75rem', color: '#64748b' }}>
+                            <span>Rep: <strong>{act.rep}</strong></span>
+                            {act.outcome && <span>Outcome: <strong style={{ color: '#059669' }}>{act.outcome}</strong></span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+
+          {/* TAB 3: SIGNALS */}
+          {activeTab === 'Signals' && (
+            <div className="crm-card" style={{ padding: '1.35rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Lead Scoring Breakdown
+              </h2>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.25rem' }}>
+                Algorithmic purchase intent signals evaluated for {lead.name}.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {Object.entries(lead.scoreBreakdown || {}).map(([metric, val]) => (
+                  <div key={metric} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                      {metric.replace(/([A-Z])/g, ' $1')}
+                    </div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2563eb', margin: '0.25rem 0' }}>
+                      {val}%
+                    </div>
+                    <div style={{ width: '100%', height: 6, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: `${val}%`, height: '100%', background: '#2563eb' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: NOTES */}
+          {activeTab === 'Notes' && (
+            <div className="crm-card" style={{ padding: '1.35rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Notes on {lead.name}
+              </h2>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
+                Internal notes visible to authorized sales reps and managers.
+              </p>
+              <textarea
+                placeholder="Add a new private note about this prospect..."
+                rows={4}
+                style={{ width: '100%', padding: '0.8rem', border: '1px solid #cbd5e1', borderRadius: 9, background: '#fff' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <button type="button" className="btn btn-primary btn-sm">Save Note</button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: DOCUMENTS */}
+          {activeTab === 'Documents' && (
+            <div className="crm-card" style={{ padding: '1.35rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Attached Documents
+              </h2>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
+                Proposals, contracts, and decks for {lead.company || lead.name}.
+              </p>
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
+                <FileText size={28} style={{ margin: '0 auto 0.5rem', color: '#94a3b8' }} />
+                <p style={{ fontWeight: 700, color: '#334155' }}>No documents attached</p>
+                <p style={{ fontSize: '0.8rem' }}>Upload proposals and contracts for this account.</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* =========================================================================
-            COLUMN 3: Related Associations & Contextual AI Panel
-            ========================================================================= */}
+        {/* COLUMN 3: Related Associations */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Linked Records Card */}
           <div className="crm-card">
             <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.85rem' }}>
               Associations
@@ -399,7 +822,6 @@ export default function LeadDetailPage() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

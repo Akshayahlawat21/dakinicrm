@@ -6,6 +6,7 @@ from backend.app.application.exceptions import BadRequestError, NotFoundError, F
 from backend.app.data.models.contact import Contact
 from backend.app.data.models.account import Account
 from backend.app.data.repositories.contact_repository import ContactRepository
+from backend.app.data.repositories.base import phones_match
 from backend.app.data.repositories.account_repository import AccountRepository
 from backend.app.data.repositories.team_repository import TeamRepository
 from backend.app.data.repositories.user_repository import UserRepository
@@ -138,19 +139,21 @@ class ContactService:
         name: Optional[str] = None,
         company: Optional[str] = None,
         email: Optional[str] = None,
+        phone: Optional[str] = None,
         title: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Check for duplicate contact in the organization.
-        Warns ONLY if name + company name + email address (+ optional job title) match.
+        Warns if name + company name + (email OR phone) (+ optional job title) match.
         """
         clean_name = name.strip() if name and name.strip() else None
         clean_company = company.strip() if company and company.strip() else None
         clean_email = email.lower().strip() if email and email.strip() else None
+        clean_phone = phone.strip() if phone and phone.strip() else None
         clean_title = title.strip() if title and title.strip() else None
 
-        # Give the warning ONLY if all 3 core things match: name + company + email
-        if not clean_name or not clean_company or not clean_email:
+        # Give the warning ONLY if name + company + (email OR phone) match
+        if not clean_name or not clean_company or (not clean_email and not clean_phone):
             return None
 
         from sqlalchemy import select, func
@@ -163,7 +166,6 @@ class ContactService:
                 Account.organization_id == ctx.tenant_uuid,
                 Contact.deleted_at.is_(None),
                 Account.deleted_at.is_(None),
-                func.lower(func.trim(Contact.email)) == clean_email,
                 func.lower(func.trim(Account.name)) == clean_company.lower(),
             )
         )
@@ -171,6 +173,13 @@ class ContactService:
         rows = res.all()
 
         for contact_entity, acc_name in rows:
+            # 1. Match email or phone
+            email_match = bool(clean_email and contact_entity.email and contact_entity.email.lower().strip() == clean_email)
+            phone_match = bool(clean_phone and phones_match(clean_phone, contact_entity.phone))
+
+            if not email_match and not phone_match:
+                continue
+
             c_first = (contact_entity.first_name or "").strip().lower()
             c_last = (contact_entity.last_name or "").strip().lower()
             c_full = f"{c_first} {c_last}".strip()
@@ -191,16 +200,18 @@ class ContactService:
                 if clean_title.lower() != contact_entity.title.strip().lower():
                     continue
 
+            channel_info = contact_entity.email or contact_entity.phone or ""
             return {
                 "is_duplicate_warning": True,
                 "existing_contact_id": str(contact_entity.id),
                 "existing_contact_name": f"{contact_entity.first_name} {contact_entity.last_name}".strip(),
                 "existing_company": acc_name,
                 "existing_email": contact_entity.email,
+                "existing_phone": contact_entity.phone,
                 "existing_title": contact_entity.title,
                 "warning_message": (
                     f"A contact matching '{contact_entity.first_name} {contact_entity.last_name}' at '{acc_name}' "
-                    f"({contact_entity.email}{f' - {contact_entity.title}' if contact_entity.title else ''}) already exists in {'your organization' if ctx.is_owner else 'your contacts'}."
+                    f"({channel_info}{f' - {contact_entity.title}' if contact_entity.title else ''}) already exists in {'your organization' if ctx.is_owner else 'your contacts'}."
                 ),
             }
         return None
@@ -233,16 +244,18 @@ class ContactService:
                 raise ForbiddenError("You are not authorized to create contacts for this account")
 
         clean_email = email.lower().strip() if email else None
+        clean_phone = phone.strip() if phone else None
         clean_first = first_name.strip()
         clean_last = last_name.strip() if last_name else ""
         clean_full_name = f"{clean_first} {clean_last}".strip()
 
-        if not allow_separate_contact and clean_email:
+        if not allow_separate_contact and (clean_email or clean_phone):
             dup = await self.check_duplicate_contact(
                 ctx=ctx,
                 name=clean_full_name,
                 company=account.name,
                 email=clean_email,
+                phone=clean_phone,
                 title=title,
             )
             if dup and dup.get("is_duplicate_warning"):

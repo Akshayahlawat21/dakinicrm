@@ -3,7 +3,9 @@ this module deliberately does not persist AI outputs to the CRM database.
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import re
 
 import httpx
@@ -11,7 +13,7 @@ from fastapi import HTTPException
 
 from app.config import get_settings
 
-
+logger = logging.getLogger("ai.transcript_analysis")
 
 
 def _as_text(value: object) -> str:
@@ -31,9 +33,15 @@ def _as_string_list(value: object) -> list[str]:
 def parse_transcript_analysis(content: str) -> dict:
     """Parse and normalize the LLM response to the two-output UI contract."""
     raw = content.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
-        raw = re.sub(r"\s*```$", "", raw)
+    if "```" in raw:
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL | re.IGNORECASE)
+        if match:
+            raw = match.group(1).strip()
+        else:
+            raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+            raw = re.sub(r"\s*```$", "", raw).strip()
+
+    parsed = None
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
@@ -85,22 +93,24 @@ async def analyze_call_transcript(transcript: str) -> dict:
         "Keep each list item concise and actionable. The summary must describe what happened on the call, positives, "
         "negatives, customer needs, and explicit or plausible buying signals. Improvements must identify conversion "
         "blockers, relevant product improvements, sales recommendations, and next steps. Avoid generic suggestions "
-        "unless they address something evidenced in this transcript. Return this exact JSON shape: "
+        "unless they address something evidenced in this transcript. "
+        "Even for very brief transcripts, voicemails, or greetings (e.g. 'hi', 'hello'), you must return valid JSON "
+        "with call_summary describing the greeting and empty arrays for unsupported fields. Never output conversational text. "
+        "Return this exact JSON shape: "
         '{"summary":{"call_summary":"string","positive_feedback":["string"],'
         '"negative_feedback":["string"],"customer_needs":["string"],"buying_signals":["string"]},'
         '"improvements":{"conversion_blockers":["string"],"product_improvements":["string"],'
         '"sales_recommendations":["string"],"next_steps":["string"]}}'
     )
     url = settings.llm_base_url.rstrip("/") + "/chat/completions"
-    try:
-        async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
-            response = await client.post(
-                url,
-                headers={
-                    "Authorization": f"Bearer {settings.llm_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
+
+    max_attempts = 3
+    last_error: Exception | None = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
+                request_payload = {
                     "model": settings.llm_model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
@@ -111,24 +121,59 @@ async def analyze_call_transcript(transcript: str) -> dict:
                         },
                     ],
                     "temperature": 0.1,
-                },
-            )
-            response.raise_for_status()
-            payload = response.json()
-            content = payload["choices"][0]["message"]["content"]
-            if isinstance(content, list):
-                content = "\n".join(
-                    str(part.get("text", "")) for part in content if isinstance(part, dict)
+                    "response_format": {"type": "json_object"},
+                }
+
+                response = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {settings.llm_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_payload,
                 )
-            if not isinstance(content, str) or not content.strip():
-                raise ValueError("LLM response was empty")
-            return parse_transcript_analysis(content)
-    except HTTPException:
-        raise
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=502, detail=f"LLM provider returned HTTP {exc.response.status_code}") from exc
-    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+                response.raise_for_status()
+                payload = response.json()
+                choice = payload["choices"][0]["message"]
+                content = choice.get("content")
+                if not content and "reasoning" in choice:
+                    content = choice.get("reasoning")
+
+                if isinstance(content, list):
+                    content = "\n".join(
+                        str(part.get("text", "")) for part in content if isinstance(part, dict)
+                    )
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("LLM response was empty")
+                return parse_transcript_analysis(content)
+
+        except HTTPException:
+            raise
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.ReadTimeout) as exc:
+            last_error = exc
+            logger.warning(
+                f"[Layer 5 Transcript Analysis] Attempt {attempt}/{max_attempts} failed with network error: {exc}. Retrying..."
+            )
+            if attempt < max_attempts:
+                await asyncio.sleep(0.5 * attempt)
+                continue
+            logger.error(f"[Layer 5 Transcript Analysis] All {max_attempts} attempts failed: {exc}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Unable to connect to LLM provider after {max_attempts} attempts: {exc}",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            logger.error(f"[Layer 5 Transcript Analysis] LLM provider returned HTTP {exc.response.status_code}: {exc.response.text}")
+            raise HTTPException(status_code=502, detail=f"LLM provider returned HTTP {exc.response.status_code}") from exc
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            logger.error(f"[Layer 5 Transcript Analysis] Failed to parse LLM response: {exc}")
+            raise HTTPException(
+                status_code=502,
+                detail="Unable to get a valid transcript analysis from the configured LLM provider",
+            ) from exc
+
+    if last_error:
         raise HTTPException(
             status_code=502,
-            detail="Unable to get a valid transcript analysis from the configured LLM provider",
-        ) from exc
+            detail=f"Transcript analysis failed: {last_error}",
+        )

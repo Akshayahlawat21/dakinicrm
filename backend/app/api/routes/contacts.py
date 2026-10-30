@@ -5,6 +5,7 @@ from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.contact_service import ContactService
+from backend.app.application.exceptions import BadRequestError
 from backend.app.application.exceptions import ForbiddenError, NotFoundError
 from backend.app.data.exceptions import RecordNotFoundError
 from backend.app.api.schemas.contact import ContactCreateRequest, ContactResponse, ContactDuplicateCheckResponse
@@ -67,6 +68,7 @@ async def check_duplicate_contact(
     name: Optional[str] = Query(None),
     company: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
     title: Optional[str] = Query(None),
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
@@ -77,6 +79,7 @@ async def check_duplicate_contact(
         name=name,
         company=company,
         email=email,
+        phone=phone,
         title=title,
     )
     return StandardResponse(
@@ -92,6 +95,9 @@ async def create_contact(
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
+    if not body.phone or not body.phone.strip():
+        raise BadRequestError("Phone number is required")
+
     service = ContactService(session)
     account_id = body.account_id
     if not account_id:

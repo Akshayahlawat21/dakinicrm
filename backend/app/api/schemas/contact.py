@@ -25,6 +25,7 @@ class ContactDuplicateCheckResponse(BaseModel):
     existing_contact_name: Optional[str] = None
     existing_company: Optional[str] = None
     existing_email: Optional[str] = None
+    existing_phone: Optional[str] = None
     existing_title: Optional[str] = None
     warning_message: Optional[str] = None
 

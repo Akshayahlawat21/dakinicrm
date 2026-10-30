@@ -36,6 +36,7 @@ REGISTERED_RESOURCES: Set[str] = {
     "notifications",
     "approvals",
     "products",
+    "calls",
     "export",
     "import",
 }

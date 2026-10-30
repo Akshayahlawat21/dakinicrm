@@ -178,6 +178,7 @@ export default function CountryPhoneInput({
           onChange={handleNumberChange}
           placeholder={placeholder}
           disabled={disabled}
+          required={required}
           className="input-field"
           style={{
             flex: 1,

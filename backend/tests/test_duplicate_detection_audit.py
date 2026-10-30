@@ -754,3 +754,97 @@ async def test_product_aware_lead_duplicate_detection(db_session: AsyncSession, 
     assert cross_sell_lead.interested_product == "Autonomous Route Planning"
     assert lead_1.interested_product == "Fleet Telematics"
 
+
+# ---------------------------------------------------------------------------
+# Test 20: Phone duplicate checking and cross-sell detection
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_lead_phone_duplicate_and_cross_sell(db_session: AsyncSession, ctx_owner_a: RequestContext):
+    lead_service = LeadService(db_session)
+
+    # 1. Create a lead with phone number + product (no email)
+    lead_phone = await lead_service.create_lead(
+        ctx=ctx_owner_a,
+        name="Sunita Rao",
+        company="AeroTech Industries",
+        phone="+1 (555) 345-6789",
+        title="Procurement Director",
+        interested_product="Turbine Engines",
+    )
+    await db_session.flush()
+
+    assert lead_phone.phone == "+1 (555) 345-6789"
+
+    # 2. Duplicate check using different phone format (e.g. 555-345-6789) + SAME product
+    dup_check = await lead_service.check_duplicate_lead(
+        ctx=ctx_owner_a,
+        name="Sunita Rao",
+        phone="555-345-6789",
+        company="AeroTech Industries",
+        interested_product="Turbine Engines",
+    )
+    assert dup_check is not None
+    assert dup_check["is_duplicate_warning"] is True
+    assert dup_check["existing_lead_id"] == str(lead_phone.id)
+
+    # 3. Same name + same phone, but DIFFERENT product -> Valid Cross-Sell Opportunity
+    cross_sell_check = await lead_service.check_duplicate_lead(
+        ctx=ctx_owner_a,
+        name="Sunita Rao",
+        phone="5553456789",
+        company="AeroTech Industries",
+        interested_product="Avionics Software",
+    )
+    assert cross_sell_check is not None
+    assert cross_sell_check["is_duplicate_warning"] is False
+    assert cross_sell_check.get("is_cross_sell") is True
+    assert "cross-sell" in cross_sell_check["notice_message"].lower()
+
+    # 4. Different person with same phone does not trigger duplicate when name differs
+    diff_person_check = await lead_service.check_duplicate_lead(
+        ctx=ctx_owner_a,
+        name="Vikram Patel",
+        phone="555-345-6789",
+        company="AeroTech Industries",
+        interested_product="Turbine Engines",
+    )
+    assert diff_person_check is None
+
+
+# ---------------------------------------------------------------------------
+# Test 21: Existing contact detection by phone
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_lead_phone_existing_contact_detection(db_session: AsyncSession, ctx_owner_a: RequestContext):
+    lead_service = LeadService(db_session)
+    account_service = AccountService(db_session)
+
+    # 1. Create an account and contact with a phone number
+    acc = await account_service.create_account(
+        ctx=ctx_owner_a,
+        name="Zenith Dynamics",
+        industry="Technology",
+    )
+    await db_session.flush()
+
+    contact = Contact(
+        account_id=acc.id,
+        first_name="Anita",
+        last_name="Desai",
+        phone="+1 555-876-5432",
+        email="anita@zenith.com",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+
+    # 2. Check duplicate lead matching contact's phone
+    check_contact = await lead_service.check_duplicate_lead(
+        ctx=ctx_owner_a,
+        phone="555-876-5432",
+    )
+    assert check_contact is not None
+    assert check_contact["has_existing_contact"] is True
+    assert check_contact["is_duplicate_warning"] is False
+    assert check_contact["existing_contact_name"] == "Anita Desai"
+    assert "already an existing Contact" in check_contact["notice_message"]
+

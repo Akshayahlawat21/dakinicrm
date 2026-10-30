@@ -6,7 +6,7 @@ from backend.app.data.models.account import Account
 from backend.app.data.models.contact import Contact
 from backend.app.data.models.deal import Opportunity, Deal, Product, DealProduct
 from backend.app.data.models.campaign import Campaign, CampaignMember, CampaignResponse
-from backend.app.data.models.activity import Activity, ActivityParticipant, Note
+from backend.app.data.models.activity import Activity, ActivityParticipant, Note, CallTranscript, CallAnalysis
 from backend.app.data.models.target import SalesTarget
 from backend.app.data.models.audit import AuditLog, OutboxEvent, IdempotencyKey
 from backend.app.data.models.invoice import Invoice, InvoiceItem, Payment
@@ -39,6 +39,8 @@ __all__ = [
     "Activity",
     "ActivityParticipant",
     "Note",
+    "CallTranscript",
+    "CallAnalysis",
     "SalesTarget",
     "AuditLog",
     "OutboxEvent",

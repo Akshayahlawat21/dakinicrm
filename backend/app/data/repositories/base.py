@@ -1,4 +1,5 @@
 import uuid
+import re
 from typing import Generic, TypeVar, Type, Optional, List, Any, Dict
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,29 @@ from backend.app.data.exceptions import (
 )
 
 ModelType = TypeVar("ModelType", bound=Base)
+
+def phones_match(p1: Optional[str], p2: Optional[str]) -> bool:
+    """
+    Robust phone comparison supporting international codes, formatting differences,
+    spaces, dashes, parentheses, and leading zeros.
+    """
+    if not p1 or not p2:
+        return False
+    if p1.strip().lower() == p2.strip().lower():
+        return True
+    d1 = re.sub(r'[^0-9]', '', p1)
+    d2 = re.sub(r'[^0-9]', '', p2)
+    if not d1 or not d2:
+        return False
+    if d1 == d2:
+        return True
+    if len(d1) >= 10 and len(d2) >= 10 and d1[-10:] == d2[-10:]:
+        return True
+    if len(d1) >= 7 and len(d2) >= 7:
+        if d1.endswith(d2) or d2.endswith(d1):
+            return True
+    return False
+
 
 
 class BaseRepository(Generic[ModelType]):

@@ -147,7 +147,7 @@ export function CRMProvider({ children }) {
     setIsLoadingData(true);
     console.log('%c[SUPABASE FETCH] 🚀 Requesting live CRM data from Supabase PostgreSQL via Gateway API...', 'color: #0284c7; font-weight: bold; font-size: 13px;');
     try {
-      const [leadsRes, dealsRes, accountsRes, contactsRes, campaignsRes, tasksRes, productsRes] = await Promise.allSettled([
+      const [leadsRes, dealsRes, accountsRes, contactsRes, campaignsRes, tasksRes, productsRes, callsRes] = await Promise.allSettled([
         gatewayApi.getLeads(),
         gatewayApi.getDeals(),
         gatewayApi.getAccounts(),
@@ -155,6 +155,7 @@ export function CRMProvider({ children }) {
         gatewayApi.getCampaigns(),
         gatewayApi.getTasks(),
         gatewayApi.getProducts(),
+        gatewayApi.getCallAnalyses(),
       ]);
 
       let loadedLeads = [];
@@ -278,6 +279,28 @@ export function CRMProvider({ children }) {
         setTasks(loadedTasks);
       }
 
+      if (callsRes && callsRes.status === 'fulfilled' && callsRes.value?.success && Array.isArray(callsRes.value.data?.data)) {
+        const loadedCallAnalyses = callsRes.value.data.data.map((c) => ({
+          id: String(c.id),
+          leadId: c.lead_id ? String(c.lead_id) : '',
+          leadName: c.lead_name || 'Unknown Lead',
+          productName: c.product_name || 'Unassigned',
+          sentiment: c.sentiment || 'neutral',
+          callOutcome: c.call_outcome,
+          transcript: c.summary?.transcript || '',
+          outputs: {
+            ...c.summary,
+            improvements: c.improvements,
+          },
+          createdAt: c.created_at,
+          analyzedBy: c.analyzed_by,
+          analystName: c.analyst_name,
+        }));
+        if (loadedCallAnalyses.length > 0) {
+          setTranscriptAnalyses(loadedCallAnalyses);
+        }
+      }
+
       // Display live Supabase data in console with styled table
       console.log(
         `%c[SUPABASE FETCH SUCCESS] ✅ Retrieved ${loadedLeads.length} leads, ${loadedDeals.length} deals, ${loadedAccounts.length} accounts, ${loadedContacts.length} contacts, ${loadedCampaigns.length} campaigns, ${loadedTasks.length} tasks, ${loadedProducts.length} products from Supabase DB`,
@@ -372,9 +395,11 @@ export function CRMProvider({ children }) {
   const logout = () => {
     try {
       localStorage.setItem('dakini_signed_out', 'true');
+      localStorage.removeItem(TRANSCRIPT_ANALYSES_STORAGE_KEY);
     } catch (err) {
       console.warn(err);
     }
+    setTranscriptAnalyses([]);
     gatewayApi.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);
@@ -1072,18 +1097,49 @@ export function CRMProvider({ children }) {
   };
 
 
-  const addTranscriptAnalysis = (lead, transcript, outputs, productName = '') => {
+  const addTranscriptAnalysis = async (lead, transcript, outputs, productName = '') => {
+    const tempId = `transcript-analysis-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const resolvedProduct = (productName || lead?.interested_product || '').trim() || 'Unassigned';
     const record = {
-      id: `transcript-analysis-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: tempId,
       leadId: String(lead?.id || ''),
       leadName: lead?.name || 'Unknown lead',
       company: lead?.company || '',
-      productName: (productName || '').trim() || 'Unassigned',
+      productName: resolvedProduct,
       transcript,
       outputs,
       createdAt: new Date().toISOString(),
+      owner: lead?.owner || currentUser?.name || '',
+      assigned_to: lead?.assigned_to || currentUser?.id || '',
+      analyzedBy: currentUser?.id || '',
     };
     setTranscriptAnalyses((previous) => [record, ...previous]);
+
+    // Persist to Supabase DB via Gateway API
+    try {
+      const sentiment = outputs?.sentiment || 'neutral';
+      const callOutcome = outputs?.call_outcome || outputs?.outcome || null;
+      const res = await gatewayApi.ingestCallAndAnalysis({
+        raw_text: transcript || 'No raw transcript available',
+        lead_id: lead?.id || null,
+        subject: `Call with ${lead?.name || 'Lead'}`,
+        model_version: outputs?.model_version || 'gemini-2.0-flash',
+        sentiment: sentiment,
+        call_outcome: callOutcome,
+        summary: outputs || {},
+        improvements: outputs?.improvements || {},
+      });
+      if (res?.success && res.data?.data?.id) {
+        const persistedId = String(res.data.data.id);
+        setTranscriptAnalyses((previous) =>
+          previous.map((item) => (item.id === tempId ? { ...item, id: persistedId } : item))
+        );
+        record.id = persistedId;
+      }
+    } catch (err) {
+      console.warn('Could not persist call analysis to DB:', err);
+    }
+
     return record;
   };
 
@@ -1314,11 +1370,12 @@ export function CRMProvider({ children }) {
     return { is_duplicate_warning: false };
   };
 
-  const checkDuplicateLead = async ({ name, email, company, title, interested_product, product_id }) => {
+  const checkDuplicateLead = async ({ name, email, phone, company, title, interested_product, product_id }) => {
     try {
       const params = {};
       if (name) params.name = name;
       if (email) params.email = email;
+      if (phone) params.phone = phone;
       if (company) params.company = company;
       if (title) params.title = title;
       if (interested_product) params.interested_product = interested_product;
@@ -1332,25 +1389,39 @@ export function CRMProvider({ children }) {
     }
     // Fallback local check
     const cleanEmail = (email || '').toLowerCase().trim();
+    const cleanPhone = (phone || '').trim();
     const cleanName = (name || '').toLowerCase().trim();
     const cleanCompany = (company || '').toLowerCase().trim();
     const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const normNewProd = norm(interested_product);
 
-    // If name is provided, require all 3: name + email + product to match!
+    const phonesMatch = (p1, p2) => {
+      if (!p1 || !p2) return false;
+      const d1 = p1.replace(/\D/g, '');
+      const d2 = p2.replace(/\D/g, '');
+      if (!d1 || !d2) return false;
+      if (d1 === d2) return true;
+      if (d1.length >= 10 && d2.length >= 10 && d1.slice(-10) === d2.slice(-10)) return true;
+      if (d1.length >= 7 && d2.length >= 7 && (d1.endsWith(d2) || d2.endsWith(d1))) return true;
+      return false;
+    };
+
+    // If name is provided, require contact info (email or phone) + product to match!
     if (cleanName) {
-      if (!cleanEmail || !normNewProd) return { is_duplicate_warning: false };
+      if ((!cleanEmail && !cleanPhone) || !normNewProd) return { is_duplicate_warning: false };
     }
 
     const active = leads.find((l) => {
       const matchEmail = cleanEmail && l.email && l.email.toLowerCase().trim() === cleanEmail;
+      const matchPhone = cleanPhone && l.phone && phonesMatch(cleanPhone, l.phone);
+      const matchContact = matchEmail || matchPhone;
       const matchName = cleanName && l.name && l.name.toLowerCase().trim() === cleanName;
       const matchProd = normNewProd && norm(l.interested_product) === normNewProd;
 
       if (cleanName) {
-        return matchName && matchEmail && matchProd && !['Expired', 'Lost', 'Disqualified'].includes(l.status);
+        return matchName && matchContact && matchProd && !['Expired', 'Lost', 'Disqualified'].includes(l.status);
       }
-      return matchEmail && !['Expired', 'Lost', 'Disqualified'].includes(l.status);
+      return matchContact && !['Expired', 'Lost', 'Disqualified'].includes(l.status);
     });
 
     if (active) {
@@ -1375,10 +1446,11 @@ export function CRMProvider({ children }) {
     return { is_duplicate_warning: false };
   };
 
-  const checkDuplicateAccount = async ({ name, industry, location }) => {
+  const checkDuplicateAccount = async ({ name, phone, industry, location }) => {
     try {
       const params = {};
       if (name) params.name = name;
+      if (phone) params.phone = phone;
       if (industry) params.industry = industry;
       if (location) params.location = location;
       const res = await gatewayApi.checkDuplicateAccount(params);
@@ -1390,20 +1462,35 @@ export function CRMProvider({ children }) {
     }
     // Fallback local check
     const cleanName = (name || '').toLowerCase().trim();
+    const cleanPhone = (phone || '').trim();
     const cleanInd = (industry || '').toLowerCase().trim();
     const cleanLoc = (location || '').toLowerCase().trim();
-    if (!cleanName || !cleanInd || !cleanLoc) return { is_duplicate_warning: false };
+
+    const phonesMatch = (p1, p2) => {
+      if (!p1 || !p2) return false;
+      const d1 = String(p1).replace(/\D/g, '');
+      const d2 = String(p2).replace(/\D/g, '');
+      if (!d1 || !d2) return false;
+      if (d1 === d2) return true;
+      if (d1.length >= 10 && d2.length >= 10 && d1.slice(-10) === d2.slice(-10)) return true;
+      if (d1.length >= 7 && d2.length >= 7 && (d1.endsWith(d2) || d2.endsWith(d1))) return true;
+      return false;
+    };
+
+    if (!cleanPhone && (!cleanName || !cleanInd || !cleanLoc)) return { is_duplicate_warning: false };
 
     const active = (accounts || []).find((a) => {
-      const aName = (a.name || '').toLowerCase().trim();
-      const aInd = (a.industry || '').toLowerCase().trim();
-      const aLoc = (a.address || a.city || a.location || 'India').toLowerCase().trim();
-      const locMatch = !aLoc || aLoc === cleanLoc || cleanLoc.includes(aLoc) || aLoc.includes(cleanLoc) || (['india', 'in'].includes(cleanLoc) && ['india', 'in', ''].includes(aLoc));
-      return (
-        aName === cleanName &&
-        aInd === cleanInd &&
-        locMatch
-      );
+      if (cleanPhone && a.phone && phonesMatch(cleanPhone, a.phone)) {
+        return true;
+      }
+      if (cleanName && cleanInd && cleanLoc) {
+        const aName = (a.name || '').toLowerCase().trim();
+        const aInd = (a.industry || '').toLowerCase().trim();
+        const aLoc = (a.address || a.city || a.location || 'India').toLowerCase().trim();
+        const locMatch = !aLoc || aLoc === cleanLoc || cleanLoc.includes(aLoc) || aLoc.includes(cleanLoc) || (['india', 'in'].includes(cleanLoc) && ['india', 'in', ''].includes(aLoc));
+        return aName === cleanName && aInd === cleanInd && locMatch;
+      }
+      return false;
     });
 
     if (active) {
@@ -1411,20 +1498,22 @@ export function CRMProvider({ children }) {
         is_duplicate_warning: true,
         existing_account_id: active.id,
         existing_account_name: active.name,
+        existing_phone: active.phone,
         existing_industry: active.industry,
         existing_location: active.address || active.city,
-        warning_message: `An account matching '${active.name}' in '${active.industry}' at '${active.address || active.city || cleanLoc}' already exists.`,
+        warning_message: `An account matching '${active.name}' (${active.phone || active.industry}) already exists.`,
       };
     }
     return { is_duplicate_warning: false };
   };
 
-  const checkDuplicateContact = async ({ name, company, email, title }) => {
+  const checkDuplicateContact = async ({ name, company, email, phone, title }) => {
     try {
       const params = {};
       if (name) params.name = name;
       if (company) params.company = company;
       if (email) params.email = email;
+      if (phone) params.phone = phone;
       if (title) params.title = title;
       const res = await gatewayApi.checkDuplicateContact(params);
       if (res && res.success && res.data) {
@@ -1437,16 +1526,34 @@ export function CRMProvider({ children }) {
     const cleanName = (name || '').toLowerCase().trim();
     const cleanComp = (company || '').toLowerCase().trim();
     const cleanEmail = (email || '').toLowerCase().trim();
+    const cleanPhone = (phone || '').trim();
     const cleanTitle = (title || '').toLowerCase().trim();
-    if (!cleanName || !cleanComp || !cleanEmail) return { is_duplicate_warning: false };
+
+    const phonesMatch = (p1, p2) => {
+      if (!p1 || !p2) return false;
+      const d1 = String(p1).replace(/\D/g, '');
+      const d2 = String(p2).replace(/\D/g, '');
+      if (!d1 || !d2) return false;
+      if (d1 === d2) return true;
+      if (d1.length >= 10 && d2.length >= 10 && d1.slice(-10) === d2.slice(-10)) return true;
+      if (d1.length >= 7 && d2.length >= 7 && (d1.endsWith(d2) || d2.endsWith(d1))) return true;
+      return false;
+    };
+
+    if (!cleanName || !cleanComp || (!cleanEmail && !cleanPhone)) return { is_duplicate_warning: false };
 
     const active = (contacts || []).find((c) => {
-      const cEmail = (c.email || '').toLowerCase().trim();
       const cComp = (c.account || c.company || '').toLowerCase().trim();
+      if (cComp !== cleanComp) return false;
+
+      const emailMatch = Boolean(cleanEmail && c.email && c.email.toLowerCase().trim() === cleanEmail);
+      const phoneMatch = Boolean(cleanPhone && c.phone && phonesMatch(cleanPhone, c.phone));
+      if (!emailMatch && !phoneMatch) return false;
+
       const cFull = (c.name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase().trim();
-      if (cEmail !== cleanEmail || cComp !== cleanComp) return false;
       const nameMatch = cFull === cleanName || cFull.includes(cleanName) || cleanName.includes(cFull);
       if (!nameMatch) return false;
+
       if (cleanTitle && c.title) {
         return cleanTitle === c.title.toLowerCase().trim();
       }
@@ -1455,14 +1562,16 @@ export function CRMProvider({ children }) {
 
     if (active) {
       const cName = active.name || `${active.first_name || ''} ${active.last_name || ''}`.trim();
+      const channel = active.email || active.phone || '';
       return {
         is_duplicate_warning: true,
         existing_contact_id: active.id,
         existing_contact_name: cName,
         existing_company: active.account || active.company,
         existing_email: active.email,
+        existing_phone: active.phone,
         existing_title: active.title,
-        warning_message: `A contact matching '${cName}' at '${active.account || active.company}' (${active.email}) already exists.`,
+        warning_message: `A contact matching '${cName}' at '${active.account || active.company}' (${channel}) already exists.`,
       };
     }
     return { is_duplicate_warning: false };

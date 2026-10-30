@@ -3,7 +3,7 @@ from typing import Optional, List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.data.models.lead import Lead, LeadSignal, LeadConversion
-from backend.app.data.repositories.base import BaseRepository
+from backend.app.data.repositories.base import BaseRepository, phones_match
 
 
 class LeadRepository(BaseRepository[Lead]):
@@ -42,6 +42,47 @@ class LeadRepository(BaseRepository[Lead]):
         )
         res = await self.session.execute(stmt)
         return list(res.scalars().all())
+
+    async def get_by_phone(self, phone: str, tenant_id: str | uuid.UUID, status: Optional[str] = None) -> Optional[Lead]:
+        leads = await self.list_by_phone(phone, tenant_id)
+        if status:
+            leads = [l for l in leads if l.status == status]
+        return leads[0] if leads else None
+
+    async def list_by_phone(self, phone: str, tenant_id: str | uuid.UUID) -> List[Lead]:
+        if not phone or not phone.strip():
+            return []
+        import re
+        tenant_uuid = self._parse_uuid(tenant_id)
+        digits = re.sub(r'[^0-9]', '', phone)
+
+        conditions = [
+            Lead.organization_id == tenant_uuid,
+            Lead.phone.is_not(None),
+            Lead.deleted_at.is_(None),
+        ]
+
+        if len(digits) >= 4:
+            from sqlalchemy import or_
+            last4 = digits[-4:]
+            conditions.append(
+                or_(
+                    Lead.phone.ilike(f"%{last4}%"),
+                    func.trim(Lead.phone) == phone.strip()
+                )
+            )
+        else:
+            conditions.append(func.trim(Lead.phone) == phone.strip())
+
+        stmt = (
+            select(Lead)
+            .where(*conditions)
+            .order_by(Lead.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        candidates = list(res.scalars().all())
+        return [l for l in candidates if phones_match(phone, l.phone)]
+
 
     async def list_scoped_by_assignees(
         self,

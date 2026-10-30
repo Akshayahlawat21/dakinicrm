@@ -88,15 +88,31 @@ export async function gatewayFetch(endpoint, options = {}) {
     }
 
     if (!response.ok) {
-      // Handle E8 normalized error schema
-      const errorPayload =
-        typeof responseData === 'object' && responseData?.error
-          ? responseData.error
-          : {
-              code: `HTTP_${response.status}`,
-              message: response.statusText || 'Gateway request failed',
-              correlation_id: responseCorrelationId,
-            };
+      // Handle E8 normalized error schema or FastAPI detail schema
+      let errorPayload;
+      if (typeof responseData === 'object' && responseData?.error) {
+        errorPayload = responseData.error;
+      } else if (typeof responseData === 'object' && responseData?.detail) {
+        const detailMessage = typeof responseData.detail === 'string'
+          ? responseData.detail
+          : JSON.stringify(responseData.detail);
+        errorPayload = {
+          code: 'HTTP_' + response.status,
+          message: detailMessage,
+          detail: responseData.detail,
+          correlation_id: responseCorrelationId,
+        };
+      } else {
+        errorPayload = {
+          code: 'HTTP_' + response.status,
+          message:
+            (typeof responseData === 'object' && responseData?.message) ||
+            (typeof responseData === 'string' && responseData.trim()) ||
+            response.statusText ||
+            'Gateway request failed',
+          correlation_id: responseCorrelationId,
+        };
+      }
 
       // If token expired, clear invalid token
       if (response.status === 401) {
@@ -465,6 +481,47 @@ export const gatewayApi = {
   /**
    * E3 & E5: Copilot AI Assistant
    */
+
+  /**
+   * Calls & AI Transcripts resource (Live Supabase DB)
+   */
+  async getCallAnalyses(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/calls/analysis?${query}` : '/calls/analysis';
+    return gatewayFetch(endpoint, { method: 'GET' });
+  },
+
+  async getCallAnalysis(analysisId) {
+    return gatewayFetch(`/calls/analysis/${analysisId}`, { method: 'GET' });
+  },
+
+  async createCallTranscript(data) {
+    return gatewayFetch('/calls/transcripts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async createCallAnalysis(data) {
+    return gatewayFetch('/calls/analysis', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async ingestCallAndAnalysis(data) {
+    return gatewayFetch('/calls/ingest', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getCallMetrics(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/calls/metrics?${query}` : '/calls/metrics';
+    return gatewayFetch(endpoint, { method: 'GET' });
+  },
+
   async sendAgentMessage(message) {
     return gatewayFetch('/agent', {
       method: 'POST',

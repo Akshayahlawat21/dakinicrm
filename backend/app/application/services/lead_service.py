@@ -108,6 +108,7 @@ class LeadService:
         self,
         ctx: RequestContext,
         email: Optional[str] = None,
+        phone: Optional[str] = None,
         company: Optional[str] = None,
         name: Optional[str] = None,
         title: Optional[str] = None,
@@ -132,18 +133,25 @@ class LeadService:
             return re.sub(r'[^a-z0-9]', '', (p or "").lower())
 
         clean_email = email.lower().strip() if email and email.strip() else None
+        clean_phone = phone.strip() if phone and phone.strip() else None
         clean_name = name.strip() if name and name.strip() else None
         new_prod_norm = norm_prod(interested_product)
 
-        # Requirement: Give the warning ONLY if all things match (name + email + interested_product)
+        # Requirement: Give the warning ONLY if all things match (name + contact info (email/phone) + interested_product)
         # because with the same name many people exist.
         if clean_name:
-            if not clean_email or not new_prod_norm:
+            if (not clean_email and not clean_phone) or not new_prod_norm:
                 return None
 
-        existing_leads = []
+        existing_leads_map = {}
         if clean_email:
-            existing_leads = await self.lead_repo.list_by_email(clean_email, ctx.tenant_id)
+            for l in await self.lead_repo.list_by_email(clean_email, ctx.tenant_id):
+                existing_leads_map[l.id] = l
+        if clean_phone:
+            for l in await self.lead_repo.list_by_phone(clean_phone, ctx.tenant_id):
+                existing_leads_map[l.id] = l
+
+        existing_leads = list(existing_leads_map.values())
 
         # If name is provided, ensure existing lead matches the name too
         if clean_name and existing_leads:
@@ -153,26 +161,29 @@ class LeadService:
             ]
 
         if not existing_leads:
-            # Check contact table by email
+            # Check contact table by email or phone
+            contact = None
             if clean_email:
                 contact = await self.contact_repo.get_by_normalized_email(ctx.tenant_id, clean_email)
-                if contact:
-                    account_name = None
-                    if contact.account_id:
-                        acc = await self.session.get(Account, contact.account_id)
-                        if acc:
-                            account_name = acc.name
-                    return {
-                        "is_duplicate_warning": False,
-                        "has_existing_contact": True,
-                        "existing_contact_id": str(contact.id),
-                        "existing_contact_name": contact.full_name,
-                        "existing_company": account_name,
-                        "notice_message": (
-                            f"Note: '{contact.full_name}' is already an existing Contact at '{account_name or 'N/A'}'. "
-                            f"Converting this inquiry will automatically link to the existing Contact without creating duplicates."
-                        ),
-                    }
+            if not contact and clean_phone:
+                contact = await self.contact_repo.get_by_normalized_phone(ctx.tenant_id, clean_phone)
+            if contact:
+                account_name = None
+                if contact.account_id:
+                    acc = await self.session.get(Account, contact.account_id)
+                    if acc:
+                        account_name = acc.name
+                return {
+                    "is_duplicate_warning": False,
+                    "has_existing_contact": True,
+                    "existing_contact_id": str(contact.id),
+                    "existing_contact_name": contact.full_name,
+                    "existing_company": account_name,
+                    "notice_message": (
+                        f"Note: '{contact.full_name}' is already an existing Contact at '{account_name or 'N/A'}'. "
+                        f"Converting this inquiry will automatically link to the existing Contact without creating duplicates."
+                    ),
+                }
             return None
 
         # 1. Check for matching active (unconverted) lead
@@ -266,10 +277,12 @@ class LeadService:
 
         # 2. Check if person is an existing Contact in contacts table OR has a Converted lead
         converted_leads = [l for l in existing_leads if l.status == "Converted"]
-        if clean_email or converted_leads:
+        if clean_email or clean_phone or converted_leads:
             contact = None
             if clean_email:
                 contact = await self.contact_repo.get_by_normalized_email(ctx.tenant_id, clean_email)
+            if not contact and clean_phone:
+                contact = await self.contact_repo.get_by_normalized_phone(ctx.tenant_id, clean_phone)
             if contact:
                 account_name = None
                 if contact.account_id:
@@ -386,12 +399,19 @@ class LeadService:
         is_returning_contact = False
         is_cross_sell = False
 
-        existing_leads = []
+        clean_phone = phone.strip() if phone and phone.strip() else None
+
+        existing_leads_map = {}
         if clean_email:
-            existing_leads = await self.lead_repo.list_by_email(clean_email, ctx.tenant_id)
+            for l in await self.lead_repo.list_by_email(clean_email, ctx.tenant_id):
+                existing_leads_map[l.id] = l
+        if clean_phone:
+            for l in await self.lead_repo.list_by_phone(clean_phone, ctx.tenant_id):
+                existing_leads_map[l.id] = l
+        existing_leads = list(existing_leads_map.values())
 
         # If clean_name is provided, only match leads that also match the name
-        # (different people with the same name and different emails are distinct leads)
+        # (different people with the same name and different emails/phones are distinct leads)
         if clean_name and existing_leads:
             existing_leads = [
                 l for l in existing_leads

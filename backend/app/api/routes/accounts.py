@@ -5,6 +5,7 @@ from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.account_service import AccountService
+from backend.app.application.exceptions import BadRequestError
 from backend.app.application.exceptions import ForbiddenError, NotFoundError
 from backend.app.data.exceptions import RecordNotFoundError
 from backend.app.api.schemas.account import AccountCreateRequest, AccountResponse, AccountDuplicateCheckResponse
@@ -139,6 +140,7 @@ async def list_accounts(
 @router.get("/check-duplicate", response_model=StandardResponse[Optional[AccountDuplicateCheckResponse]])
 async def check_duplicate_account(
     name: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
     industry: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     ctx: RequestContext = Depends(get_request_context),
@@ -148,6 +150,7 @@ async def check_duplicate_account(
     result = await service.check_duplicate_account(
         ctx=ctx,
         name=name,
+        phone=phone,
         industry=industry,
         location=location,
     )
@@ -164,6 +167,9 @@ async def create_account(
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
+    if not body.phone or not body.phone.strip():
+        raise BadRequestError("Phone number is required")
+
     service = AccountService(session)
     account = await service.create_account(
         ctx=ctx,

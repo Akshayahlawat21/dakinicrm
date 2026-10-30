@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import {
   MessageSquareText,
@@ -35,7 +35,16 @@ export default function CustomerFeedbackPage() {
     transcriptAnalyses = [],
     deleteTranscriptAnalysis,
     clearTranscriptAnalyses,
+    fetchSupabaseData,
+    currentUser,
+    leads = [],
   } = useCRM();
+
+  useEffect(() => {
+    if (typeof fetchSupabaseData === 'function') {
+      fetchSupabaseData();
+    }
+  }, []);
 
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('All products');
@@ -51,26 +60,58 @@ export default function CustomerFeedbackPage() {
     clearTranscriptAnalyses();
     setShowClearConfirmation(false);
   };
+  // Role determination for RBAC
+  const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
+  const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
+  const isManager = userRole.includes('manager');
+
+  // Enforce RBAC filtering:
+  // - Owner: sees all organization records
+  // - Salesperson: ONLY sees calls for leads assigned to them or analyzed by them
+  // - Manager: sees calls for leads assigned to them or their team members
+  const rbacFilteredAnalyses = useMemo(() => {
+    if (!currentUser) return [];
+    if (isOwner) return transcriptAnalyses;
+
+    const myLeadIds = new Set(leads.map((l) => String(l.id)));
+    const myLeadNames = new Set(leads.map((l) => (l.name || '').toLowerCase().trim()));
+    const myName = (currentUser?.name || '').toLowerCase().trim();
+    const myId = String(currentUser?.id || '');
+
+    return transcriptAnalyses.filter((record) => {
+      // 1. Direct match with caller's assigned leads (leads is already RBAC-scoped from DB)
+      if (record.leadId && myLeadIds.has(String(record.leadId))) return true;
+      if (record.leadName && myLeadNames.has((record.leadName || '').toLowerCase().trim())) return true;
+
+      // 2. Direct match with analyst or activity owner
+      if (record.analyzedBy && String(record.analyzedBy) === myId) return true;
+      if (record.owner && record.owner.toLowerCase().trim() === myName) return true;
+      if (record.assigned_to && String(record.assigned_to) === myId) return true;
+
+      return false;
+    });
+  }, [transcriptAnalyses, currentUser, isOwner, leads]);
+
   const productOptions = useMemo(
     () => [
       'All products',
       ...Array.from(
         new Set(
-          transcriptAnalyses.map(
-            (record) => record.productName || 'Unassigned'
+          rbacFilteredAnalyses.map(
+            (record) => record.productName || record.product || 'Unassigned'
           )
         )
       ).sort(),
     ],
-    [transcriptAnalyses]
+    [rbacFilteredAnalyses]
   );
 
   const activeAnalyses =
     selectedProduct === 'All products'
-      ? transcriptAnalyses
-      : transcriptAnalyses.filter(
+      ? rbacFilteredAnalyses
+      : rbacFilteredAnalyses.filter(
           (record) =>
-            (record.productName || 'Unassigned') === selectedProduct
+            (record.productName || record.product || 'Unassigned') === selectedProduct
         );
 
   const positiveItems = useMemo(
@@ -205,12 +246,12 @@ export default function CustomerFeedbackPage() {
               fontWeight: 700,
             }}
           >
-            V1 · Browser-local data
+            {isOwner ? 'Owner View (All Company Records)' : isManager ? 'Manager View (Team Records)' : 'Salesperson View (Own Records)'}
           </span>
           <button
             type="button"
             onClick={() => setShowClearConfirmation(true)}
-            disabled={transcriptAnalyses.length === 0}
+            disabled={rbacFilteredAnalyses.length === 0}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -218,9 +259,9 @@ export default function CustomerFeedbackPage() {
               border: '1px solid #fecaca',
               borderRadius: 9,
               padding: '0.55rem 0.8rem',
-              background: transcriptAnalyses.length ? '#fff' : '#f8fafc',
-              color: transcriptAnalyses.length ? '#b91c1c' : '#94a3b8',
-              cursor: transcriptAnalyses.length ? 'pointer' : 'not-allowed',
+              background: rbacFilteredAnalyses.length ? '#fff' : '#f8fafc',
+              color: rbacFilteredAnalyses.length ? '#b91c1c' : '#94a3b8',
+              cursor: rbacFilteredAnalyses.length ? 'pointer' : 'not-allowed',
               fontWeight: 650,
             }}
           >
@@ -615,7 +656,7 @@ export default function CustomerFeedbackPage() {
                           minWidth: 140,
                         }}
                       >
-                        {record.productName || 'Unassigned'}
+                        {record.productName || record.product || 'Unassigned'}
                       </td>
 
                       <td
@@ -766,7 +807,7 @@ export default function CustomerFeedbackPage() {
               Clear all call analyses?
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.6 }}>
-              This permanently removes all {transcriptAnalyses.length} browser-local analyses
+              This permanently removes all {rbacFilteredAnalyses.length} analyses
               and resets the dashboard totals in this browser. This cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

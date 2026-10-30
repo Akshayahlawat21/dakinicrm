@@ -21,7 +21,7 @@ from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
 # Import routes
-from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products
+from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls
 
 logger = get_logger("backend.main")
 
@@ -235,6 +235,7 @@ app.include_router(dashboard.router)
 app.include_router(agent.router)
 app.include_router(campaigns.router)
 app.include_router(products.router)
+app.include_router(calls.router)
 
 if __name__ == "__main__":
     import uvicorn

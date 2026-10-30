@@ -17,6 +17,7 @@ class AccountDuplicateCheckResponse(BaseModel):
     is_duplicate_warning: bool
     existing_account_id: Optional[str] = None
     existing_account_name: Optional[str] = None
+    existing_phone: Optional[str] = None
     existing_industry: Optional[str] = None
     existing_location: Optional[str] = None
     warning_message: Optional[str] = None

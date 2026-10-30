@@ -5,6 +5,7 @@ from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.lead_service import LeadService
+from backend.app.application.exceptions import BadRequestError
 from backend.app.api.schemas.lead import (
     LeadCreateRequest,
     ConvertLeadRequest,
@@ -76,6 +77,7 @@ async def list_leads(
 async def check_duplicate_lead(
     name: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
     company: Optional[str] = Query(None),
     title: Optional[str] = Query(None),
     interested_product: Optional[str] = Query(None),
@@ -92,6 +94,7 @@ async def check_duplicate_lead(
         ctx=ctx,
         name=name,
         email=email,
+        phone=phone,
         company=company,
         title=title,
         interested_product=interested_product,
@@ -110,6 +113,13 @@ async def create_lead(
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
+    if not body.phone or not body.phone.strip():
+        raise BadRequestError("Phone number is required")
+
+    interested_prod = (body.interested_product or body.product_name or "").strip()
+    if not interested_prod and not body.product_id:
+        raise BadRequestError("Interested product is required")
+
     service = LeadService(session)
     lead = await service.create_lead(
         ctx=ctx,

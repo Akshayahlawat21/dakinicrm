@@ -8,22 +8,21 @@ export default defineConfig({
     open: false,
     host: true,
     proxy: {
-
       '/v1': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+        timeout: 120000,
       },
       '/health': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
-
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
       },
       // Route analytics through Layer 2 Gateway (8080) so JWT headers are properly injected and forwarded
       '/analytics': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/analytics/, '/v1/analytics')
-      }
-    }
-  }
+        rewrite: (path) => path.replace(/^\/analytics/, '/v1/analytics'),
+      },
+    },
+  },
 });

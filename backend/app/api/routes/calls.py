@@ -14,7 +14,7 @@ from backend.app.api.schemas.calls import (
     CallAnalysisResponse,
     CallMetricsResponse,
 )
-from backend.app.api.schemas.common import PaginatedResponse, StandardResponse
+from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
 router = APIRouter(prefix="/v1/calls", tags=["Calls & AI Analysis"])
 
@@ -208,3 +208,22 @@ async def get_metrics(
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
 
+@router.delete("/analysis/{analysis_id}", response_model=ActionResponse)
+async def delete_analysis(
+    analysis_id: str = Path(..., description="UUID of call analysis to delete"),
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Deletes a CallAnalysis record with Owner/Manager RBAC enforcement.
+    Salespersons are rejected with 403 Forbidden.
+    """
+    service = CallService(session)
+    await service.delete_analysis(ctx, analysis_id)
+    await session.commit()
+    return ActionResponse(
+        status="success",
+        message=f"Call analysis '{analysis_id}' deleted successfully",
+        id=str(analysis_id),
+        correlation_id=ctx.correlation_id,
+    )

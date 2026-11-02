@@ -1143,10 +1143,23 @@ export function CRMProvider({ children }) {
     return record;
   };
 
-  const deleteTranscriptAnalysis = (analysisId) => {
+  const deleteTranscriptAnalysis = async (analysisId) => {
+    // 1. Optimistic removal from React state & localStorage
     setTranscriptAnalyses((previous) =>
       previous.filter((record) => record.id !== analysisId)
     );
+
+    // 2. Persist deletion in Supabase DB via Gateway API
+    try {
+      const res = await gatewayApi.deleteCallAnalysis(analysisId);
+      if (res?.success) {
+        console.log(`%c[SUPABASE DELETE] 🗑️ Call analysis ${analysisId} deleted from DB`, 'color: #ef4444; font-weight: bold;');
+      } else {
+        console.warn('Gateway deleteCallAnalysis sync rejected:', res?.error?.message || res?.statusText);
+      }
+    } catch (err) {
+      console.warn('Gateway deleteCallAnalysis sync error:', err);
+    }
   };
 
   const clearTranscriptAnalyses = () => {

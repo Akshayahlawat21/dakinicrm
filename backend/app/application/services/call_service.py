@@ -16,6 +16,7 @@ from backend.app.data.repositories.call_repository import (
     CallAnalysisRepository,
 )
 from backend.app.data.repositories.team_repository import TeamRepository
+from backend.app.application.permissions import PermissionService
 
 
 class CallService:
@@ -251,3 +252,38 @@ class CallService:
             allowed_user_ids=allowed_user_ids,
             product_id=product_id,
         )
+
+    async def delete_analysis(self, ctx: RequestContext, analysis_id: str | uuid.UUID) -> bool:
+        """
+        Deletes a CallAnalysis record with RBAC enforcement:
+        - Owner: Can delete any analysis in the organization.
+        - Manager: Can delete analyses belonging to their team.
+        - Salesperson: 403 Forbidden.
+        """
+        an_uuid = uuid.UUID(str(analysis_id))
+        analysis = await self.analysis_repo.get_analysis_detail(an_uuid, ctx.tenant_id)
+        if not analysis:
+            raise NotFoundError(f"CallAnalysis {analysis_id} not found")
+
+        is_team_call = False
+        if ctx.is_manager:
+            allowed_user_ids = await self._resolve_allowed_user_ids(ctx)
+            if allowed_user_ids is not None:
+                analyst_match = analysis.analyzed_by in allowed_user_ids
+                activity_match = (
+                    analysis.activity and analysis.activity.user_id in allowed_user_ids
+                )
+                lead_match = (
+                    analysis.lead and analysis.lead.assigned_to in allowed_user_ids
+                )
+                is_team_call = analyst_match or activity_match or lead_match
+
+        PermissionService.check_can_delete_call_analysis(
+            ctx=ctx,
+            analysis_tenant_id=str(analysis.organization_id),
+            is_team_call=is_team_call,
+        )
+
+        await self.session.delete(analysis)
+        await self.session.flush()
+        return True

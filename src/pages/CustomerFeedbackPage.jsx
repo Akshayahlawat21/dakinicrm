@@ -50,10 +50,11 @@ export default function CustomerFeedbackPage() {
   const [selectedProduct, setSelectedProduct] = useState('All products');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
-  const handleDeleteOne = () => {
+  const handleDeleteOne = async () => {
     if (!deleteTarget || typeof deleteTranscriptAnalysis !== 'function') return;
-    deleteTranscriptAnalysis(deleteTarget);
+    const targetId = deleteTarget;
     setDeleteTarget(null);
+    await deleteTranscriptAnalysis(targetId);
   };
   const handleClearAll = () => {
     if (typeof clearTranscriptAnalyses !== 'function') return;
@@ -64,6 +65,7 @@ export default function CustomerFeedbackPage() {
   const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
   const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
   const isManager = userRole.includes('manager');
+  const canDelete = isOwner || isManager;
 
   // Enforce RBAC filtering:
   // - Owner: sees all organization records
@@ -248,6 +250,7 @@ export default function CustomerFeedbackPage() {
           >
             {isOwner ? 'Owner View (All Company Records)' : isManager ? 'Manager View (Team Records)' : 'Salesperson View (Own Records)'}
           </span>
+          {canDelete && (
           <button
             type="button"
             onClick={() => setShowClearConfirmation(true)}
@@ -267,6 +270,7 @@ export default function CustomerFeedbackPage() {
           >
             <Trash size={15} /> Clear all
           </button>
+          )}
         </div>
       </header>
 
@@ -708,25 +712,29 @@ export default function CustomerFeedbackPage() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(record.id)}
-                          aria-label={`Delete analysis for ${record.leadName || 'customer'}`}
-                          title="Delete this analysis"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            border: '1px solid #fecaca',
-                            borderRadius: 8,
-                            padding: '0.45rem 0.6rem',
-                            background: '#fff',
-                            color: '#b91c1c',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Trash2 size={14} /> Delete
-                        </button>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(record.id)}
+                            aria-label={`Delete analysis for ${record.leadName || 'customer'}`}
+                            title="Delete this analysis"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              border: '1px solid #fecaca',
+                              borderRadius: 8,
+                              padding: '0.45rem 0.6rem',
+                              background: '#fff',
+                              color: '#b91c1c',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -1143,14 +1143,51 @@ export function CRMProvider({ children }) {
     return record;
   };
 
-  const deleteTranscriptAnalysis = (analysisId) => {
+  const deleteTranscriptAnalysis = async (analysisId) => {
+    // 1. Optimistic removal from React state & localStorage
     setTranscriptAnalyses((previous) =>
       previous.filter((record) => record.id !== analysisId)
     );
+
+    // 2. Persist deletion in Supabase DB via Gateway API
+    try {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(analysisId)) {
+        const res = await gatewayApi.deleteCallAnalysis(analysisId);
+        if (res?.success) {
+          console.log(`%c[SUPABASE DELETE] 🗑️ Call analysis ${analysisId} deleted from DB`, 'color: #ef4444; font-weight: bold;');
+        } else {
+          console.warn('Gateway deleteCallAnalysis sync rejected:', res?.error?.message || res?.statusText);
+        }
+      }
+    } catch (err) {
+      console.warn('Gateway deleteCallAnalysis sync error:', err);
+    }
   };
 
-  const clearTranscriptAnalyses = () => {
-    setTranscriptAnalyses([]);
+  const clearTranscriptAnalyses = async (analysesToClear) => {
+    const targetRecords = analysesToClear || transcriptAnalyses;
+    const targetIds = new Set(targetRecords.map((r) => r.id).filter(Boolean));
+
+    // 1. Optimistic removal from React state & localStorage
+    setTranscriptAnalyses((previous) =>
+      previous.filter((record) => !targetIds.has(record.id))
+    );
+
+    // 2. Persist deletion in Supabase DB for all target IDs
+    try {
+      const deletePromises = Array.from(targetIds).map(async (id) => {
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+          return gatewayApi.deleteCallAnalysis(id).catch((err) => {
+            console.warn(`Gateway deleteCallAnalysis failed for ${id}:`, err);
+          });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(deletePromises);
+      console.log(`%c[SUPABASE DELETE] 🗑️ All selected call analyses deleted from DB`, 'color: #ef4444; font-weight: bold;');
+    } catch (err) {
+      console.warn('Gateway clear all analyses sync error:', err);
+    }
   };
 
   const convertLead = async (lead, dealName, dealAmount, createDeal = true, extra = {}) => {

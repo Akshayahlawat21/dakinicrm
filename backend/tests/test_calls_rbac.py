@@ -274,3 +274,84 @@ async def test_amal_and_babu_lead_rbac_isolation(client: AsyncClient, seed_data,
     owner_ids = [item["id"] for item in owner_list.json()["data"]]
     assert amal_analysis_id in owner_ids
     assert babu_analysis_id in owner_ids
+
+@pytest.mark.asyncio
+async def test_call_analysis_deletion_rbac(client: AsyncClient, seed_data, db_session):
+    """
+    Verifies RBAC rules on Call Analysis Deletion:
+    - Salesperson: 403 Forbidden (cannot delete any call analysis)
+    - Manager: 403 Forbidden on another team's calls; 200 OK on team member's calls
+    - Owner: 200 OK (can delete any analysis)
+    """
+    tenant_id = str(seed_data["tenant_a"].id)
+    owner_id = str(seed_data["owner_a"].id)
+    mgr_alpha_id = str(seed_data["manager_a1"].id)
+    sales_alpha_id = str(seed_data["sales_a1"].id)
+    sales_beta_id = str(seed_data["sales_a2"].id)
+
+    sales_alpha_headers = {
+        "X-User-Id": sales_alpha_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "salesperson",
+        "X-Correlation-ID": "req_del_sales_alpha",
+    }
+    sales_beta_headers = {
+        "X-User-Id": sales_beta_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "salesperson",
+        "X-Correlation-ID": "req_del_sales_beta",
+    }
+    mgr_alpha_headers = {
+        "X-User-Id": mgr_alpha_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "manager",
+        "X-Correlation-ID": "req_del_mgr_alpha",
+    }
+    owner_headers = {
+        "X-User-Id": owner_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "owner",
+        "X-Correlation-ID": "req_del_owner",
+    }
+
+    # 1. Ingest a call for Sales Alpha (in Manager Alpha's team)
+    resp_alpha = await client.post(
+        "/v1/calls/ingest",
+        json={"raw_text": "Sales Alpha call transcript", "subject": "Alpha Call For Delete"},
+        headers=sales_alpha_headers,
+    )
+    assert resp_alpha.status_code == 200
+    alpha_id = resp_alpha.json()["data"]["id"]
+
+    # 2. Ingest a call for Sales Beta (outside Manager Alpha's team)
+    resp_beta = await client.post(
+        "/v1/calls/ingest",
+        json={"raw_text": "Sales Beta call transcript", "subject": "Beta Call For Delete"},
+        headers=sales_beta_headers,
+    )
+    assert resp_beta.status_code == 200
+    beta_id = resp_beta.json()["data"]["id"]
+
+    # 3. Salesperson attempts to delete their own call -> 403 Forbidden
+    del_sales = await client.delete(f"/v1/calls/analysis/{alpha_id}", headers=sales_alpha_headers)
+    assert del_sales.status_code == 403
+
+    # 4. Manager Alpha attempts to delete Beta's call (outside team) -> 403 Forbidden
+    del_mgr_beta = await client.delete(f"/v1/calls/analysis/{beta_id}", headers=mgr_alpha_headers)
+    assert del_mgr_beta.status_code == 403
+
+    # 5. Manager Alpha deletes Alpha's call (inside team) -> 200 OK
+    del_mgr_alpha = await client.delete(f"/v1/calls/analysis/{alpha_id}", headers=mgr_alpha_headers)
+    assert del_mgr_alpha.status_code == 200
+
+    # 6. Verify Alpha's call is gone from DB
+    get_alpha = await client.get(f"/v1/calls/analysis/{alpha_id}", headers=owner_headers)
+    assert get_alpha.status_code == 404
+
+    # 7. Owner deletes Beta's call -> 200 OK
+    del_owner_beta = await client.delete(f"/v1/calls/analysis/{beta_id}", headers=owner_headers)
+    assert del_owner_beta.status_code == 200
+
+    # 8. Verify Beta's call is gone from DB
+    get_beta = await client.get(f"/v1/calls/analysis/{beta_id}", headers=owner_headers)
+    assert get_beta.status_code == 404

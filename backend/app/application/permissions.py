@@ -305,6 +305,27 @@ class PermissionService:
         raise ForbiddenError("Salespersons are not authorized to delete contacts")
 
     @staticmethod
+    def check_can_delete_call_analysis(
+        ctx: RequestContext,
+        analysis_tenant_id: str,
+        is_team_call: bool = False,
+    ) -> None:
+        """
+        Enforces call analysis deletion rules:
+        - Owner: All records in tenant
+        - Manager: Team records only
+        - Salesperson: No delete permission (403 Forbidden)
+        """
+        PermissionService.check_tenant_access(ctx, str(analysis_tenant_id))
+        if ctx.is_owner:
+            return
+        if ctx.is_manager and is_team_call:
+            return
+        if ctx.is_manager:
+            raise ForbiddenError("Managers can only delete call analyses belonging to their team")
+        raise ForbiddenError("Salespersons are not authorized to delete call analyses")
+
+    @staticmethod
     def check_can_manage_campaign(ctx: RequestContext) -> None:
         """
         Enforces campaign management:

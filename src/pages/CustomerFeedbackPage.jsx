@@ -50,20 +50,23 @@ export default function CustomerFeedbackPage() {
   const [selectedProduct, setSelectedProduct] = useState('All products');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
-  const handleDeleteOne = () => {
+  const handleDeleteOne = async () => {
     if (!deleteTarget || typeof deleteTranscriptAnalysis !== 'function') return;
-    deleteTranscriptAnalysis(deleteTarget);
+    const targetId = deleteTarget;
     setDeleteTarget(null);
+    await deleteTranscriptAnalysis(targetId);
   };
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (typeof clearTranscriptAnalyses !== 'function') return;
-    clearTranscriptAnalyses();
+    const recordsToClear = [...rbacFilteredAnalyses];
     setShowClearConfirmation(false);
+    await clearTranscriptAnalyses(recordsToClear);
   };
   // Role determination for RBAC
   const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
   const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
   const isManager = userRole.includes('manager');
+  const canDelete = isOwner || isManager;
 
   // Enforce RBAC filtering:
   // - Owner: sees all organization records
@@ -235,39 +238,29 @@ export default function CustomerFeedbackPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span
-            style={{
-              borderRadius: 999,
-              padding: '0.4rem 0.75rem',
-              background: '#eff6ff',
-              color: '#1d4ed8',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-            }}
-          >
-            {isOwner ? 'Owner View (All Company Records)' : isManager ? 'Manager View (Team Records)' : 'Salesperson View (Own Records)'}
-          </span>
-          <button
-            type="button"
-            onClick={() => setShowClearConfirmation(true)}
-            disabled={rbacFilteredAnalyses.length === 0}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              border: '1px solid #fecaca',
-              borderRadius: 9,
-              padding: '0.55rem 0.8rem',
-              background: rbacFilteredAnalyses.length ? '#fff' : '#f8fafc',
-              color: rbacFilteredAnalyses.length ? '#b91c1c' : '#94a3b8',
-              cursor: rbacFilteredAnalyses.length ? 'pointer' : 'not-allowed',
-              fontWeight: 650,
-            }}
-          >
-            <Trash size={15} /> Clear all
-          </button>
-        </div>
+        {canDelete && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setShowClearConfirmation(true)}
+              disabled={rbacFilteredAnalyses.length === 0}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                border: '1px solid #fecaca',
+                borderRadius: 9,
+                padding: '0.55rem 0.8rem',
+                background: rbacFilteredAnalyses.length ? '#fff' : '#f8fafc',
+                color: rbacFilteredAnalyses.length ? '#b91c1c' : '#94a3b8',
+                cursor: rbacFilteredAnalyses.length ? 'pointer' : 'not-allowed',
+                fontWeight: 650,
+              }}
+            >
+              <Trash size={15} /> Clear all
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Summary KPI cards */}
@@ -708,25 +701,29 @@ export default function CustomerFeedbackPage() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(record.id)}
-                          aria-label={`Delete analysis for ${record.leadName || 'customer'}`}
-                          title="Delete this analysis"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            border: '1px solid #fecaca',
-                            borderRadius: 8,
-                            padding: '0.45rem 0.6rem',
-                            background: '#fff',
-                            color: '#b91c1c',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Trash2 size={14} /> Delete
-                        </button>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(record.id)}
+                            aria-label={`Delete analysis for ${record.leadName || 'customer'}`}
+                            title="Delete this analysis"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              border: '1px solid #fecaca',
+                              borderRadius: 8,
+                              padding: '0.45rem 0.6rem',
+                              background: '#fff',
+                              color: '#b91c1c',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -769,18 +766,17 @@ export default function CustomerFeedbackPage() {
         >
           <section style={{ ...cardStyle, width: 'min(100%, 420px)', padding: '1.4rem' }}>
             <h2 id="delete-analysis-title" style={{ fontSize: '1.1rem', marginBottom: 8 }}>
-              Delete this analysis?
+              Are you sure you want to delete this record?
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.6 }}>
-              This removes the selected call analysis from this browser's local records.
-              Dashboard totals will be recalculated. This cannot be undone.
+              This record will be completely deleted from the database. This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
               <button type="button" onClick={() => setDeleteTarget(null)} style={{ padding: '0.6rem 0.9rem', border: '1px solid #cbd5e1', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>
                 Cancel
               </button>
-              <button type="button" onClick={handleDeleteOne} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer' }}>
-                <Trash2 size={14} /> Delete analysis
+              <button type="button" onClick={handleDeleteOne} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                <Trash2 size={14} /> Delete
               </button>
             </div>
           </section>
@@ -804,18 +800,17 @@ export default function CustomerFeedbackPage() {
         >
           <section style={{ ...cardStyle, width: 'min(100%, 440px)', padding: '1.4rem' }}>
             <h2 id="clear-analyses-title" style={{ fontSize: '1.1rem', marginBottom: 8 }}>
-              Clear all call analyses?
+              Are you sure you want to delete all records?
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.6 }}>
-              This permanently removes all {rbacFilteredAnalyses.length} analyses
-              and resets the dashboard totals in this browser. This cannot be undone.
+              All {rbacFilteredAnalyses.length} records will be completely deleted from the database. This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
               <button type="button" onClick={() => setShowClearConfirmation(false)} style={{ padding: '0.6rem 0.9rem', border: '1px solid #cbd5e1', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>
                 Cancel
               </button>
-              <button type="button" onClick={handleClearAll} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer' }}>
-                <Trash size={14} /> Clear all analyses
+              <button type="button" onClick={handleClearAll} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                <Trash size={14} /> Clear all
               </button>
             </div>
           </section>

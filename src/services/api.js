@@ -495,6 +495,10 @@ export const gatewayApi = {
     return gatewayFetch(`/calls/analysis/${analysisId}`, { method: 'GET' });
   },
 
+  async deleteCallAnalysis(analysisId) {
+    return gatewayFetch(`/calls/analysis/${analysisId}`, { method: 'DELETE' });
+  },
+
   async createCallTranscript(data) {
     return gatewayFetch('/calls/transcripts', {
       method: 'POST',

@@ -260,7 +260,11 @@ class CallService:
         - Manager: Can delete analyses belonging to their team.
         - Salesperson: 403 Forbidden.
         """
-        an_uuid = uuid.UUID(str(analysis_id))
+        try:
+            an_uuid = uuid.UUID(str(analysis_id))
+        except (ValueError, TypeError):
+            raise NotFoundError(f"CallAnalysis {analysis_id} not found")
+
         analysis = await self.analysis_repo.get_analysis_detail(an_uuid, ctx.tenant_id)
         if not analysis:
             raise NotFoundError(f"CallAnalysis {analysis_id} not found")

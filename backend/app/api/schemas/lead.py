@@ -72,3 +72,14 @@ class AssignLeadsRequest(BaseModel):
 
 class AssignLeadRequest(BaseModel):
     assignee_id: str
+
+
+class LeadBulkImportResponse(BaseModel):
+    batch_id: str
+    file_name: str
+    total_rows: int
+    inserted_count: int
+    duplicate_count: int
+    error_count: int
+    status: str
+    error_sample: list[dict] = []

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, File
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.data.session import get_db_session
 from backend.app.application.context import RequestContext
 from backend.app.api.dependencies import get_request_context
 from backend.app.application.services.lead_service import LeadService
+from backend.app.application.services.lead_import_service import LeadImportService
 from backend.app.application.exceptions import BadRequestError
 from backend.app.api.schemas.lead import (
     LeadCreateRequest,
@@ -12,6 +13,7 @@ from backend.app.api.schemas.lead import (
     LeadResponse,
     AssignLeadsRequest,
     AssignLeadRequest,
+    LeadBulkImportResponse,
 )
 from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
@@ -346,5 +348,36 @@ async def delete_lead(
     return ActionResponse(
         status="success",
         message=f"Lead '{lead_id}' deleted successfully",
+        correlation_id=ctx.correlation_id,
+    )
+
+
+@router.post("/bulk-import", response_model=StandardResponse[LeadBulkImportResponse])
+async def bulk_import_leads(
+    file: UploadFile = File(...),
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    CRM-BE-02: Streaming bulk lead import endpoint with product-aware deduplication.
+    Accepts .csv files, validates records, checks tenant duplicates, and records batch metrics.
+    """
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise BadRequestError("Only CSV files are currently supported for bulk import.")
+
+    content = await file.read()
+    if not content:
+        raise BadRequestError("Uploaded file is empty.")
+
+    service = LeadImportService(session)
+    result = await service.import_leads_csv(
+        ctx=ctx,
+        file_content=content,
+        file_name=file.filename,
+    )
+
+    return StandardResponse(
+        status="success",
+        data=LeadBulkImportResponse(**result),
         correlation_id=ctx.correlation_id,
     )

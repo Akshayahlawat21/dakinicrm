@@ -71,6 +71,58 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* ==========================================================================
+   DAKINI SALES CRM — HIGH-CONTRAST DARK THEME
+   ========================================================================== */
+[data-theme="dark"],
+body.dark-mode {
+  /* Brand Blue Palette adjusted for dark mode */
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-dark: #93c5fd;
+  --primary-light: rgba(59, 130, 246, 0.16);
+  --primary-subtle: rgba(59, 130, 246, 0.28);
+  --primary-glow: rgba(59, 130, 246, 0.35);
+  --primary-gradient: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  --agent-gradient: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #60a5fa 100%);
+
+  /* Neutrals & Surfaces (Obsidian Slate) */
+  --bg-page: #0b0f19;              /* Deep obsidian slate canvas */
+  --bg-card: #111827;              /* Rich dark slate card background */
+  --surface-soft: #1e293b;         /* Elevated surface */
+  --surface-hover: #1f2937;        /* Row / pill hover */
+  --surface-alt: #1e293b;
+
+  /* Borders & Dividers */
+  --border-light: #1e293b;
+  --border-default: #334155;       /* Crisp slate border in dark mode */
+  --border-active: #3b82f6;
+
+  /* Typography Colors in Dark Mode */
+  --text-main: #f8fafc;            /* Crisp off-white heading */
+  --text-body: #cbd5e1;            /* Readable light slate body */
+  --text-muted: #94a3b8;           /* Muted secondary labels */
+  --text-subtle: #64748b;          /* Placeholders & disabled */
+  --text-inverse: #0b0f19;
+
+  /* Functional Status in Dark Mode */
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-border: rgba(245, 158, 11, 0.35);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --info-bg: rgba(2, 132, 199, 0.15);
+  --info-border: rgba(2, 132, 199, 0.35);
+
+  /* Dark mode shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -163,3 +215,161 @@ input, select, textarea {
     padding: 1rem 1rem 2.5rem 1rem;
   }
 }
+
+/* ==========================================================================
+   DARK THEME COMPONENT & CONTAINER OVERRIDES
+   ========================================================================== */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+[data-theme="dark"] .crm-card,
+[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .deal-card,
+[data-theme="dark"] .flow-step-card,
+[data-theme="dark"] .inbox-layout,
+[data-theme="dark"] .lead-detail-header,
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .crm-sidebar,
+[data-theme="dark"] .crm-topbar,
+[data-theme="dark"] .crm-agent-dock,
+[data-theme="dark"] .crm-preview-drawer {
+  background-color: var(--bg-card);
+  border-color: var(--border-default);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .input-field,
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: var(--surface-soft);
+  color: var(--text-main);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] .input-field:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: var(--primary);
+  background-color: var(--bg-card);
+}
+
+[data-theme="dark"] .topbar-search-trigger {
+  background: var(--surface-soft);
+  border-color: var(--border-default);
+  color: var(--text-muted);
+}
+[data-theme="dark"] .topbar-search-trigger:hover {
+  background: var(--surface-hover);
+  border-color: #475569;
+}
+
+[data-theme="dark"] .topbar-avatar-pill {
+  background: var(--surface-soft);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .topbar-avatar-pill:hover {
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .nav-item {
+  color: var(--text-body);
+}
+[data-theme="dark"] .nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+[data-theme="dark"] .nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .tab-btn {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .tab-btn:hover {
+  color: var(--text-main);
+  background: var(--surface-hover);
+}
+[data-theme="dark"] .tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+[data-theme="dark"] table th {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  border-bottom-color: var(--border-default);
+}
+[data-theme="dark"] table td {
+  border-bottom-color: var(--border-default);
+  color: var(--text-body);
+}
+[data-theme="dark"] table tr:hover td {
+  background: var(--surface-hover);
+}
+
+[data-theme="dark"] .sidebar-footer-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] .suggested-prompt-btn {
+  background: var(--surface-soft);
+  border-color: var(--border-default);
+  color: var(--text-main);
+}
+[data-theme="dark"] .suggested-prompt-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .agent-dock-footer {
+  background: var(--bg-card);
+  border-top-color: var(--border-default);
+}
+[data-theme="dark"] .agent-input-container {
+  background: var(--surface-soft);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .agent-chat-input {
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .badge-blue {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+[data-theme="dark"] .badge-green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+[data-theme="dark"] .badge-amber {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+[data-theme="dark"] .badge-red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+[data-theme="dark"] .badge-purple {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+[data-theme="dark"] .badge-gray {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+

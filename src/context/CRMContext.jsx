@@ -45,6 +45,35 @@ export function CRMProvider({ children }) {
   const convertingLeadsRef = useRef(new Set());
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
+  // Theme State: 'light' | 'dark' with persistence and html attribute sync
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dakini_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dakini_theme', theme);
+    } catch (e) {
+      console.warn('Could not save theme preference:', e);
+    }
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Entities Data State — Exclusively populated from live Supabase PostgreSQL via Gateway API
   // NOTE: Hardcoded mock initializers are commented out per user instruction:
   // const [leads, setLeads] = useState(initialLeads);
@@ -1822,6 +1851,10 @@ export function CRMProvider({ children }) {
         setIsSignInModalOpen,
         isLoadingData,
         fetchSupabaseData,
+        theme,
+        setTheme,
+        toggleTheme,
+        isDarkMode: theme === 'dark',
         login,
         logout
       }}

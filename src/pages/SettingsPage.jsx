@@ -10,12 +10,14 @@ import {
   ShieldCheck,
   Check,
   Save,
-  LogOut
+  LogOut,
+  Sun,
+  Moon
 } from 'lucide-react';
 import TeamRolesSettings from '../components/settings/TeamRolesSettings';
 
 export default function SettingsPage() {
-  const { currentUser, updateUserProfile, logout } = useCRM();
+  const { currentUser, updateUserProfile, logout, theme, setTheme } = useCRM();
   const [activeSection, setActiveSection] = useState('profile');
   const [savedNotice, setSavedNotice] = useState(false);
 
@@ -73,10 +75,10 @@ export default function SettingsPage() {
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+        <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
           Workspace Settings
         </h1>
-        <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
           Manage your user profile, CRM pipelines, integrations, and enterprise configuration
         </p>
       </div>
@@ -118,19 +120,19 @@ export default function SettingsPage() {
               marginBottom: '1.5rem'
             }}>
               <Check size={16} />
-              <span>Settings successfully updated across all Salesforce instances.</span>
+              <span>Settings successfully updated across all workspace instances.</span>
             </div>
           )}
 
           {activeSection === 'profile' && (
             <form onSubmit={handleSave}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1.25rem' }}>
                 Profile & User Settings
               </h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     First Name
                   </label>
                   <input
@@ -143,7 +145,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Last Name
                   </label>
                   <input
@@ -157,7 +159,7 @@ export default function SettingsPage() {
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                   Email Address
                 </label>
                 <input
@@ -171,7 +173,7 @@ export default function SettingsPage() {
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                   Sales Role & Quota Assignment
                 </label>
                 <input
@@ -180,11 +182,115 @@ export default function SettingsPage() {
                   key={`role-${currentUser?.role || 'Sales Director'}`}
                   defaultValue={`${currentUser?.role || 'Sales Director'} — Enterprise APAC ($75,000 Quota)`}
                   readOnly
-                  style={{ background: '#f8fafc' }}
+                  style={{ background: 'var(--surface-soft)' }}
                 />
               </div>
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Theme & Appearance (Dark Mode / Light Mode) */}
+              <div style={{ marginBottom: '1.75rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: '0.65rem' }}>
+                  Interface Theme & Appearance
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  {/* Light Mode Selector Card */}
+                  <div
+                    onClick={() => setTheme('light')}
+                    role="button"
+                    tabIndex={0}
+                    style={{
+                      cursor: 'pointer',
+                      border: theme === 'light' ? '2px solid var(--primary)' : '1px solid var(--border-default)',
+                      background: theme === 'light' ? 'var(--primary-light)' : 'var(--bg-card)',
+                      boxShadow: theme === 'light' ? '0 0 0 1px var(--primary)' : 'none',
+                      borderRadius: 10,
+                      padding: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        background: '#fef3c7',
+                        color: '#d97706',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Sun size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                          Light Mode
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Crisp white canvas & modern blue
+                        </div>
+                      </div>
+                    </div>
+                    {theme === 'light' && (
+                      <span className="badge badge-blue" style={{ fontSize: '0.6875rem', padding: '0.2rem 0.55rem' }}>
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dark Mode Selector Card */}
+                  <div
+                    onClick={() => setTheme('dark')}
+                    role="button"
+                    tabIndex={0}
+                    style={{
+                      cursor: 'pointer',
+                      border: theme === 'dark' ? '2px solid var(--primary)' : '1px solid var(--border-default)',
+                      background: theme === 'dark' ? 'var(--primary-light)' : 'var(--bg-card)',
+                      boxShadow: theme === 'dark' ? '0 0 0 1px var(--primary)' : 'none',
+                      borderRadius: 10,
+                      padding: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        background: '#1e293b',
+                        color: '#60a5fa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Moon size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                          Dark Mode
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Deep obsidian slate for night focus
+                        </div>
+                      </div>
+                    </div>
+                    {theme === 'dark' && (
+                      <span className="badge badge-blue" style={{ fontSize: '0.6875rem', padding: '0.2rem 0.55rem' }}>
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -194,9 +300,9 @@ export default function SettingsPage() {
                   <LogOut size={16} />
                   <span>Sign Out of Workspace</span>
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary" disabled={isSaving}>
                   <Save size={16} />
-                  <span>Save Changes</span>
+                  <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </form>
@@ -204,7 +310,7 @@ export default function SettingsPage() {
 
           {activeSection === 'integrations' && (
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1.25rem' }}>
                 Connected Platforms
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -214,10 +320,10 @@ export default function SettingsPage() {
                   { name: 'Slack Sales Alerts', status: 'Connected', desc: 'Broadcast won deals and agent approval alerts into #sales-war-room' },
                   { name: 'WhatsApp Business API', status: 'Pending Config', desc: 'Omnichannel customer messaging and conversational quotes' }
                 ].map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', border: '1px solid var(--border-default)', borderRadius: 10, background: 'var(--bg-card)' }}>
                     <div>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.desc}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.desc}</div>
                     </div>
                     <span className={`badge ${item.status === 'Connected' ? 'badge-green' : 'badge-gray'}`}>
                       {item.status}
@@ -234,10 +340,10 @@ export default function SettingsPage() {
 
           {activeSection !== 'profile' && activeSection !== 'integrations' && activeSection !== 'team' && (
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
                 {activeSection.replace('-', ' ')}
               </h2>
-              <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 Configure parameters, custom schemas, and role privileges for this section.
               </p>
               <button className="btn btn-primary" onClick={handleSave}>

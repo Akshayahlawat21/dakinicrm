@@ -8,7 +8,7 @@
 .crm-sidebar {
   width: 240px;
   height: 100vh;
-  background: #ffffff;
+  background: var(--bg-card);
   border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
@@ -175,7 +175,7 @@
    -------------------------------------------------------------------------- */
 .crm-topbar {
   height: 64px;
-  background: #ffffff;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-default);
   display: flex;
   align-items: center;
@@ -207,7 +207,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.85rem;
-  background: #f8fafc;
+  background: var(--surface-soft);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-muted);
@@ -223,7 +223,7 @@
   text-overflow: ellipsis;
 }
 .topbar-search-trigger:hover {
-  background: #ffffff;
+  background: var(--bg-card);
   border-color: #cbd5e1;
   box-shadow: var(--shadow-sm);
 }
@@ -258,7 +258,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
-  border: 2px solid #ffffff;
+  border: 2px solid var(--bg-card);
 }
 
 .topbar-avatar-pill {
@@ -268,7 +268,7 @@
   padding: 0.25rem 0.65rem 0.25rem 0.35rem;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-default);
-  background: #ffffff;
+  background: var(--bg-card);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -295,7 +295,7 @@
 .crm-agent-dock {
   width: 360px;
   height: 100vh;
-  background: #ffffff;
+  background: var(--bg-card);
   border-left: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
@@ -328,7 +328,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  background: var(--surface-soft);
 }
 .agent-header-title {
   display: flex;
@@ -369,8 +369,8 @@
 }
 
 .agent-bubble-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: 1rem;
   font-size: 0.875rem;
@@ -387,12 +387,12 @@
   width: 100%;
   text-align: left;
   padding: 0.6rem 0.85rem;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--text-main);
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
@@ -406,8 +406,8 @@
 }
 
 .agent-approvals-box {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
   border-radius: var(--radius-md);
   padding: 0.75rem;
 }
@@ -415,13 +415,13 @@
 .agent-dock-footer {
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--border-default);
-  background: #ffffff;
+  background: var(--bg-card);
 }
 .agent-input-container {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #f8fafc;
+  background: var(--surface-soft);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: 0.35rem 0.5rem;
@@ -437,13 +437,14 @@
   outline: none;
   font-size: 0.875rem;
   padding: 0.35rem;
+  color: var(--text-main);
 }
 
 /* Quick Preview Drawer */
 .crm-preview-drawer {
   width: 420px;
   height: 100vh;
-  background: #ffffff;
+  background: var(--bg-card);
   border-left: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;

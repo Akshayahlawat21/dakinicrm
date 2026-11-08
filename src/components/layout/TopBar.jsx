@@ -13,7 +13,9 @@ import {
   ExternalLink,
   Database,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -33,7 +35,9 @@ export default function TopBar() {
     isLoadingData,
     fetchSupabaseData,
     logout,
-    setIsSignInModalOpen
+    setIsSignInModalOpen,
+    theme,
+    toggleTheme
   } = useCRM();
 
   const navigate = useNavigate();
@@ -102,10 +106,10 @@ export default function TopBar() {
                 top: 'calc(100% + 6px)',
                 right: 0,
                 width: 180,
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-default)',
                 borderRadius: 10,
-                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                boxShadow: 'var(--shadow-lg)',
                 padding: '0.4rem',
                 zIndex: 100
               }}
@@ -128,7 +132,7 @@ export default function TopBar() {
                     borderRadius: 6,
                     fontSize: '0.8125rem',
                     fontWeight: 600,
-                    color: '#1e293b',
+                    color: 'var(--text-main)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem'
@@ -147,6 +151,21 @@ export default function TopBar() {
             </div>
           )}
         </div>
+
+        {/* Theme Toggle Button (Light / Dark) */}
+        <button
+          className="topbar-action-icon"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-label="Toggle theme"
+          style={{ transition: 'all 0.2s ease' }}
+        >
+          {theme === 'dark' ? (
+            <Sun size={19} color="#f59e0b" />
+          ) : (
+            <Moon size={19} color="#64748b" />
+          )}
+        </button>
 
         {/* Notifications Bell */}
         <div style={{ position: 'relative' }}>
@@ -176,10 +195,10 @@ export default function TopBar() {
                   .toUpperCase()}
               </div>
               <div style={{ textAlign: 'left', paddingRight: '0.25rem' }}>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
                   {currentUser.name || 'User'}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                   {currentUser.role || 'Sales Representative'}
                 </div>
               </div>
@@ -193,20 +212,20 @@ export default function TopBar() {
                   top: 'calc(100% + 8px)',
                   right: 0,
                   width: 220,
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 12,
-                  boxShadow: '0 12px 28px rgba(0,0,0,0.12)',
+                  boxShadow: 'var(--shadow-lg)',
                   padding: '0.5rem',
                   zIndex: 100
                 }}
                 onMouseLeave={() => setIsUserMenuOpen(false)}
               >
-                <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {currentUser.name || 'User'}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     {currentUser.email || 'user@dakini.ai'}
                   </div>
                 </div>
@@ -220,6 +239,14 @@ export default function TopBar() {
                 >
                   <User size={15} />
                   User Preferences
+                </button>
+                <button
+                  className="nav-item"
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem' }}
+                  onClick={toggleTheme}
+                >
+                  {theme === 'dark' ? <Sun size={15} color="#f59e0b" /> : <Moon size={15} />}
+                  <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                 </button>
                 <button
                   className="nav-item"

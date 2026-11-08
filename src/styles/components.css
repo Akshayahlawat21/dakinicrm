@@ -301,7 +301,7 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-muted);
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 6px;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -339,7 +339,7 @@
   animation: fadeIn 0.15s ease-out;
 }
 .modal-box {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 580px;

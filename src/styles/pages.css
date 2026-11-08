@@ -58,7 +58,7 @@
 }
 
 .kpi-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: 1.25rem;
@@ -149,7 +149,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  background: #ffffff;
+  background: var(--bg-card);
   padding: 1.25rem 1.75rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-default);
@@ -294,7 +294,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 2px solid var(--primary);
   color: var(--primary);
   display: flex;
@@ -370,7 +370,7 @@
 }
 
 .deal-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: 1rem;
@@ -391,7 +391,7 @@
    4. Automations Visual Flow Canvas
    -------------------------------------------------------------------------- */
 .automation-canvas {
-  background: #f8fafc;
+  background: var(--surface-soft);
   border: 2px dashed #cbd5e1;
   border-radius: var(--radius-xl);
   padding: 3rem 2rem;
@@ -402,7 +402,7 @@
   min-height: 480px;
 }
 .flow-step-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1.5px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: 1.25rem 1.5rem;
@@ -438,7 +438,7 @@
   display: grid;
   grid-template-columns: 200px 320px 1fr;
   height: calc(100vh - 140px);
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -447,7 +447,7 @@
 .inbox-folders-col {
   border-right: 1px solid var(--border-default);
   padding: 1rem 0.75rem;
-  background: #f8fafc;
+  background: var(--surface-soft);
 }
 .inbox-threads-col {
   border-right: 1px solid var(--border-default);

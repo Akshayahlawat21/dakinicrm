@@ -278,7 +278,12 @@ export default function DashboardPage() {
               View Kanban <ChevronRight size={14} />
             </button>
           </div>
-          <PipelineStageChart data={analytics.pipeline} />
+          <PipelineStageChart
+            data={analytics.pipeline}
+            onStageClick={(stageName) => {
+              navigateTo(`deals?stage=${encodeURIComponent(stageName)}`, { stage: stageName });
+            }}
+          />
         </div>
       </div>
 

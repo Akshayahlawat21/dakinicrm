@@ -43,7 +43,7 @@ function EmptyState({ children = 'No records found for this organization and per
 }
 
 export default function ReportsPage() {
-  const { currentUser } = useCRM();
+  const { currentUser, navigateTo } = useCRM();
   const [activeReportTab, setActiveReportTab] = useState('Sales');
   const [dateRange, setDateRange] = useState('Last 30 Days');
   const [reports, setReports] = useState(EMPTY);
@@ -231,7 +231,7 @@ export default function ReportsPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1.25rem', marginBottom: '1.25rem' }}>
           <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Revenue Trajectory</h3><p className="chart-card-subtitle">Monthly closed-won revenue, last six months</p></div></div><RevenueTrendChart data={reports.revenue} /></div>
-          <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Pipeline by Stage</h3><p className="chart-card-subtitle">Current open opportunity value</p></div></div><PipelineStageChart data={reports.pipeline} /></div>
+          <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Pipeline by Stage</h3><p className="chart-card-subtitle">Current open opportunity value</p></div></div><PipelineStageChart data={reports.pipeline} onStageClick={(stageName) => navigateTo(`deals?stage=${encodeURIComponent(stageName)}`, { stage: stageName })} /></div>
         </div>
       </>}
 

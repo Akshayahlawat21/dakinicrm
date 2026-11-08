@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ==========================================================================
 // 1. Interactive Sparkline
@@ -126,7 +127,8 @@ export function RevenueTrendChart({ data = [] }) {
     </div>
   );
 }
-export function PipelineStageChart({ data = [] }) {
+export function PipelineStageChart({ data = [], onStageClick }) {
+  const navigate = useNavigate();
   const [activeStage, setActiveStage] = useState(null);
   const palette = ["#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8", "#cbd5e1"];
   const stages = data.map((item, index) => ({
@@ -138,6 +140,14 @@ export function PipelineStageChart({ data = [] }) {
 
   const maxValue = Math.max(1, ...stages.map((stage) => stage.value)) * 1.12;
   const maxBarHeight = 130;
+
+  const handleStageSelect = (stageName) => {
+    if (typeof onStageClick === 'function') {
+      onStageClick(stageName);
+    } else {
+      navigate(`/deals?stage=${encodeURIComponent(stageName)}`, { state: { stage: stageName } });
+    }
+  };
 
   return (
     <div style={{ width: '100%' }}>
@@ -158,6 +168,8 @@ export function PipelineStageChart({ data = [] }) {
               key={stg.name}
               onMouseEnter={() => setActiveStage(i)}
               onMouseLeave={() => setActiveStage(null)}
+              onClick={() => handleStageSelect(stg.name)}
+              title={`Click to open ${stg.name} section (${stg.count} opportunities • $${stg.value.toLocaleString()})`}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -185,8 +197,8 @@ export function PipelineStageChart({ data = [] }) {
                   height: `${height}px`,
                   background: isHovered ? 'linear-gradient(180deg, #38bdf8 0%, #2563eb 100%)' : stg.color,
                   borderRadius: '6px 6px 2px 2px',
-                  boxShadow: isHovered ? '0 4px 12px rgba(37, 99, 235, 0.35)' : 'none',
-                  transform: isHovered ? 'scaleY(1.04)' : 'scaleY(1)',
+                  boxShadow: isHovered ? '0 4px 14px rgba(37, 99, 235, 0.4)' : 'none',
+                  transform: isHovered ? 'scaleY(1.05)' : 'scaleY(1)',
                   transformOrigin: 'bottom',
                   transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
@@ -198,18 +210,28 @@ export function PipelineStageChart({ data = [] }) {
 
       {/* Stage Labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.5rem', padding: '0 0.5rem' }}>
-        {stages.map((stg, i) => (
-          <div key={stg.name} style={{ flex: 1, textAlign: 'center' }}>
-            <span style={{
-              fontSize: '0.6875rem',
-              fontWeight: activeStage === i ? 700 : 600,
-              color: activeStage === i ? '#2563eb' : '#475569',
-              whiteSpace: 'nowrap'
-            }}>
-              {stg.name}
-            </span>
-          </div>
-        ))}
+        {stages.map((stg, i) => {
+          const isHovered = activeStage === i;
+          return (
+            <div
+              key={stg.name}
+              style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
+              onClick={() => handleStageSelect(stg.name)}
+              title={`Click to open ${stg.name} section`}
+            >
+              <span style={{
+                fontSize: '0.6875rem',
+                fontWeight: isHovered ? 700 : 600,
+                color: isHovered ? '#2563eb' : '#475569',
+                whiteSpace: 'nowrap',
+                textDecoration: isHovered ? 'underline' : 'none',
+                transition: 'all 0.15s ease'
+              }}>
+                {stg.name}
+              </span>
+            </div>
+          );
+        })}
       </div></>}
     </div>
   );

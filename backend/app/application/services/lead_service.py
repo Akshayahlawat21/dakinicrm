@@ -71,6 +71,7 @@ class LeadService:
         skip: int = 0,
         limit: int = 50,
         status: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> tuple[List[Lead], int]:
         filters = {}
         if status and status.lower() != "all":
@@ -80,7 +81,7 @@ class LeadService:
             # Salespersons strictly see only assigned leads
             filters["assigned_to"] = ctx.user_uuid
             return await self.lead_repo.list_scoped(
-                tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
+                tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters, search=search
             )
 
         if ctx.is_manager:
@@ -97,11 +98,12 @@ class LeadService:
                 skip=skip,
                 limit=limit,
                 filters=filters,
+                search=search,
             )
 
         # Owner: all organization leads
         return await self.lead_repo.list_scoped(
-            tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
+            tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters, search=search
         )
 
     async def check_duplicate_lead(

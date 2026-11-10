@@ -83,3 +83,24 @@ class LeadBulkImportResponse(BaseModel):
     error_count: int
     status: str
     error_sample: list[dict] = []
+
+
+class AllowImportDuplicatesRequest(BaseModel):
+    row_numbers: list[int] = []
+    allow_all: bool = False
+
+
+class LeadImportBatchSummary(BaseModel):
+    batch_id: str
+    file_name: str
+    total_rows: int
+    inserted_count: int
+    duplicate_count: int
+    error_count: int
+    newly_inserted: int = 0
+    status: str
+    created_at: Optional[str] = None
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    error_sample: list[dict] = []

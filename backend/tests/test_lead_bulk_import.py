@@ -152,3 +152,124 @@ async def test_bulk_import_rejects_non_csv_and_empty_files(client: AsyncClient, 
     resp_empty = await client.post("/v1/leads/bulk-import", files=files_empty, headers=headers)
     assert resp_empty.status_code == 400
     assert "empty" in resp_empty.text
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_history_rbac(client: AsyncClient, seed_data):
+    """Verifies that import history endpoint returns batches according to RBAC boundaries."""
+    tenant_id = str(seed_data["tenant_a"].id)
+    owner_id = str(seed_data["owner_a"].id)
+    rep_id = str(seed_data["sales_a1"].id)
+
+    # 1. Owner imports a batch
+    headers_owner = {
+        "X-User-Id": owner_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "owner",
+        "X-Correlation-ID": "test_history_owner",
+    }
+    csv1 = "Name,Email,Company\nOwner Lead,ownerlead@test.com,Owner Corp\n"
+    await client.post("/v1/leads/bulk-import", files={"file": ("owner_batch.csv", csv1.encode(), "text/csv")}, headers=headers_owner)
+
+    # 2. Sales rep imports a batch
+    headers_rep = {
+        "X-User-Id": rep_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "salesperson",
+        "X-Correlation-ID": "test_history_rep",
+    }
+    csv2 = "Name,Email,Company\nRep Lead,replead@test.com,Rep Corp\n"
+    await client.post("/v1/leads/bulk-import", files={"file": ("rep_batch.csv", csv2.encode(), "text/csv")}, headers=headers_rep)
+
+    # 3. Owner checks history -> sees both
+    resp_owner = await client.get("/v1/leads/imports", headers=headers_owner)
+    assert resp_owner.status_code == 200
+    owner_files = [b["file_name"] for b in resp_owner.json()["data"]]
+    assert "owner_batch.csv" in owner_files
+    assert "rep_batch.csv" in owner_files
+
+    # 4. Sales rep checks history -> sees only rep_batch.csv
+    resp_rep = await client.get("/v1/leads/imports", headers=headers_rep)
+    assert resp_rep.status_code == 200
+    rep_files = [b["file_name"] for b in resp_rep.json()["data"]]
+    assert "rep_batch.csv" in rep_files
+    assert "owner_batch.csv" not in rep_files
+
+
+@pytest.mark.asyncio
+async def test_allow_duplicate_leads_selective_and_bulk(client: AsyncClient, db_session: AsyncSession, seed_data):
+    """Verifies per-row and allow-all duplicate override plus RBAC guard."""
+    tenant_id = str(seed_data["tenant_a"].id)
+    owner_id = str(seed_data["owner_a"].id)
+    rep_id = str(seed_data["sales_a1"].id)
+
+    headers_owner = {
+        "X-User-Id": owner_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "owner",
+        "X-Correlation-ID": "test_allow_dups",
+    }
+
+    # Row 2: Clean insert; Row 3 & Row 4: Intra-file duplicates of Row 2
+    csv_data = (
+        "Name,Email,Phone,Company,Interested Product\n"
+        "Dup Base,dup.base@tenant-a.com,+919900000099,Dup Corp,Cloud ERP\n"
+        "Dup Base,dup.base@tenant-a.com,+919900000099,Dup Corp,Cloud ERP\n"
+        "Dup Base,dup.base@tenant-a.com,+919900000099,Dup Corp,Cloud ERP\n"
+    )
+    resp = await client.post("/v1/leads/bulk-import", files={"file": ("dups.csv", csv_data.encode(), "text/csv")}, headers=headers_owner)
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    batch_id = data["batch_id"]
+    assert data["inserted_count"] == 1
+    assert data["duplicate_count"] == 2
+    assert len(data["error_sample"]) == 2
+    assert all(e.get("is_duplicate") is True and e.get("allowed") is False and e.get("lead_data") for e in data["error_sample"])
+
+    # RBAC check: Sales rep cannot approve Owner's batch duplicates
+    headers_rep = {
+        "X-User-Id": rep_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "salesperson",
+        "X-Correlation-ID": "test_allow_dups_forbidden",
+    }
+    resp_forbidden = await client.post(
+        f"/v1/leads/imports/{batch_id}/allow-duplicates",
+        json={"allow_all": True},
+        headers=headers_rep,
+    )
+    assert resp_forbidden.status_code == 403
+
+    # Selective allow: Row 3 only
+    resp_row3 = await client.post(
+        f"/v1/leads/imports/{batch_id}/allow-duplicates",
+        json={"row_numbers": [3], "allow_all": False},
+        headers=headers_owner,
+    )
+    assert resp_row3.status_code == 200, resp_row3.text
+    d1 = resp_row3.json()["data"]
+    assert d1["newly_inserted"] == 1
+    assert d1["inserted_count"] == 2
+    assert d1["duplicate_count"] == 1
+    row3_entry = next(e for e in d1["error_sample"] if e["row"] == 3)
+    row4_entry = next(e for e in d1["error_sample"] if e["row"] == 4)
+    assert row3_entry["allowed"] is True
+    assert row4_entry["allowed"] is False
+
+    # Allow all remaining pending duplicates (only Row 4 should be inserted)
+    resp_all = await client.post(
+        f"/v1/leads/imports/{batch_id}/allow-duplicates",
+        json={"allow_all": True},
+        headers=headers_owner,
+    )
+    assert resp_all.status_code == 200, resp_all.text
+    d2 = resp_all.json()["data"]
+    assert d2["newly_inserted"] == 1
+    assert d2["inserted_count"] == 3
+    assert d2["duplicate_count"] == 0
+    assert all(e["allowed"] is True for e in d2["error_sample"])
+
+    # Verify 3 leads persisted under the batch
+    leads_stmt = select(Lead).where(Lead.import_batch_id == uuid.UUID(batch_id))
+    leads = (await db_session.execute(leads_stmt)).scalars().all()
+    assert len(leads) == 3

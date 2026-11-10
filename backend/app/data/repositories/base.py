@@ -1,7 +1,7 @@
 import uuid
 import re
 from typing import Generic, TypeVar, Type, Optional, List, Any, Dict
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from backend.app.data.models.base import Base, SoftDeleteMixin
@@ -115,6 +115,7 @@ class BaseRepository(Generic[ModelType]):
         limit: int = 50,
         filters: Optional[Dict[str, Any]] = None,
         order_by: Any = None,
+        search: Optional[str] = None,
     ) -> tuple[List[ModelType], int]:
         """
         Lists tenant-scoped records with optional filters, pagination, and sorting.
@@ -130,6 +131,27 @@ class BaseRepository(Generic[ModelType]):
             for field, val in filters.items():
                 if hasattr(self.model, field) and val is not None:
                     base_filter.append(getattr(self.model, field) == val)
+
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            search_conditions = []
+            if hasattr(self.model, "name"):
+                search_conditions.append(getattr(self.model, "name").ilike(term))
+            if hasattr(self.model, "company"):
+                search_conditions.append(getattr(self.model, "company").ilike(term))
+            if hasattr(self.model, "email"):
+                search_conditions.append(getattr(self.model, "email").ilike(term))
+            if hasattr(self.model, "phone"):
+                search_conditions.append(getattr(self.model, "phone").ilike(term))
+            if hasattr(self.model, "assigned_to"):
+                from backend.app.data.models.user import User
+                user_matches = select(User.id).where(
+                    User.name.ilike(term),
+                    User.organization_id == tenant_uuid,
+                )
+                search_conditions.append(getattr(self.model, "assigned_to").in_(user_matches))
+            if search_conditions:
+                base_filter.append(or_(*search_conditions))
 
         # Count total
         count_stmt = select(func.count(self.model.id)).where(*base_filter)

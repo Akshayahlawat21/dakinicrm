@@ -1,0 +1,16 @@
+Full Name,Work Email,Mobile Phone,Company Name,Interested Product,Lead Source,Industry,Job Title,Lead Score,Website
+,missing.name1@acme.com,+919811000001,Acme Corp,Cloud ERP,Website,Technology,Manager,50,https://acme.com
+,missing.name2@globex.com,+919811000002,Globex Corp,Enterprise Core,LinkedIn,Manufacturing,Director,60,https://globex.com
+Bad Email One,invalid-email-no-at-sign,+919811000003,Initech,Fleet Telematics,Referral,Logistics,VP,70,https://initech.com
+Bad Email Two,user@@double-at.com,+919811000004,Umbrella Corp,Cloud ERP,Google Ads,Healthcare,Lead,45,https://umbrella.com
+Bad Email Three,@no-username.com,+919811000005,Hooli,Warehouse IoT,Cold Outreach,Technology,Head of Ops,80,https://hooli.com
+Bad Email Four,missing-tld@domain,+919811000006,Stark Industries,Supply Chain AI,Event,Defense,Officer,90,https://stark.com
+No Contact Person,,,Wayne Enterprises,Cloud ERP,Website,Finance,CFO,65,https://wayne.com
+Empty Contact Row Two,,,Cyberdyne Systems,Warehouse IoT,Webinar,Robotics,Engineer,55,https://cyberdyne.com
+Valid Lead A,valid.contact.alpha@testcorp.com,+919811000010,Test Corp,Cloud ERP,Website,Technology,Lead,75,https://testcorp.com
+Valid Lead A,valid.contact.alpha@testcorp.com,+919811000010,Test Corp,Cloud ERP,Website,Technology,Lead,75,https://testcorp.com
+Valid Lead B,valid.contact.beta@testcorp.com,+919811000011,Test Corp,Warehouse IoT,Referral,Technology,Lead,80,https://testcorp.com
+,only.phone.but.no.name@test.com,+919811000012,Soylent Corp,Supply Chain AI,Cold Outreach,Food,Supervisor,40,https://soylent.com
+No Name No Email,,+919811000013,Massive Dynamic,Enterprise Core,Event,Biotech,Scientist,60,https://massivedynamic.com
+Bad Phone And Bad Email,bad_email_format,not_a_valid_phone_number_abc,Wonka Industries,Cloud ERP,Website,Retail,Owner,50,https://wonka.com
+

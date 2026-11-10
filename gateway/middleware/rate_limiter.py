@@ -91,7 +91,10 @@ def get_endpoint_policy(request: Request) -> Tuple[str, int, int, bool]:
         return "login", settings.RATE_LIMIT_LOGIN, 60, True
     elif "agent" in path or "ai" in path:
         return "ai", settings.RATE_LIMIT_AI, 60, True
-    elif "export" in path or "import" in path or "bulk" in path:
+    elif method == "GET":
+        # Read-only queries (including metadata, import logs, batch history) are classified as reads
+        return "reads", settings.RATE_LIMIT_READS, 60, False
+    elif "export" in path or "bulk-import" in path or "/bulk" in path or "bulk" in path:
         return "bulk", settings.RATE_LIMIT_BULK, 3600, True
     elif "webhook" in path:
         return "webhooks", settings.RATE_LIMIT_WEBHOOKS, 60, False

@@ -65,6 +65,11 @@ export async function gatewayFetch(endpoint, options = {}) {
     ...(options.headers || {}),
   };
 
+  // Allow browser to set boundary automatically for multipart file uploads
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
+
   const token = getStoredToken();
   if (token && !headers['Authorization']) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -197,8 +202,13 @@ export const gatewayApi = {
   /**
    * E3: Leads resource
    */
-  async getLeads() {
-    return gatewayFetch('/leads', { method: 'GET' });
+  async getLeads(params = {}) {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const query = new URLSearchParams(cleanParams).toString();
+    const endpoint = query ? `/leads?${query}` : '/leads';
+    return gatewayFetch(endpoint, { method: 'GET' });
   },
 
   async createLead(leadData) {
@@ -238,6 +248,31 @@ export const gatewayApi = {
     return gatewayFetch(`/leads/${leadId}/assign`, {
       method: 'POST',
       body: JSON.stringify({ assignee_id: assigneeId }),
+    });
+  },
+
+  async bulkImportLeads(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return gatewayFetch('/leads/bulk-import', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async getLeadImportHistory() {
+    return gatewayFetch('/leads/imports', {
+      method: 'GET',
+    });
+  },
+
+  async allowImportDuplicates(batchId, { rowNumbers = [], allowAll = false } = {}) {
+    return gatewayFetch(`/leads/imports/${batchId}/allow-duplicates`, {
+      method: 'POST',
+      body: JSON.stringify({
+        row_numbers: rowNumbers,
+        allow_all: allowAll,
+      }),
     });
   },
 

@@ -108,7 +108,7 @@ class GatewaySettings(BaseSettings):
     RATE_LIMIT_LOGIN: int = 10            # 10 per 60s (fail-closed)
     RATE_LIMIT_READS: int = 300           # 300 per 60s (fail-open)
     RATE_LIMIT_WRITES: int = 60           # 60 per 60s (fail-open)
-    RATE_LIMIT_BULK: int = 5              # 5 per 3600s (fail-closed)
+    RATE_LIMIT_BULK: int = 60             # 60 per 3600s (fail-closed)
     RATE_LIMIT_AI: int = 20               # 20 per 60s (fail-closed)
     RATE_LIMIT_WEBHOOKS: int = 100        # 100 per 60s (fail-open)
     RATE_LIMIT_TENANT: int = 3000         # 3000 per 60s (fail-open)

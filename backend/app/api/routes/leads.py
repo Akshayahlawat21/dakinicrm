@@ -14,6 +14,8 @@ from backend.app.api.schemas.lead import (
     AssignLeadsRequest,
     AssignLeadRequest,
     LeadBulkImportResponse,
+    LeadImportBatchSummary,
+    AllowImportDuplicatesRequest,
 )
 from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, ActionResponse
 
@@ -23,13 +25,14 @@ router = APIRouter(prefix="/v1/leads", tags=["Leads"])
 @router.get("", response_model=PaginatedResponse[LeadResponse])
 async def list_leads(
     status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
     service = LeadService(session)
-    leads, total = await service.list_leads(ctx, skip=skip, limit=limit, status=status)
+    leads, total = await service.list_leads(ctx, skip=skip, limit=limit, status=status, search=search)
     from sqlalchemy import select
     from backend.app.data.models.user import User
 
@@ -225,6 +228,52 @@ async def assign_leads_bulk(
             "lead_ids": [str(l.id) for l in updated_leads],
             "deal_ids": list(set(all_deal_ids)),
         },
+        correlation_id=ctx.correlation_id,
+    )
+
+
+@router.get("/imports", response_model=StandardResponse[list[LeadImportBatchSummary]])
+async def get_lead_import_history(
+    limit: int = Query(50, ge=1, le=100),
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    CRM-BE-02: Returns historical lead bulk import batches scoped by RBAC:
+    - Owner: sees all organization import batches.
+    - Manager: sees own imports + team members' imports.
+    - Salesperson: sees strictly own imports.
+    """
+    service = LeadImportService(session)
+    history = await service.get_import_history(ctx, limit=limit)
+    return StandardResponse(
+        status="success",
+        data=[LeadImportBatchSummary(**item) for item in history],
+        correlation_id=ctx.correlation_id,
+    )
+
+
+@router.post("/imports/{batch_id}/allow-duplicates", response_model=StandardResponse[LeadImportBatchSummary])
+async def allow_duplicate_leads_from_import(
+    batch_id: str,
+    body: AllowImportDuplicatesRequest,
+    ctx: RequestContext = Depends(get_request_context),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Force-inserts user-selected skipped duplicate rows from a bulk import batch.
+    Allows users to selectively or completely override duplicate blocks with full RBAC enforcement.
+    """
+    service = LeadImportService(session)
+    updated_batch = await service.allow_duplicate_leads(
+        ctx=ctx,
+        batch_id=batch_id,
+        row_numbers=body.row_numbers,
+        allow_all=body.allow_all,
+    )
+    return StandardResponse(
+        status="success",
+        data=LeadImportBatchSummary(**updated_batch),
         correlation_id=ctx.correlation_id,
     )
 

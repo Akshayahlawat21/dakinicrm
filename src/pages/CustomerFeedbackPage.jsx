@@ -166,8 +166,8 @@ export default function CustomerFeedbackPage() {
   });
 
   const cardStyle = {
-    background: '#fff',
-    border: '1px solid #e2e8f0',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-default)',
     borderRadius: 14,
     padding: '1.1rem 1.2rem',
     boxShadow: '0 2px 8px -2px rgba(15,23,42,.06)',
@@ -187,12 +187,12 @@ export default function CustomerFeedbackPage() {
     alignItems: 'flex-start',
     gap: 12,
     padding: '0.65rem 0',
-    borderTop: '1px solid #f1f5f9',
+    borderTop: '1px solid var(--border-default)',
   };
 
   const itemTextStyle = {
     fontSize: '0.83rem',
-    color: '#334155',
+    color: 'var(--text-body)',
     lineHeight: 1.6,
     overflowWrap: 'anywhere',
   };
@@ -220,7 +220,7 @@ export default function CustomerFeedbackPage() {
             style={{
               fontSize: '1.65rem',
               fontWeight: 800,
-              color: '#0f172a',
+              color: 'var(--text-main)',
             }}
           >
             Customer Analysis
@@ -228,7 +228,7 @@ export default function CustomerFeedbackPage() {
 
           <p
             style={{
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.875rem',
               marginTop: 5,
             }}
@@ -248,11 +248,11 @@ export default function CustomerFeedbackPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 7,
-                border: '1px solid #fecaca',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 9,
                 padding: '0.55rem 0.8rem',
-                background: rbacFilteredAnalyses.length ? '#fff' : '#f8fafc',
-                color: rbacFilteredAnalyses.length ? '#b91c1c' : '#94a3b8',
+                background: rbacFilteredAnalyses.length ? 'var(--bg-card)' : 'var(--surface-soft)',
+                color: rbacFilteredAnalyses.length ? 'var(--danger-text-dark)' : 'var(--text-subtle)',
                 cursor: rbacFilteredAnalyses.length ? 'pointer' : 'not-allowed',
                 fontWeight: 650,
               }}
@@ -276,19 +276,19 @@ export default function CustomerFeedbackPage() {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.8rem',
             }}
           >
             <span>Calls analyzed</span>
-            <MessageSquareText size={18} color="#2563eb" />
+            <MessageSquareText size={18} color="var(--primary)" />
           </div>
 
           <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: 8 }}>
             {activeAnalyses.length}
           </div>
 
-          <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
             Successful analyses for selected filter
           </div>
 
@@ -299,19 +299,19 @@ export default function CustomerFeedbackPage() {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.8rem',
             }}
           >
             <span>Positive feedback points</span>
-            <TrendingUp size={18} color="#059669" />
+            <TrendingUp size={18} color="var(--success-text)" />
           </div>
 
           <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: 8 }}>
             {positiveItems.reduce((sum, item) => sum + item.count, 0)}
           </div>
 
-          <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
             Extracted from analyzed transcripts
           </div>
 
@@ -322,19 +322,19 @@ export default function CustomerFeedbackPage() {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.8rem',
             }}
           >
             <span>Customer concerns</span>
-            <AlertTriangle size={18} color="#ea580c" />
+            <AlertTriangle size={18} color="var(--warning-text)" />
           </div>
 
           <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: 8 }}>
             {concernItems.reduce((sum, item) => sum + item.count, 0)}
           </div>
 
-          <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
             Negative feedback / concerns identified
           </div>
 
@@ -344,19 +344,19 @@ export default function CustomerFeedbackPage() {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.8rem',
             }}
           >
             <span>Suggested next steps</span>
-            <ListChecks size={18} color="#7c3aed" />
+            <ListChecks size={18} color="var(--purple-text)" />
           </div>
 
           <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: 8 }}>
             {followUps}
           </div>
 
-          <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
             Total sales recommendations
           </div>
 
@@ -373,7 +373,7 @@ export default function CustomerFeedbackPage() {
         >
           <MessageSquareText
             size={38}
-            color="#94a3b8"
+            color="var(--text-subtle)"
             style={{ margin: '0 auto 0.8rem' }}
           />
 
@@ -381,7 +381,7 @@ export default function CustomerFeedbackPage() {
             No call analyses yet
           </h2>
 
-          <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             Open a lead, paste its call transcript, and click Analyze with AI.
             The results will appear here automatically.
           </p>
@@ -407,7 +407,7 @@ export default function CustomerFeedbackPage() {
                   gap: 8,
                 }}
               >
-                <TrendingUp size={18} color="#059669" />
+                <TrendingUp size={18} color="var(--success-text)" />
                 Repeated positive feedback
               </h2>
 
@@ -416,14 +416,14 @@ export default function CustomerFeedbackPage() {
                   <div key={item.text} style={recommendationRowStyle}>
                     <span style={itemTextStyle}>{item.text}</span>
                     <strong
-                      style={{ color: '#047857', whiteSpace: 'nowrap' }}
+                      style={{ color: 'var(--success-text-dark)', whiteSpace: 'nowrap' }}
                     >
                       {item.count}
                     </strong>
                   </div>
                 ))
               ) : (
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   No positive feedback points found yet.
                 </p>
               )}
@@ -439,7 +439,7 @@ export default function CustomerFeedbackPage() {
                   gap: 8,
                 }}
               >
-                <AlertTriangle size={18} color="#ea580c" />
+                <AlertTriangle size={18} color="var(--warning-text)" />
                 Repeated concerns
               </h2>
 
@@ -448,14 +448,14 @@ export default function CustomerFeedbackPage() {
                   <div key={item.text} style={recommendationRowStyle}>
                     <span style={itemTextStyle}>{item.text}</span>
                     <strong
-                      style={{ color: '#c2410c', whiteSpace: 'nowrap' }}
+                      style={{ color: 'var(--warning-text)', whiteSpace: 'nowrap' }}
                     >
                       {item.count}
                     </strong>
                   </div>
                 ))
               ) : (
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   No concerns found yet.
                 </p>
               )}
@@ -471,13 +471,13 @@ export default function CustomerFeedbackPage() {
                   gap: 8,
                 }}
               >
-                <Lightbulb size={18} color="#7c3aed" />
+                <Lightbulb size={18} color="var(--purple-text)" />
                 Common sales recommendations
                 {improvementItems.length > 0 && (
                   <span
                     style={{
                       marginLeft: 'auto',
-                      color: '#64748b',
+                      color: 'var(--text-muted)',
                       fontSize: '0.75rem',
                       fontWeight: 500,
                     }}
@@ -495,7 +495,7 @@ export default function CustomerFeedbackPage() {
 
                       <strong
                         style={{
-                          color: '#6d28d9',
+                          color: 'var(--purple-text)',
                           whiteSpace: 'nowrap',
                           flexShrink: 0,
                         }}
@@ -507,7 +507,7 @@ export default function CustomerFeedbackPage() {
                   ))}
                 </div>
               ) : (
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   No sales recommendations found yet.
                 </p>
               )}
@@ -547,10 +547,10 @@ export default function CustomerFeedbackPage() {
                   onChange={(event) => setSelectedProduct(event.target.value)}
                   style={{
                     padding: '0.55rem 0.65rem',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid var(--border-strong)',
                     borderRadius: 9,
-                    background: '#fff',
-                    color: '#334155',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-body)',
                   }}
                   aria-label="Filter by product"
                 >
@@ -566,13 +566,14 @@ export default function CustomerFeedbackPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--bg-card)',
                     borderRadius: 9,
                     padding: '0.45rem 0.65rem',
                     minWidth: 240,
                   }}
                 >
-                  <Search size={15} color="#64748b" />
+                  <Search size={15} color="var(--text-muted)" />
 
                   <input
                     value={search}
@@ -582,6 +583,8 @@ export default function CustomerFeedbackPage() {
                       border: 0,
                       outline: 0,
                       width: '100%',
+                      background: 'transparent',
+                      color: 'var(--text-main)',
                     }}
                   />
                 </label>
@@ -598,8 +601,8 @@ export default function CustomerFeedbackPage() {
               >
                 <thead
                   style={{
-                    background: '#f8fafc',
-                    color: '#64748b',
+                    background: 'var(--surface-soft)',
+                    color: 'var(--text-muted)',
                     textAlign: 'left',
                   }}
                 >
@@ -616,8 +619,8 @@ export default function CustomerFeedbackPage() {
                         key={label}
                         style={{
                           padding: '0.75rem 1rem',
-                          borderTop: '1px solid #e2e8f0',
-                          borderBottom: '1px solid #e2e8f0',
+                          borderTop: '1px solid var(--border-default)',
+                          borderBottom: '1px solid var(--border-default)',
                         }}
                       >
                         {label}
@@ -632,12 +635,12 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           minWidth: 145,
                         }}
                       >
                         <strong>{record.leadName || 'Unknown customer'}</strong>
-                        <div style={{ color: '#64748b', marginTop: 3 }}>
+                        <div style={{ color: 'var(--text-muted)', marginTop: 3 }}>
                           {record.company || 'Company not provided'}
                         </div>
                       </td>
@@ -645,7 +648,7 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           minWidth: 140,
                         }}
                       >
@@ -655,7 +658,7 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -667,7 +670,7 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           minWidth: 260,
                         }}
                       >
@@ -677,7 +680,7 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           minWidth: 260,
                         }}
                       >
@@ -697,7 +700,7 @@ export default function CustomerFeedbackPage() {
                       <td
                         style={{
                           padding: '0.9rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--border-default)',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -711,18 +714,18 @@ export default function CustomerFeedbackPage() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 6,
-                              border: '1px solid #fecaca',
+                              border: '1px solid var(--danger-border)',
                               borderRadius: 8,
                               padding: '0.45rem 0.6rem',
-                              background: '#fff',
-                              color: '#b91c1c',
+                              background: 'var(--bg-card)',
+                              color: 'var(--danger-text-dark)',
                               cursor: 'pointer',
                             }}
                           >
                             <Trash2 size={14} /> Delete
                           </button>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>—</span>
+                          <span style={{ color: 'var(--text-subtle)', fontSize: '0.85rem' }}>—</span>
                         )}
                       </td>
                     </tr>
@@ -735,7 +738,7 @@ export default function CustomerFeedbackPage() {
                         style={{
                           padding: '1.5rem',
                           textAlign: 'center',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                         }}
                       >
                         No calls match this search.
@@ -768,11 +771,11 @@ export default function CustomerFeedbackPage() {
             <h2 id="delete-analysis-title" style={{ fontSize: '1.1rem', marginBottom: 8 }}>
               Are you sure you want to delete this record?
             </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
               This record will be completely deleted from the database. This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-              <button type="button" onClick={() => setDeleteTarget(null)} style={{ padding: '0.6rem 0.9rem', border: '1px solid #cbd5e1', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setDeleteTarget(null)} style={{ padding: '0.6rem 0.9rem', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--bg-card)', color: 'var(--text-body)', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button type="button" onClick={handleDeleteOne} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
@@ -802,11 +805,11 @@ export default function CustomerFeedbackPage() {
             <h2 id="clear-analyses-title" style={{ fontSize: '1.1rem', marginBottom: 8 }}>
               Are you sure you want to delete all records?
             </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
               All {rbacFilteredAnalyses.length} records will be completely deleted from the database. This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-              <button type="button" onClick={() => setShowClearConfirmation(false)} style={{ padding: '0.6rem 0.9rem', border: '1px solid #cbd5e1', borderRadius: 8, background: '#fff', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setShowClearConfirmation(false)} style={{ padding: '0.6rem 0.9rem', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--bg-card)', color: 'var(--text-body)', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button type="button" onClick={handleClearAll} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.6rem 0.9rem', border: '1px solid #b91c1c', borderRadius: 8, background: '#b91c1c', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>

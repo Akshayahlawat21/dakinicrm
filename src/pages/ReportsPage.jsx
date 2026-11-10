@@ -29,17 +29,17 @@ function StatCard({ label, value, hint, icon: Icon }) {
   return (
     <div className="crm-card" style={{ padding: '1rem 1.25rem', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>{label}</span>
-        {Icon && <Icon size={18} color="#2563eb" />}
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>{label}</span>
+        {Icon && <Icon size={18} color="var(--primary)" />}
       </div>
-      <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: 800, marginTop: '0.45rem', overflowWrap: 'anywhere' }}>{value}</div>
-      {hint && <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: 4 }}>{hint}</div>}
+      <div style={{ color: 'var(--text-main)', fontSize: '1.5rem', fontWeight: 800, marginTop: '0.45rem', overflowWrap: 'anywhere' }}>{value}</div>
+      {hint && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 4 }}>{hint}</div>}
     </div>
   );
 }
 
 function EmptyState({ children = 'No records found for this organization and period.' }) {
-  return <div style={{ padding: '1.5rem 1rem', color: '#64748b', textAlign: 'center', fontSize: '0.875rem' }}>{children}</div>;
+  return <div style={{ padding: '1.5rem 1rem', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.875rem' }}>{children}</div>;
 }
 
 export default function ReportsPage() {
@@ -132,10 +132,10 @@ export default function ReportsPage() {
     : money(overview.closed_won_revenue, overview.closed_won_currency || 'USD');
   const tabStyle = (tab) => ({
     padding: '0.65rem 1rem',
-    border: '1px solid #e2e8f0',
+    border: '1px solid var(--border-default)',
     borderRadius: 8,
-    background: activeReportTab === tab ? '#eff6ff' : '#fff',
-    color: activeReportTab === tab ? '#1d4ed8' : '#475569',
+    background: activeReportTab === tab ? 'var(--primary-light)' : 'var(--bg-card)',
+    color: activeReportTab === tab ? 'var(--primary-dark)' : 'var(--text-body)',
     fontWeight: activeReportTab === tab ? 800 : 600,
     cursor: 'pointer'
   });
@@ -144,8 +144,8 @@ export default function ReportsPage() {
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Reports & Pipeline Intelligence</h1>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 6 }}>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Reports & Pipeline Intelligence</h1>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 6 }}>
             {isOwner
               ? 'Database-backed overall company reports from all leads, contacts, deals, activities, and pipelines.'
               : isManager
@@ -171,8 +171,8 @@ export default function ReportsPage() {
 
       {/* Role-Based Scope Indicator Banner */}
       <div style={{
-        background: isOwner ? 'linear-gradient(90deg, #eff6ff 0%, #ffffff 100%)' : isManager ? 'linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%)' : 'linear-gradient(90deg, #fffbeb 0%, #ffffff 100%)',
-        border: `1px solid ${isOwner ? '#bfdbfe' : isManager ? '#a7f3d0' : '#fde68a'}`,
+        background: isOwner ? 'linear-gradient(90deg, var(--primary-light) 0%, var(--bg-card) 100%)' : isManager ? 'linear-gradient(90deg, var(--success-bg) 0%, var(--bg-card) 100%)' : 'linear-gradient(90deg, var(--warning-bg) 0%, var(--bg-card) 100%)',
+        border: `1px solid ${isOwner ? 'var(--primary-subtle)' : isManager ? 'var(--success-border)' : 'var(--warning-border)'}`,
         borderRadius: 12,
         padding: '0.85rem 1.25rem',
         marginBottom: '1.25rem',
@@ -197,10 +197,10 @@ export default function ReportsPage() {
             {isOwner ? '👑' : isManager ? '👥' : '👤'}
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '0.925rem', color: '#0f172a' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.925rem', color: 'var(--text-main)' }}>
               {isOwner ? 'Overall Organization Records' : isManager ? 'Managed Team & Personal Records' : 'Personal Assigned Records'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: 2 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginTop: 2 }}>
               {isOwner
                 ? `Displaying overall company records from all leads, contacts, deals, activities, and pipelines across all teams (User: ${currentUser?.name || 'Owner'})`
                 : isManager
@@ -214,9 +214,9 @@ export default function ReportsPage() {
         </span>
       </div>
 
-      {error && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.8125rem' }}><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />{error}</div>}
-      {exportError && <div role="alert" style={{ marginBottom: '1rem', color: '#991b1b', fontSize: '0.8125rem' }}>{exportError}</div>}
-      {loading && <div aria-live="polite" style={{ color: '#64748b', marginBottom: '0.75rem', fontSize: '0.8125rem' }}>Loading analytics from Layer 9…</div>}
+      {error && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid var(--danger-border)', borderRadius: 8, background: 'var(--danger-bg)', color: 'var(--danger-text-dark)', fontSize: '0.8125rem' }}><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />{error}</div>}
+      {exportError && <div role="alert" style={{ marginBottom: '1rem', color: 'var(--danger-text-dark)', fontSize: '0.8125rem' }}>{exportError}</div>}
+      {loading && <div aria-live="polite" style={{ color: 'var(--text-muted)', marginBottom: '0.75rem', fontSize: '0.8125rem' }}>Loading analytics from Layer 9…</div>}
 
       <div className="tab-group" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
         {['Sales', 'Leads', 'Activity', 'Team'].map((tab) => <button key={tab} type="button" style={tabStyle(tab)} onClick={() => setActiveReportTab(tab)}>{tab} Performance</button>)}
@@ -243,7 +243,7 @@ export default function ReportsPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.15fr)', gap: '1.25rem' }}>
           <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Lead Source Distribution</h3><p className="chart-card-subtitle">Counts and share by stored lead source</p></div></div><LeadSourceDonutChart data={reports.sources.data || []} totalLeads={reports.sources.total_leads} /></div>
-          <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Commercial Conversion Funnel</h3><p className="chart-card-subtitle">Counts based on stored lead states and conversion events</p></div></div><ConversionFunnelChart data={reports.funnel.data || []} /><p style={{ marginTop: '0.75rem', color: '#64748b', fontSize: '0.7rem' }}>{reports.funnel.definitions?.mql_sql || 'Funnel stage availability depends on lead status values configured in the CRM.'}</p></div>
+          <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Commercial Conversion Funnel</h3><p className="chart-card-subtitle">Counts based on stored lead states and conversion events</p></div></div><ConversionFunnelChart data={reports.funnel.data || []} /><p style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.7rem' }}>{reports.funnel.definitions?.mql_sql || 'Funnel stage availability depends on lead status values configured in the CRM.'}</p></div>
         </div>
       </>}
 
@@ -257,7 +257,7 @@ export default function ReportsPage() {
           <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Activities by Type</h3><p className="chart-card-subtitle">Calls, meetings, tasks, emails and other records</p></div></div>
             {reports.activity?.by_type?.length ? reports.activity.by_type.map((item) => {
               const max = Math.max(1, ...reports.activity.by_type.map((v) => v.count));
-              return <div key={item.type} style={{ marginBottom: '0.85rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}><span>{item.type}</span><strong>{item.count}</strong></div><div style={{ height: 8, borderRadius: 6, background: '#f1f5f9' }}><div style={{ height: 8, width: `${item.count / max * 100}%`, background: '#2563eb', borderRadius: 6 }} /></div></div>;
+              return <div key={item.type} style={{ marginBottom: '0.85rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}><span>{item.type}</span><strong>{item.count}</strong></div><div style={{ height: 8, borderRadius: 6, background: 'var(--surface-alt)' }}><div style={{ height: 8, width: `${item.count / max * 100}%`, background: 'var(--primary)', borderRadius: 6 }} /></div></div>;
             }) : <EmptyState>No activity records for this period.</EmptyState>}
           </div>
           <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Activity by Owner</h3><p className="chart-card-subtitle">Assigned and unassigned activity counts</p></div></div>
@@ -273,8 +273,8 @@ export default function ReportsPage() {
           <StatCard label="Target pace" value={(reports.pace.data?.length || 0) > 1 ? 'Multiple currencies' : firstPace?.attainment_percent == null ? '—' : `${firstPace.attainment_percent}%`} hint={(reports.pace.data?.length || 0) > 1 ? 'Currency groups are kept separate' : firstPace?.ahead_or_behind == null ? 'No target available' : `${money(firstPace.ahead_or_behind, firstPace.currency || 'USD')} vs linear pace`} icon={TrendingUp} />
         </div>
         <div className="crm-card"><div className="chart-card-header"><div><h3 className="chart-card-title">Quota Leaderboard</h3><p className="chart-card-subtitle">Won revenue, configured targets and open pipeline by owner</p></div></div>
-          {reports.quota.data?.length ? <div style={{ overflowX: 'auto' }}><table className="crm-table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Target</th><th>Won Revenue</th><th>Deals Won</th><th>Pipeline</th><th>Attainment</th></tr></thead><tbody>{reports.quota.data.map((rep, index) => <tr key={`${rep.user_id}-${rep.currency}`}><td>#{index + 1}</td><td>{rep.name}</td><td>{money(rep.target_amount, rep.currency)}</td><td>{money(rep.won_revenue, rep.currency)}</td><td>{rep.deals_won}</td><td>{money(rep.open_pipeline_value, rep.currency)}</td><td><strong>{rep.attainment_percent == null ? '—' : `${rep.attainment_percent}%`}</strong><div style={{ height: 5, background: '#e2e8f0', borderRadius: 4, marginTop: 5, minWidth: 60 }}><div style={{ height: 5, width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, background: '#2563eb', borderRadius: 4 }} /></div></td></tr>)}</tbody></table></div> : <EmptyState>No matching sales targets found. Add active sales target records for this organization to populate the leaderboard.</EmptyState>}
-          {reports.quota.note && <p style={{ marginTop: 10, fontSize: '0.72rem', color: '#64748b' }}>{reports.quota.note}</p>}
+          {reports.quota.data?.length ? <div style={{ overflowX: 'auto' }}><table className="crm-table"><thead><tr><th>Rank</th><th>Salesperson</th><th>Target</th><th>Won Revenue</th><th>Deals Won</th><th>Pipeline</th><th>Attainment</th></tr></thead><tbody>{reports.quota.data.map((rep, index) => <tr key={`${rep.user_id}-${rep.currency}`}><td>#{index + 1}</td><td>{rep.name}</td><td>{money(rep.target_amount, rep.currency)}</td><td>{money(rep.won_revenue, rep.currency)}</td><td>{rep.deals_won}</td><td>{money(rep.open_pipeline_value, rep.currency)}</td><td><strong>{rep.attainment_percent == null ? '—' : `${rep.attainment_percent}%`}</strong><div style={{ height: 5, background: 'var(--border-default)', borderRadius: 4, marginTop: 5, minWidth: 60 }}><div style={{ height: 5, width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, background: 'var(--primary)', borderRadius: 4 }} /></div></td></tr>)}</tbody></table></div> : <EmptyState>No matching sales targets found. Add active sales target records for this organization to populate the leaderboard.</EmptyState>}
+          {reports.quota.note && <p style={{ marginTop: 10, fontSize: '0.72rem', color: 'var(--text-muted)' }}>{reports.quota.note}</p>}
         </div>
       </>}
     </div>

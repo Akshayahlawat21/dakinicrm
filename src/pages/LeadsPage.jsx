@@ -337,21 +337,21 @@ export default function LeadsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Leads
             </h1>
             <span className="badge badge-blue">
               {totalEffectiveCount.toLocaleString()} total
             </span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Track, score and convert prospective accounts into pipeline revenue
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {/* View switcher */}
-          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 3, border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', background: 'var(--surface-alt)', borderRadius: 8, padding: 3, border: '1px solid var(--border-default)' }}>
             <button
               onClick={() => setViewMode('list')}
               style={{
@@ -362,8 +362,8 @@ export default function LeadsPage() {
                 borderRadius: 6,
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                background: viewMode === 'list' ? '#ffffff' : 'transparent',
-                color: viewMode === 'list' ? '#2563eb' : '#64748b',
+                background: viewMode === 'list' ? 'var(--bg-card)' : 'transparent',
+                color: viewMode === 'list' ? 'var(--primary)' : 'var(--text-muted)',
                 boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
               }}
             >
@@ -380,8 +380,8 @@ export default function LeadsPage() {
                 borderRadius: 6,
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                background: viewMode === 'board' ? '#ffffff' : 'transparent',
-                color: viewMode === 'board' ? '#2563eb' : '#64748b',
+                background: viewMode === 'board' ? 'var(--bg-card)' : 'transparent',
+                color: viewMode === 'board' ? 'var(--primary)' : 'var(--text-muted)',
                 boxShadow: viewMode === 'board' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
               }}
             >
@@ -410,9 +410,9 @@ export default function LeadsPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              borderColor: '#bbf7d0',
-              background: '#f0fdf4',
-              color: '#15803d',
+              borderColor: 'var(--success-border)',
+              background: 'var(--success-bg)',
+              color: 'var(--success-text-dark)',
             }}
           >
             <span>📊 Import History</span>
@@ -509,10 +509,10 @@ export default function LeadsPage() {
         <div
           style={{
             padding: '0.65rem 1rem',
-            background: importNotification.type === 'error' ? '#fef2f2' : '#ecfdf5',
-            border: `1px solid ${importNotification.type === 'error' ? '#fecaca' : '#a7f3d0'}`,
+            background: importNotification.type === 'error' ? 'var(--danger-bg)' : 'var(--success-bg)',
+            border: `1px solid ${importNotification.type === 'error' ? 'var(--danger-border)' : 'var(--success-border)'}`,
             borderRadius: 8,
-            color: importNotification.type === 'error' ? '#991b1b' : '#065f46',
+            color: importNotification.type === 'error' ? 'var(--danger-text-dark)' : 'var(--success-text-dark)',
             fontSize: '0.8125rem',
             fontWeight: 600,
             marginBottom: '1rem',
@@ -554,7 +554,7 @@ export default function LeadsPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: importNotification.type === 'error' ? '#991b1b' : '#065f46',
+                color: importNotification.type === 'error' ? 'var(--danger-text-dark)' : 'var(--success-text-dark)',
                 cursor: 'pointer',
                 fontWeight: 700,
                 fontSize: '0.9rem',
@@ -697,8 +697,8 @@ export default function LeadsPage() {
                           {(lead.name || 'Lead').split(' ').filter(Boolean).map((n) => n[0] || '').join('')}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a', textDecoration: 'none' }} className="lead-name-link">{lead.name}</div>
-                          {lead.title ? <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.title}</div> : null}
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none' }} className="lead-name-link">{lead.name}</div>
+                          {lead.title ? <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lead.title}</div> : null}
                         </div>
                       </div>
                     </td>
@@ -710,9 +710,9 @@ export default function LeadsPage() {
                             fontWeight: 600,
                             padding: '0.2rem 0.55rem',
                             borderRadius: 6,
-                            background: '#eff6ff',
-                            color: '#1d4ed8',
-                            border: '1px solid #bfdbfe',
+                            background: 'var(--primary-light)',
+                            color: 'var(--primary-dark)',
+                            border: '1px solid rgba(59, 130, 246, 0.28)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: 4,
@@ -726,7 +726,7 @@ export default function LeadsPage() {
                           📦 {lead.interested_product}
                         </span>
                       ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>—</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>—</span>
                       )}
                     </td>
                     <td>
@@ -737,21 +737,21 @@ export default function LeadsPage() {
                           padding: '0.2rem 0.55rem',
                           borderRadius: 6,
                           background:
-                            (lead.source || '').toLowerCase().includes('linkedin') ? '#eff6ff' :
-                            (lead.source || '').toLowerCase().includes('google') ? '#fef2f2' :
-                            (lead.source || '').toLowerCase().includes('referral') ? '#f0fdf4' :
-                            '#f8fafc',
+                            (lead.source || '').toLowerCase().includes('linkedin') ? 'var(--primary-light)' :
+                            (lead.source || '').toLowerCase().includes('google') ? 'var(--danger-bg)' :
+                            (lead.source || '').toLowerCase().includes('referral') ? 'var(--success-bg)' :
+                            'var(--surface-soft)',
                           color:
-                            (lead.source || '').toLowerCase().includes('linkedin') ? '#1d4ed8' :
-                            (lead.source || '').toLowerCase().includes('google') ? '#b91c1c' :
-                            (lead.source || '').toLowerCase().includes('referral') ? '#15803d' :
-                            '#475569',
+                            (lead.source || '').toLowerCase().includes('linkedin') ? 'var(--primary-dark)' :
+                            (lead.source || '').toLowerCase().includes('google') ? 'var(--danger-text-dark)' :
+                            (lead.source || '').toLowerCase().includes('referral') ? 'var(--success-text-dark)' :
+                            'var(--text-body)',
                           border: '1px solid',
                           borderColor:
-                            (lead.source || '').toLowerCase().includes('linkedin') ? '#bfdbfe' :
-                            (lead.source || '').toLowerCase().includes('google') ? '#fecaca' :
-                            (lead.source || '').toLowerCase().includes('referral') ? '#bbf7d0' :
-                            '#e2e8f0',
+                            (lead.source || '').toLowerCase().includes('linkedin') ? 'rgba(59, 130, 246, 0.28)' :
+                            (lead.source || '').toLowerCase().includes('google') ? 'var(--danger-border)' :
+                            (lead.source || '').toLowerCase().includes('referral') ? 'var(--success-border)' :
+                            'var(--border-default)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 4,
@@ -762,8 +762,8 @@ export default function LeadsPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#334155' }}>{lead.company}</div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{lead.industry}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-body)' }}>{lead.company}</div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{lead.industry}</div>
                     </td>
                     <td>
                       <span className={`badge ${
@@ -777,7 +777,7 @@ export default function LeadsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <div style={{ width: 60, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ width: 60, height: 6, background: 'var(--border-default)', borderRadius: 3, overflow: 'hidden' }}>
                           <div
                             style={{
                               width: `${Math.min(100, (lead.score / 130) * 100)}%`,
@@ -787,14 +787,14 @@ export default function LeadsPage() {
                             }}
                           />
                         </div>
-                        <span style={{ fontWeight: 800, color: lead.score >= 90 ? '#2563eb' : '#0f172a' }}>
+                        <span style={{ fontWeight: 800, color: lead.score >= 90 ? 'var(--primary)' : 'var(--text-main)' }}>
                           {lead.score}
                         </span>
                       </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.8125rem', color: 'var(--text-body)', fontWeight: 600 }}>
                           {lead.owner}
                         </span>
                         {(isOwner || isManager) && (
@@ -809,7 +809,7 @@ export default function LeadsPage() {
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#64748b',
+                              color: 'var(--text-muted)',
                               cursor: 'pointer',
                               padding: '2px 4px',
                               borderRadius: 4,
@@ -821,13 +821,13 @@ export default function LeadsPage() {
                             onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
                             onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
                           >
-                            <UserCheck size={13} color="#2563eb" />
+                            <UserCheck size={13} color="var(--primary)" />
                           </button>
                         )}
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.lastContact}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lead.lastContact}</span>
                     </td>
                     <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
@@ -884,16 +884,16 @@ export default function LeadsPage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span className="badge badge-blue">Score: {lead.score}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{lead.source}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lead.source}</span>
                       </div>
-                      <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a' }}>{lead.name}</h4>
-                      <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.35rem' }}>{lead.company}</div>
+                      <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-main)' }}>{lead.name}</h4>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginBottom: '0.35rem' }}>{lead.company}</div>
                       {lead.interested_product && (
-                        <div style={{ fontSize: '0.6875rem', color: '#1d4ed8', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                           <span>📦 {lead.interested_product}</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         <span>{lead.owner}</span>
                         <ChevronRight size={14} />
                       </div>
@@ -916,20 +916,20 @@ export default function LeadsPage() {
           gap: '1rem',
           marginTop: '1.25rem',
           padding: '0.85rem 1.25rem',
-          background: '#ffffff',
+          background: 'var(--bg-card)',
           borderRadius: 10,
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border-default)',
           boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: '#64748b' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
           <span>
-            Showing <strong style={{ color: '#0f172a' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
-            <strong style={{ color: '#0f172a' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
-            <strong style={{ color: '#0f172a' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
+            Showing <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
+            <strong style={{ color: 'var(--text-main)' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
+            <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
           </span>
 
-          <span style={{ color: '#cbd5e1' }}>|</span>
+          <span style={{ color: 'var(--border-strong)' }}>|</span>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span>Rows per page:</span>
@@ -943,9 +943,9 @@ export default function LeadsPage() {
                 fontSize: '0.8125rem',
                 padding: '0.2rem 0.5rem',
                 borderRadius: 6,
-                border: '1px solid #cbd5e1',
-                background: '#f8fafc',
-                color: '#334155',
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-soft)',
+                color: 'var(--text-body)',
                 cursor: 'pointer',
               }}
             >
@@ -977,7 +977,7 @@ export default function LeadsPage() {
 
           {getPageNumbers(page, totalPages).map((p, idx) =>
             p === '...' ? (
-              <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: '#94a3b8' }}>
+              <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: 'var(--text-subtle)' }}>
                 …
               </span>
             ) : (
@@ -992,9 +992,9 @@ export default function LeadsPage() {
                   fontSize: '0.8125rem',
                   fontWeight: page === p ? 700 : 500,
                   border: '1px solid',
-                  borderColor: page === p ? '#2563eb' : '#e2e8f0',
-                  background: page === p ? '#2563eb' : '#ffffff',
-                  color: page === p ? '#ffffff' : '#334155',
+                  borderColor: page === p ? '#2563eb' : 'var(--border-default)',
+                  background: page === p ? '#2563eb' : 'var(--bg-card)',
+                  color: page === p ? '#ffffff' : 'var(--text-body)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
@@ -1035,8 +1035,8 @@ export default function LeadsPage() {
             bottom: 0,
             width: 380,
             maxWidth: 'calc(100vw - 380px)',
-            background: '#ffffff',
-            borderLeft: '1px solid #e2e8f0',
+            background: 'var(--bg-card)',
+            borderLeft: '1px solid var(--border-default)',
             boxShadow: '-4px 0 20px rgba(0,0,0,0.08)',
             zIndex: 45,
             display: 'flex',
@@ -1045,9 +1045,9 @@ export default function LeadsPage() {
             animation: 'slideLeft 0.2s ease'
           }}
         >
-          <div style={{ padding: '1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>Lead Preview</h3>
-            <button onClick={() => setQuickPreviewLead(null)} style={{ color: '#64748b' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>Lead Preview</h3>
+            <button onClick={() => setQuickPreviewLead(null)} style={{ color: 'var(--text-muted)' }}>
               ✕
             </button>
           </div>
@@ -1057,49 +1057,49 @@ export default function LeadsPage() {
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#fff', fontSize: '1.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem auto' }}>
                 {(quickPreviewLead?.name || 'Lead').split(' ').filter(Boolean).map(n => n[0] || '').join('')}
               </div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>{quickPreviewLead.name}</h2>
-              {quickPreviewLead.title ? <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>{quickPreviewLead.title}</div> : null}
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>{quickPreviewLead.name}</h2>
+              {quickPreviewLead.title ? <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{quickPreviewLead.title}</div> : null}
               <div style={{ marginTop: '0.5rem' }}>
                 <span className="badge badge-blue">Lead Score: {quickPreviewLead.score}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8125rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8125rem', borderTop: '1px solid var(--border-default)', paddingTop: '1rem' }}>
               <div>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Company</span>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.company}</div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Company</span>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{quickPreviewLead.company}</div>
               </div>
               {quickPreviewLead.interested_product && (
                 <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Interested Product</span>
-                  <div style={{ fontWeight: 600, color: '#1d4ed8' }}>📦 {quickPreviewLead.interested_product}</div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Interested Product</span>
+                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>📦 {quickPreviewLead.interested_product}</div>
                 </div>
               )}
               <div>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Email</span>
-                <div style={{ fontWeight: 600, color: '#2563eb' }}>{quickPreviewLead.email}</div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Email</span>
+                <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{quickPreviewLead.email}</div>
               </div>
               <div>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Phone</span>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.phone}</div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Phone</span>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{quickPreviewLead.phone}</div>
               </div>
               <div>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Owner</span>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.owner}</div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Owner</span>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{quickPreviewLead.owner}</div>
               </div>
               <div>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Lead Source</span>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{quickPreviewLead.source || 'Website'}</div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Lead Source</span>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{quickPreviewLead.source || 'Website'}</div>
               </div>
               {quickPreviewLead.website && (
                 <div>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Website</span>
-                  <div style={{ fontWeight: 600, color: '#2563eb' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Website</span>
+                  <div style={{ fontWeight: 600, color: 'var(--primary)' }}>
                     <a
                       href={quickPreviewLead.website.startsWith('http') ? quickPreviewLead.website : `https://${quickPreviewLead.website}`}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ color: '#2563eb', textDecoration: 'none' }}
+                      style={{ color: 'var(--primary)', textDecoration: 'none' }}
                     >
                       {quickPreviewLead.website}
                     </a>
@@ -1109,7 +1109,7 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem' }}>
+          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '0.75rem' }}>
             <button
               className="btn btn-secondary"
               style={{ flex: 1 }}
@@ -1142,8 +1142,8 @@ export default function LeadsPage() {
             bottom: 0,
             width: 500,
             maxWidth: 'calc(100vw - 380px)',
-            background: '#ffffff',
-            borderLeft: '1px solid #e2e8f0',
+            background: 'var(--bg-card)',
+            borderLeft: '1px solid var(--border-default)',
             boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
             zIndex: 46,
             display: 'flex',
@@ -1156,17 +1156,17 @@ export default function LeadsPage() {
           <div
             style={{
               padding: '1.15rem 1.25rem',
-              borderBottom: '1px solid #e2e8f0',
+              borderBottom: '1px solid var(--border-default)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#f8fafc',
+              background: 'var(--surface-soft)',
             }}
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1.15rem' }}>📊</span>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                   Bulk Import Audit
                 </h3>
               </div>
@@ -1180,9 +1180,9 @@ export default function LeadsPage() {
                       fontWeight: 700,
                       borderRadius: 6,
                       border: '1px solid',
-                      borderColor: drawerMode === 'details' ? '#2563eb' : '#cbd5e1',
-                      background: drawerMode === 'details' ? '#eff6ff' : '#ffffff',
-                      color: drawerMode === 'details' ? '#2563eb' : '#64748b',
+                      borderColor: drawerMode === 'details' ? 'var(--primary)' : 'var(--border-strong)',
+                      background: drawerMode === 'details' ? 'var(--primary-light)' : 'var(--bg-card)',
+                      color: drawerMode === 'details' ? 'var(--primary)' : 'var(--text-muted)',
                       cursor: 'pointer',
                     }}
                   >
@@ -1200,9 +1200,9 @@ export default function LeadsPage() {
                     fontWeight: 700,
                     borderRadius: 6,
                     border: '1px solid',
-                    borderColor: drawerMode === 'history' ? '#2563eb' : '#cbd5e1',
-                    background: drawerMode === 'history' ? '#eff6ff' : '#ffffff',
-                    color: drawerMode === 'history' ? '#2563eb' : '#64748b',
+                    borderColor: drawerMode === 'history' ? 'var(--primary)' : 'var(--border-strong)',
+                    background: drawerMode === 'history' ? 'var(--primary-light)' : 'var(--bg-card)',
+                    color: drawerMode === 'history' ? 'var(--primary)' : 'var(--text-muted)',
                     cursor: 'pointer',
                   }}
                 >
@@ -1215,7 +1215,7 @@ export default function LeadsPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#64748b',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
                 fontSize: '1.2rem',
                 fontWeight: 700,
@@ -1234,10 +1234,10 @@ export default function LeadsPage() {
                 style={{
                   marginBottom: '1rem',
                   padding: '0.5rem 0.75rem',
-                  background: '#f1f5f9',
+                  background: 'var(--surface-alt)',
                   borderRadius: 6,
                   fontSize: '0.75rem',
-                  color: '#475569',
+                  color: 'var(--text-body)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -1256,7 +1256,7 @@ export default function LeadsPage() {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#2563eb',
+                    color: 'var(--primary)',
                     fontSize: '0.75rem',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -1267,13 +1267,13 @@ export default function LeadsPage() {
               </div>
 
               {isLoadingHistory ? (
-                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
                   ⏳ Loading persistent import history...
                 </div>
               ) : importHistory.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-subtle)' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#475569' }}>No Import Batches Found</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-body)' }}>No Import Batches Found</div>
                   <div style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>
                     Click [↑ Import] on the Leads page to upload your first lead batch.
                   </div>
@@ -1294,8 +1294,8 @@ export default function LeadsPage() {
                       <div
                         key={batch.batch_id}
                         style={{
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--border-default)',
                           borderRadius: 8,
                           padding: '0.9rem',
                           boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -1305,7 +1305,7 @@ export default function LeadsPage() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#0f172a' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--text-main)' }}>
                             📄 {batch.file_name}
                           </span>
                           <span
@@ -1315,16 +1315,16 @@ export default function LeadsPage() {
                               textTransform: 'uppercase',
                               padding: '2px 6px',
                               borderRadius: 4,
-                              background: '#ecfdf5',
-                              color: '#065f46',
+                              background: 'var(--success-bg)',
+                              color: 'var(--success-text-dark)',
                             }}
                           >
                             {batch.status}
                           </span>
                         </div>
 
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>By: <strong style={{ color: '#334155' }}>{batch.user_name}</strong> ({batch.user_role})</span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>By: <strong style={{ color: 'var(--text-body)' }}>{batch.user_name}</strong> ({batch.user_role})</span>
                           <span>{formattedDate}</span>
                         </div>
 
@@ -1334,9 +1334,9 @@ export default function LeadsPage() {
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              background: '#f0fdf4',
-                              color: '#15803d',
-                              border: '1px solid #bbf7d0',
+                              background: 'var(--success-bg)',
+                              color: 'var(--success-text-dark)',
+                              border: '1px solid var(--success-border)',
                               borderRadius: 4,
                               padding: '2px 6px',
                             }}
@@ -1347,9 +1347,9 @@ export default function LeadsPage() {
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              background: '#fffbeb',
-                              color: '#b45309',
-                              border: '1px solid #fde68a',
+                              background: 'var(--warning-bg)',
+                              color: 'var(--warning-text-dark)',
+                              border: '1px solid var(--warning-border)',
                               borderRadius: 4,
                               padding: '2px 6px',
                             }}
@@ -1360,9 +1360,9 @@ export default function LeadsPage() {
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              background: '#fef2f2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca',
+                              background: 'var(--danger-bg)',
+                              color: 'var(--danger-text-dark)',
+                              border: '1px solid var(--danger-border)',
                               borderRadius: 4,
                               padding: '2px 6px',
                             }}
@@ -1372,7 +1372,7 @@ export default function LeadsPage() {
                         </div>
 
                         {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border-default)' }}>
                           <button
                             className="btn btn-secondary btn-sm"
                             onClick={() => {
@@ -1408,9 +1408,9 @@ export default function LeadsPage() {
           {drawerMode === 'details' && importAuditReport && (
             <>
               {/* Stat Cards Overview */}
-              <div style={{ padding: '1.25rem 1.25rem 0.75rem 1.25rem', borderBottom: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.75rem' }}>
-                  Inspecting file: <strong style={{ color: '#0f172a' }}>{importAuditReport.file_name}</strong>
+              <div style={{ padding: '1.25rem 1.25rem 0.75rem 1.25rem', borderBottom: '1px solid var(--border-default)' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  Inspecting file: <strong style={{ color: 'var(--text-main)' }}>{importAuditReport.file_name}</strong>
                   {importAuditReport.user_name && (
                     <span> • Imported by: <strong>{importAuditReport.user_name}</strong></span>
                   )}
@@ -1419,51 +1419,51 @@ export default function LeadsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                   <div
                     style={{
-                      background: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
+                      background: 'var(--success-bg)',
+                      border: '1px solid var(--success-border)',
                       borderRadius: 8,
                       padding: '0.65rem',
                       textAlign: 'center',
                     }}
                   >
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--success-text)' }}>
                       {importAuditReport.inserted_count.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#15803d', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--success-text-dark)', textTransform: 'uppercase' }}>
                       ✓ Inserted
                     </div>
                   </div>
 
                   <div
                     style={{
-                      background: '#fffbeb',
-                      border: '1px solid #fde68a',
+                      background: 'var(--warning-bg)',
+                      border: '1px solid var(--warning-border)',
                       borderRadius: 8,
                       padding: '0.65rem',
                       textAlign: 'center',
                     }}
                   >
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--warning-text)' }}>
                       {importAuditReport.duplicate_count.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#b45309', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--warning-text-dark)', textTransform: 'uppercase' }}>
                       ⚠️ Duplicates
                     </div>
                   </div>
 
                   <div
                     style={{
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
+                      background: 'var(--danger-bg)',
+                      border: '1px solid var(--danger-border)',
                       borderRadius: 8,
                       padding: '0.65rem',
                       textAlign: 'center',
                     }}
                   >
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--danger-text)' }}>
                       {importAuditReport.error_count.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#b91c1c', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--danger-text-dark)', textTransform: 'uppercase' }}>
                       ❌ Errors
                     </div>
                   </div>
@@ -1494,9 +1494,9 @@ export default function LeadsPage() {
                         fontWeight: 600,
                         borderRadius: 6,
                         border: '1px solid',
-                        borderColor: auditFilterTab === t.id ? '#2563eb' : '#e2e8f0',
-                        background: auditFilterTab === t.id ? '#eff6ff' : '#ffffff',
-                        color: auditFilterTab === t.id ? '#2563eb' : '#64748b',
+                        borderColor: auditFilterTab === t.id ? 'var(--primary)' : 'var(--border-default)',
+                        background: auditFilterTab === t.id ? 'var(--primary-light)' : 'var(--bg-card)',
+                        color: auditFilterTab === t.id ? 'var(--primary)' : 'var(--text-muted)',
                         cursor: 'pointer',
                       }}
                     >
@@ -1511,8 +1511,8 @@ export default function LeadsPage() {
                     style={{
                       marginTop: '0.85rem',
                       padding: '0.6rem 0.75rem',
-                      background: '#fffbeb',
-                      border: '1px solid #fde68a',
+                      background: 'var(--warning-bg)',
+                      border: '1px solid var(--warning-border)',
                       borderRadius: 8,
                       display: 'flex',
                       alignItems: 'center',
@@ -1528,7 +1528,7 @@ export default function LeadsPage() {
                         gap: '0.45rem',
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: '#92400e',
+                        color: 'var(--warning-text-dark)',
                         cursor: 'pointer',
                       }}
                     >
@@ -1566,10 +1566,10 @@ export default function LeadsPage() {
               {/* Scrollable Error / Duplicate Diagnostics List */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
                 {(!importAuditReport.error_sample || importAuditReport.error_sample.length === 0) ? (
-                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#16a34a' }}>
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--success-text)' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
                     <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>100% Clean Upload!</div>
-                    <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                       All {importAuditReport.total_rows} rows were successfully inserted without any duplicate or validation issues.
                     </div>
                   </div>
@@ -1598,8 +1598,8 @@ export default function LeadsPage() {
                                   padding: '0.75rem',
                                   borderRadius: 8,
                                   border: '1px solid',
-                                  borderColor: isAllowed ? '#bbf7d0' : isChecked ? '#2563eb' : isDup ? '#fde68a' : '#fecaca',
-                                  background: isAllowed ? '#f0fdf4' : isChecked ? '#eff6ff' : isDup ? '#fffdf7' : '#fffaf0',
+                                  borderColor: isAllowed ? 'var(--success-border)' : isChecked ? 'var(--primary)' : isDup ? 'var(--warning-border)' : 'var(--danger-border)',
+                                  background: isAllowed ? 'var(--success-bg)' : isChecked ? 'var(--primary-light)' : isDup ? 'var(--warning-bg)' : 'var(--danger-bg)',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   gap: '0.35rem',
@@ -1622,13 +1622,13 @@ export default function LeadsPage() {
                                         fontWeight: 800,
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: 4,
-                                        background: isAllowed ? '#dcfce7' : isDup ? '#fef3c7' : '#fee2e2',
-                                        color: isAllowed ? '#15803d' : isDup ? '#92400e' : '#991b1b',
+                                        background: isAllowed ? 'var(--success-bg)' : isDup ? 'var(--warning-bg)' : 'var(--danger-bg)',
+                                        color: isAllowed ? 'var(--success-text-dark)' : isDup ? 'var(--warning-text-dark)' : 'var(--danger-text-dark)',
                                       }}
                                     >
                                       ROW {item.row}
                                     </span>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>
                                       {item.name || '(Missing Name)'}
                                     </span>
                                   </div>
@@ -1637,7 +1637,7 @@ export default function LeadsPage() {
                                       fontSize: '0.625rem',
                                       fontWeight: 700,
                                       textTransform: 'uppercase',
-                                      color: isAllowed ? '#16a34a' : isDup ? '#d97706' : '#dc2626',
+                                      color: isAllowed ? 'var(--success-text)' : isDup ? 'var(--warning-text)' : 'var(--danger-text)',
                                     }}
                                   >
                                     {isAllowed ? '✓ Allowed & Imported' : isDup ? 'Skipped Duplicate' : 'Validation Error'}
@@ -1645,12 +1645,12 @@ export default function LeadsPage() {
                                 </div>
 
                                 {item.email && (
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                    Contact: <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.04)', padding: '1px 4px', borderRadius: 3 }}>{item.email}</code>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    Contact: <code style={{ color: 'var(--text-main)', background: 'var(--surface-alt)', padding: '1px 4px', borderRadius: 3 }}>{item.email}</code>
                                   </div>
                                 )}
 
-                                <div style={{ fontSize: '0.75rem', color: isAllowed ? '#166534' : isDup ? '#78350f' : '#7f1d1d', lineHeight: 1.4 }}>
+                                <div style={{ fontSize: '0.75rem', color: isAllowed ? 'var(--success-text-dark)' : isDup ? 'var(--warning-text-dark)' : 'var(--danger-text-dark)', lineHeight: 1.4 }}>
                                   {item.error}
                                 </div>
                               </div>
@@ -1688,8 +1688,8 @@ export default function LeadsPage() {
           <div
             style={{
               padding: '0.85rem 1.25rem',
-              borderTop: '1px solid #e2e8f0',
-              background: '#f8fafc',
+              borderTop: '1px solid var(--border-default)',
+              background: 'var(--surface-soft)',
               display: 'flex',
               gap: '0.75rem',
             }}

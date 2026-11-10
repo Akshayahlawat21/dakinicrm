@@ -626,11 +626,11 @@ export default function QuickCreateModal() {
       <div className="modal-box" style={{ maxWidth: 640, width: '100%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
               {currentConfig.title}
             </h3>
             {showTypeSelector && (
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2, flexWrap: 'wrap', gap: 2 }}>
+              <div style={{ display: 'flex', background: 'var(--surface-alt)', borderRadius: 8, padding: 2, flexWrap: 'wrap', gap: 2 }}>
                 {['lead', 'deal', 'account', 'contact', 'task', 'campaign'].map((t) => (
                   <button
                     key={t}
@@ -641,8 +641,8 @@ export default function QuickCreateModal() {
                       fontWeight: 700,
                       textTransform: 'capitalize',
                       borderRadius: 6,
-                      background: quickCreateType === t ? '#2563eb' : 'transparent',
-                      color: quickCreateType === t ? '#ffffff' : '#64748b'
+                      background: quickCreateType === t ? 'var(--primary)' : 'transparent',
+                      color: quickCreateType === t ? '#ffffff' : 'var(--text-muted)'
                     }}
                     onClick={() => handleTypeChange(t)}
                   >
@@ -655,7 +655,7 @@ export default function QuickCreateModal() {
           <button
             onClick={() => !isSubmitting && setIsQuickCreateOpen(false)}
             disabled={isSubmitting}
-            style={{ color: '#64748b' }}
+            style={{ color: 'var(--text-muted)' }}
           >
             <X size={20} />
           </button>
@@ -671,20 +671,20 @@ export default function QuickCreateModal() {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.75rem',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
+                  background: 'var(--danger-bg)',
+                  border: '1px solid var(--danger-border)',
                   borderRadius: 8,
                   padding: '0.75rem 1rem',
-                  color: '#991b1b',
+                  color: 'var(--danger-text-dark)',
                   boxShadow: '0 1px 2px rgba(220, 38, 38, 0.05)',
                 }}
               >
-                <AlertCircle size={18} style={{ color: '#dc2626', flexShrink: 0, marginTop: 2 }} />
+                <AlertCircle size={18} style={{ color: 'var(--danger-text)', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#991b1b', marginBottom: 2 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: 'var(--danger-text-dark)', marginBottom: 2 }}>
                     {leadDuplicateWarning || dealDuplicateWarning || accountDuplicateWarning ? 'Duplicate Record Conflict' : 'Validation Error'}
                   </div>
-                  <div style={{ fontSize: '0.8125rem', color: '#b91c1c', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--danger-text)', lineHeight: 1.4 }}>
                     {errorMsg}
                   </div>
                 </div>
@@ -694,7 +694,7 @@ export default function QuickCreateModal() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Lead Name *
                     </label>
                     <input
@@ -708,7 +708,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Company *
                     </label>
                     <input
@@ -725,7 +725,7 @@ export default function QuickCreateModal() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Work Email
                     </label>
                     <input
@@ -751,16 +751,16 @@ export default function QuickCreateModal() {
 
                 {leadDuplicateWarning?.is_cross_sell && (
                   <div style={{
-                    background: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
+                    background: 'var(--success-bg)',
+                    border: '1px solid var(--success-border)',
                     borderRadius: 8,
                     padding: '0.75rem 1rem',
                     display: 'flex',
                     gap: '0.75rem',
                     alignItems: 'flex-start',
                   }}>
-                    <Check size={18} color="#16a34a" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45, color: '#166534' }}>
+                    <Check size={18} color="var(--success-text)" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45, color: 'var(--success-text-dark)' }}>
                       <strong style={{ display: 'block', marginBottom: 2 }}>
                         ✨ Cross-Sell Opportunity Identified
                       </strong>
@@ -774,20 +774,20 @@ export default function QuickCreateModal() {
 
                 {leadDuplicateWarning?.is_duplicate_warning && (
                   <div style={{
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
+                    background: 'var(--warning-bg)',
+                    border: '1px solid var(--warning-border)',
                     borderRadius: 8,
                     padding: '0.75rem 1rem',
                     display: 'flex',
                     gap: '0.75rem',
                     alignItems: 'flex-start',
                   }}>
-                    <AlertCircle size={18} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <AlertCircle size={18} color="var(--warning-text)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45 }}>
-                      <strong style={{ color: '#92400e', display: 'block', marginBottom: 2 }}>
+                      <strong style={{ color: 'var(--warning-text-dark)', display: 'block', marginBottom: 2 }}>
                         Possible Duplicate Lead Detected
                       </strong>
-                      <span style={{ color: '#b45309' }}>
+                      <span style={{ color: 'var(--warning-text)' }}>
                         {leadDuplicateWarning.warning_message}
                       </span>
                       {leadDuplicateWarning.existing_lead_id && (
@@ -800,7 +800,7 @@ export default function QuickCreateModal() {
                             }}
                             style={{
                               fontSize: '0.75rem',
-                              color: '#2563eb',
+                              color: 'var(--primary)',
                               background: 'none',
                               border: 'none',
                               padding: 0,
@@ -818,7 +818,7 @@ export default function QuickCreateModal() {
                         alignItems: 'center',
                         gap: '0.45rem',
                         marginTop: '0.5rem',
-                        color: '#78350f',
+                        color: 'var(--warning-text-dark)',
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}>
@@ -836,16 +836,16 @@ export default function QuickCreateModal() {
 
                 {leadDuplicateWarning?.has_existing_contact && (
                   <div style={{
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
+                    background: 'var(--primary-light)',
+                    border: '1px solid var(--primary-subtle)',
                     borderRadius: 8,
                     padding: '0.65rem 0.85rem',
                     display: 'flex',
                     gap: '0.6rem',
                     alignItems: 'flex-start',
                   }}>
-                    <AlertCircle size={16} color="#2563eb" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <div style={{ fontSize: '0.78125rem', color: '#1e40af', lineHeight: 1.4 }}>
+                    <AlertCircle size={16} color="var(--primary)" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <div style={{ fontSize: '0.78125rem', color: 'var(--primary-dark)', lineHeight: 1.4 }}>
                       <strong>Existing Contact Record:</strong> {leadDuplicateWarning.notice_message}
                     </div>
                   </div>
@@ -853,7 +853,7 @@ export default function QuickCreateModal() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Industry
                     </label>
                     <select name="industry" className="input-field" value={formData.industry} onChange={handleChange}>
@@ -865,7 +865,7 @@ export default function QuickCreateModal() {
                     </select>
                   </div>
                   <div ref={sourceDropdownRef} style={{ position: 'relative' }}>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Lead Source
                     </label>
                     <div style={{ position: 'relative' }}>
@@ -894,7 +894,7 @@ export default function QuickCreateModal() {
                           transform: 'translateY(-50%)',
                           background: 'none',
                           border: 'none',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -921,17 +921,17 @@ export default function QuickCreateModal() {
                           left: 0,
                           right: 0,
                           marginTop: '4px',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--border-strong)',
                           borderRadius: 8,
-                          boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+                          boxShadow: 'var(--shadow-lg)',
                           zIndex: 100,
                           maxHeight: 220,
                           overflowY: 'auto',
                           padding: '0.35rem',
                         }}
                       >
-                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0.35rem 0.6rem 0.2rem 0.6rem' }}>
+                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0.35rem 0.6rem 0.2rem 0.6rem' }}>
                           Select or Type Custom
                         </div>
                         {SOURCE_PRESETS.map((preset) => {
@@ -946,9 +946,9 @@ export default function QuickCreateModal() {
                               style={{
                                 padding: '0.5rem 0.65rem',
                                 fontSize: '0.8125rem',
-                                color: isSelected ? '#2563eb' : '#0f172a',
+                                color: isSelected ? 'var(--primary)' : 'var(--text-main)',
                                 fontWeight: isSelected ? 700 : 500,
-                                background: isSelected ? '#eff6ff' : 'transparent',
+                                background: isSelected ? 'var(--primary-light)' : 'transparent',
                                 borderRadius: 6,
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -957,14 +957,14 @@ export default function QuickCreateModal() {
                                 transition: 'background 0.1s ease',
                               }}
                               onMouseEnter={(e) => {
-                                if (!isSelected) e.currentTarget.style.background = '#f8fafc';
+                                if (!isSelected) e.currentTarget.style.background = 'var(--surface-hover)';
                               }}
                               onMouseLeave={(e) => {
                                 if (!isSelected) e.currentTarget.style.background = 'transparent';
                               }}
                             >
                               <span>{preset}</span>
-                              {isSelected && <Check size={14} color="#2563eb" strokeWidth={2.5} />}
+                              {isSelected && <Check size={14} color="var(--primary)" strokeWidth={2.5} />}
                             </div>
                           );
                         })}
@@ -975,14 +975,14 @@ export default function QuickCreateModal() {
                             <div
                               onClick={() => setIsSourceOpen(false)}
                               style={{
-                                borderTop: '1px solid #f1f5f9',
+                                borderTop: '1px solid var(--border-default)',
                                 marginTop: '0.35rem',
                                 paddingTop: '0.4rem',
                                 padding: '0.45rem 0.65rem',
                                 fontSize: '0.8125rem',
-                                color: '#059669',
+                                color: 'var(--success-text)',
                                 fontWeight: 600,
-                                background: '#ecfdf5',
+                                background: 'var(--success-bg)',
                                 borderRadius: 6,
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -996,11 +996,11 @@ export default function QuickCreateModal() {
 
                         <div
                           style={{
-                            borderTop: '1px solid #f1f5f9',
+                            borderTop: '1px solid var(--border-default)',
                             marginTop: '0.35rem',
                             padding: '0.4rem 0.65rem 0.2rem 0.65rem',
                             fontSize: '0.6875rem',
-                            color: '#64748b',
+                            color: 'var(--text-muted)',
                             fontStyle: 'italic',
                           }}
                         >
@@ -1014,7 +1014,7 @@ export default function QuickCreateModal() {
                 {/* Row 4: Job Title / Role & Interested Product (Placed before Website per user specification) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Job Title / Role
                     </label>
                     <input
@@ -1027,8 +1027,8 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div ref={productDropdownRef} style={{ position: 'relative' }}>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Interested Product <span style={{ color: '#ef4444' }}>*</span>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
+                      Interested Product <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <input
@@ -1063,7 +1063,7 @@ export default function QuickCreateModal() {
                           transform: 'translateY(-50%)',
                           background: 'none',
                           border: 'none',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1090,17 +1090,17 @@ export default function QuickCreateModal() {
                           left: 0,
                           right: 0,
                           marginTop: '4px',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--border-strong)',
                           borderRadius: 8,
-                          boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+                          boxShadow: 'var(--shadow-lg)',
                           zIndex: 110,
                           maxHeight: 230,
                           overflowY: 'auto',
                           padding: '0.35rem',
                         }}
                       >
-                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0.35rem 0.6rem 0.2rem 0.6rem' }}>
+                        <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '0.35rem 0.6rem 0.2rem 0.6rem' }}>
                           Product Catalog ({products.length})
                         </div>
                         {products
@@ -1127,9 +1127,9 @@ export default function QuickCreateModal() {
                                 style={{
                                   padding: '0.5rem 0.65rem',
                                   fontSize: '0.8125rem',
-                                  color: isSelected ? '#2563eb' : '#0f172a',
+                                  color: isSelected ? 'var(--primary)' : 'var(--text-main)',
                                   fontWeight: isSelected ? 700 : 500,
-                                  background: isSelected ? '#eff6ff' : 'transparent',
+                                  background: isSelected ? 'var(--primary-light)' : 'transparent',
                                   borderRadius: 6,
                                   cursor: 'pointer',
                                   display: 'flex',
@@ -1138,7 +1138,7 @@ export default function QuickCreateModal() {
                                   transition: 'background 0.1s ease',
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (!isSelected) e.currentTarget.style.background = '#f8fafc';
+                                  if (!isSelected) e.currentTarget.style.background = 'var(--surface-hover)';
                                 }}
                                 onMouseLeave={(e) => {
                                   if (!isSelected) e.currentTarget.style.background = 'transparent';
@@ -1146,9 +1146,9 @@ export default function QuickCreateModal() {
                               >
                                 <div>
                                   <div>{prod.name}</div>
-                                  {prod.sku && <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>SKU: {prod.sku}</div>}
+                                  {prod.sku && <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>SKU: {prod.sku}</div>}
                                 </div>
-                                {isSelected && <Check size={14} color="#2563eb" strokeWidth={2.5} />}
+                                {isSelected && <Check size={14} color="var(--primary)" strokeWidth={2.5} />}
                               </div>
                             );
                           })}
@@ -1180,14 +1180,14 @@ export default function QuickCreateModal() {
                                 }
                               }}
                               style={{
-                                borderTop: '1px solid #f1f5f9',
+                                borderTop: '1px solid var(--border-default)',
                                 marginTop: '0.35rem',
                                 paddingTop: '0.4rem',
                                 padding: '0.45rem 0.65rem',
                                 fontSize: '0.8125rem',
-                                color: '#059669',
+                                color: 'var(--success-text)',
                                 fontWeight: 600,
-                                background: '#ecfdf5',
+                                background: 'var(--success-bg)',
                                 borderRadius: 6,
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -1202,11 +1202,11 @@ export default function QuickCreateModal() {
 
                         <div
                           style={{
-                            borderTop: '1px solid #f1f5f9',
+                            borderTop: '1px solid var(--border-default)',
                             marginTop: '0.35rem',
                             padding: '0.4rem 0.65rem 0.2rem 0.65rem',
                             fontSize: '0.6875rem',
-                            color: '#64748b',
+                            color: 'var(--text-muted)',
                             fontStyle: 'italic',
                           }}
                         >
@@ -1219,8 +1219,8 @@ export default function QuickCreateModal() {
 
                 {/* Row 5: Website (Optional) — Positioned lower per user specification */}
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                    Website <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
+                    Website <span style={{ color: 'var(--text-subtle)', fontWeight: 400 }}>(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -1237,7 +1237,7 @@ export default function QuickCreateModal() {
             {quickCreateType === 'deal' && (
               <>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Deal / Opportunity Name *
                   </label>
                   <input
@@ -1252,7 +1252,7 @@ export default function QuickCreateModal() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Target Account
                     </label>
                     <input
@@ -1265,7 +1265,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Deal Value ($)
                     </label>
                     <input
@@ -1280,20 +1280,20 @@ export default function QuickCreateModal() {
 
                 {(dealDuplicateWarning || activeExistingDeal) && (
                   <div style={{
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
+                    background: 'var(--warning-bg)',
+                    border: '1px solid var(--warning-border)',
                     borderRadius: 8,
                     padding: '0.75rem 1rem',
                     display: 'flex',
                     gap: '0.75rem',
                     alignItems: 'flex-start'
                   }}>
-                    <AlertCircle size={18} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <AlertCircle size={18} color="var(--warning-text)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45 }}>
-                      <strong style={{ color: '#92400e', display: 'block', marginBottom: 2 }}>
+                      <strong style={{ color: 'var(--warning-text-dark)', display: 'block', marginBottom: 2 }}>
                         Similar Active Opportunity Detected
                       </strong>
-                      <div style={{ color: '#b45309' }}>
+                      <div style={{ color: 'var(--warning-text)' }}>
                         <strong>Deal:</strong> {dealDuplicateWarning?.existing_deal_name || activeExistingDeal?.name || 'Active Opportunity'} | {' '}
                         <strong>Amount:</strong> ${Number(dealDuplicateWarning?.existing_amount || activeExistingDeal?.amount || activeExistingDeal?.value || 0).toLocaleString()} | {' '}
                         <strong>Stage:</strong> {dealDuplicateWarning?.existing_stage || activeExistingDeal?.stage} | {' '}
@@ -1302,7 +1302,7 @@ export default function QuickCreateModal() {
                           <span> | <strong>Created:</strong> {new Date(dealDuplicateWarning.existing_created_at).toLocaleDateString()}</span>
                         )}
                       </div>
-                      <div style={{ color: '#78350f', marginTop: 4, fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--warning-text-dark)', marginTop: 4, fontSize: '0.75rem' }}>
                         💡 <em>Dakini CRM preserves all past orders. If this is a repeat purchase, subscription renewal, or additional license, confirm as a separate opportunity below.</em>
                       </div>
                       <div style={{ marginTop: '0.45rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -1314,7 +1314,7 @@ export default function QuickCreateModal() {
                           }}
                           style={{
                             fontSize: '0.75rem',
-                            color: '#2563eb',
+                            color: 'var(--primary)',
                             background: 'none',
                             border: 'none',
                             padding: 0,
@@ -1332,7 +1332,7 @@ export default function QuickCreateModal() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Initial Pipeline Stage
                     </label>
                     <select name="dealStage" className="input-field" value={formData.dealStage} onChange={handleChange}>
@@ -1342,7 +1342,7 @@ export default function QuickCreateModal() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Purchase / Opportunity Type
                     </label>
                     <select
@@ -1365,7 +1365,7 @@ export default function QuickCreateModal() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Company / Account Name *
                     </label>
                     <input
@@ -1379,7 +1379,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Industry *
                     </label>
                     <select name="industry" className="input-field" value={formData.industry} onChange={handleChange}>
@@ -1395,8 +1395,8 @@ export default function QuickCreateModal() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Website URL <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
+                      Website URL <span style={{ color: 'var(--text-subtle)', fontWeight: 400 }}>(Optional)</span>
                     </label>
                     <input
                       type="text"
@@ -1420,7 +1420,7 @@ export default function QuickCreateModal() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Headquarters / Address
                   </label>
                   <input
@@ -1436,23 +1436,23 @@ export default function QuickCreateModal() {
                 {accountDuplicateWarning && (
                   <div style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#fffbeb',
-                    border: '1px solid #fef3c7',
+                    backgroundColor: 'var(--warning-bg)',
+                    border: '1px solid var(--warning-border)',
                     borderRadius: '0.5rem',
                     marginTop: '0.75rem',
                     display: 'flex',
                     gap: '0.75rem',
                     alignItems: 'flex-start',
                   }}>
-                    <AlertCircle size={18} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <AlertCircle size={18} color="var(--warning-text)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45 }}>
-                      <strong style={{ color: '#92400e', display: 'block', marginBottom: 2 }}>
+                      <strong style={{ color: 'var(--warning-text-dark)', display: 'block', marginBottom: 2 }}>
                         Possible Duplicate Account Detected
                       </strong>
-                      <span style={{ color: '#b45309' }}>
+                      <span style={{ color: 'var(--warning-text)' }}>
                         {accountDuplicateWarning.warning_message}
                       </span>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer', color: '#78350f', fontWeight: 500 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer', color: 'var(--warning-text-dark)', fontWeight: 500 }}>
                         <input
                           type="checkbox"
                           checked={confirmSeparateAccount}
@@ -1471,7 +1471,7 @@ export default function QuickCreateModal() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Full Name *
                     </label>
                     <input
@@ -1485,7 +1485,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Company / Account
                     </label>
                     <input
@@ -1500,7 +1500,7 @@ export default function QuickCreateModal() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Job Title / Role
                     </label>
                     <input
@@ -1513,7 +1513,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Email Address
                     </label>
                     <input
@@ -1540,23 +1540,23 @@ export default function QuickCreateModal() {
                 {contactDuplicateWarning && (
                   <div style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#fffbeb',
-                    border: '1px solid #fef3c7',
+                    backgroundColor: 'var(--warning-bg)',
+                    border: '1px solid var(--warning-border)',
                     borderRadius: '0.5rem',
                     marginTop: '0.75rem',
                     display: 'flex',
                     gap: '0.75rem',
                     alignItems: 'flex-start',
                   }}>
-                    <AlertCircle size={18} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <AlertCircle size={18} color="var(--warning-text)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: '0.8125rem', lineHeight: 1.45 }}>
-                      <strong style={{ color: '#92400e', display: 'block', marginBottom: 2 }}>
+                      <strong style={{ color: 'var(--warning-text-dark)', display: 'block', marginBottom: 2 }}>
                         Possible Duplicate Contact Detected
                       </strong>
-                      <span style={{ color: '#b45309' }}>
+                      <span style={{ color: 'var(--warning-text)' }}>
                         {contactDuplicateWarning.warning_message}
                       </span>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer', color: '#78350f', fontWeight: 500 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer', color: 'var(--warning-text-dark)', fontWeight: 500 }}>
                         <input
                           type="checkbox"
                           checked={confirmSeparateContact}
@@ -1574,7 +1574,7 @@ export default function QuickCreateModal() {
             {quickCreateType === 'task' && (
               <>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Task Title *
                   </label>
                   <input
@@ -1589,7 +1589,7 @@ export default function QuickCreateModal() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Associated Record
                     </label>
                     <input
@@ -1601,7 +1601,7 @@ export default function QuickCreateModal() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Priority
                     </label>
                     <select name="taskPriority" className="input-field" value={formData.taskPriority} onChange={handleChange}>
@@ -1618,7 +1618,7 @@ export default function QuickCreateModal() {
             {quickCreateType === 'campaign' && (
               <>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Campaign Name *
                   </label>
                   <input
@@ -1633,7 +1633,7 @@ export default function QuickCreateModal() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Campaign Type
                     </label>
                     <select name="campaignType" className="input-field" value={formData.campaignType} onChange={handleChange}>
@@ -1645,7 +1645,7 @@ export default function QuickCreateModal() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Budget ($ USD) *
                     </label>
                     <input
@@ -1662,7 +1662,7 @@ export default function QuickCreateModal() {
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Status
                   </label>
                   <select name="campaignStatus" className="input-field" value={formData.campaignStatus} onChange={handleChange}>
@@ -1677,8 +1677,8 @@ export default function QuickCreateModal() {
           <div className="modal-footer">
             {quickCreateType === 'deal' && (dealDuplicateWarning || activeExistingDeal) && !confirmedDuplicate ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <div style={{ fontSize: '0.78125rem', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <AlertCircle size={16} color="#d97706" />
+                <div style={{ fontSize: '0.78125rem', color: 'var(--warning-text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertCircle size={16} color="var(--warning-text)" />
                   <span>A similar active Opportunity already exists. Do you want to proceed as a distinct deal?</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

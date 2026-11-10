@@ -290,10 +290,10 @@ export default function TeamRolesSettings({ currentUser }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
             Team & Role Governance
           </h2>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
             Manage organizational hierarchy, team assignments, and user credentials.
           </p>
         </div>
@@ -336,14 +336,14 @@ export default function TeamRolesSettings({ currentUser }) {
 
       {/* Notifications */}
       {successMsg && (
-        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: 'var(--success-bg)', border: '1px solid var(--success-border)', color: 'var(--success-text)', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <Check size={16} />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', padding: '0.75rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <AlertCircle size={16} />
           <span>{errorMsg}</span>
         </div>
@@ -351,18 +351,18 @@ export default function TeamRolesSettings({ currentUser }) {
 
       {/* Team Overview Cards */}
       <div style={{ marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#334155', marginBottom: '0.875rem' }}>
+        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.875rem' }}>
           Active Teams ({teams.length})
         </h3>
 
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.875rem' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             <RefreshCw size={20} className="spin" style={{ margin: '0 auto 8px auto', display: 'block' }} />
             Loading teams...
           </div>
         ) : teams.length === 0 ? (
-          <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 10, padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-            <Building size={32} style={{ margin: '0 auto 8px auto', color: '#94a3b8' }} />
+          <div style={{ background: 'var(--surface-soft)', border: '1px dashed var(--border-strong)', borderRadius: 10, padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <Building size={32} style={{ margin: '0 auto 8px auto', color: 'var(--text-subtle)' }} />
             <div style={{ fontWeight: 600 }}>No active teams configured</div>
             <div style={{ fontSize: '0.75rem', marginTop: 4 }}>
               {isOwner ? 'Click "+ New Team" above to create your first sales team.' : 'No teams assigned.'}
@@ -374,41 +374,41 @@ export default function TeamRolesSettings({ currentUser }) {
               <div
                 key={t.id}
                 style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 12,
                   padding: '1.25rem',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                       {t.name}
                     </h4>
                     <span className="badge badge-green">Active</span>
                   </div>
                   {t.description && (
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.875rem 0' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 0.875rem 0' }}>
                       {t.description}
                     </p>
                   )}
 
-                  <div style={{ background: '#f8fafc', borderRadius: 8, padding: '0.625rem 0.75rem', marginBottom: '0.875rem' }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                  <div style={{ background: 'var(--surface-soft)', borderRadius: 8, padding: '0.625rem 0.75rem', marginBottom: '0.875rem' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                       Team Manager
                     </div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1e293b', marginTop: 2 }}>
-                      {t.manager ? t.manager.name : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Unassigned</span>}
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', marginTop: 2 }}>
+                      {t.manager ? t.manager.name : <span style={{ color: 'var(--text-subtle)', fontStyle: 'italic' }}>Unassigned</span>}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-default)', paddingTop: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                     {t.salesperson_count || 0} Salespersons
                   </span>
 
@@ -433,7 +433,7 @@ export default function TeamRolesSettings({ currentUser }) {
                       <button
                         className="btn-icon"
                         title="Deactivate Team"
-                        style={{ color: '#dc2626' }}
+                        style={{ color: 'var(--danger-text)' }}
                         onClick={() => {
                           setConfirmDeactivate({
                             isOpen: true,
@@ -457,7 +457,7 @@ export default function TeamRolesSettings({ currentUser }) {
       {/* Search & Filter Bar */}
       <div style={{ marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
-          <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-subtle)' }} />
           <input
             type="text"
             className="input-field"
@@ -507,7 +507,7 @@ export default function TeamRolesSettings({ currentUser }) {
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   No users found matching your criteria.
                 </td>
               </tr>
@@ -520,12 +520,12 @@ export default function TeamRolesSettings({ currentUser }) {
                 return (
                   <tr key={u.id}>
                     <td>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{u.name}</div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748b', fontFamily: 'monospace' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.name}</div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                         @{u.login_id || u.email.split('@')[0]}
                       </div>
                     </td>
-                    <td style={{ fontSize: '0.8125rem', color: '#334155' }}>{u.email}</td>
+                    <td style={{ fontSize: '0.8125rem', color: 'var(--text-body)' }}>{u.email}</td>
                     <td>
                       <span className={`badge ${roleBadgeClass}`} style={{ textTransform: 'capitalize' }}>
                         {u.role_name}
@@ -554,7 +554,7 @@ export default function TeamRolesSettings({ currentUser }) {
                           u.status === 'active' ? (
                             <button
                               className="btn btn-secondary"
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--danger-text)', borderColor: 'var(--danger-border)' }}
                               title="Deactivate User"
                               onClick={() => {
                                 setConfirmDeactivate({
@@ -570,7 +570,7 @@ export default function TeamRolesSettings({ currentUser }) {
                           ) : (
                             <button
                               className="btn btn-secondary"
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: '#059669', borderColor: '#a7f3d0' }}
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--success-text)', borderColor: 'var(--success-border)' }}
                               title="Reactivate User"
                               onClick={() => handleReactivateUser(u)}
                             >
@@ -597,17 +597,17 @@ export default function TeamRolesSettings({ currentUser }) {
         <div className="modal-backdrop" onClick={() => setIsTeamModalOpen(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 {teamModalMode === 'create' ? 'Create Sales Team' : 'Edit Team'}
               </h3>
-              <button onClick={() => setIsTeamModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setIsTeamModalOpen(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSaveTeam}>
               <div className="modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Team Name
                   </label>
                   <input
@@ -620,7 +620,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Description (Optional)
                   </label>
                   <textarea
@@ -632,7 +632,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Assigned Manager (1:1 Active Team)
                   </label>
                   <select
@@ -649,7 +649,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   </select>
                 </div>
               </div>
-              <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-default)', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsTeamModalOpen(false)}>
                   Cancel
                 </button>
@@ -667,17 +667,17 @@ export default function TeamRolesSettings({ currentUser }) {
         <div className="modal-backdrop" onClick={() => setIsUserModalOpen(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 {isManager ? 'Add Team Salesperson' : 'Create User Account'}
               </h3>
-              <button onClick={() => setIsUserModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setIsUserModalOpen(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSaveUser}>
               <div className="modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Full Name
                   </label>
                   <input
@@ -690,7 +690,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Corporate Email
                   </label>
                   <input
@@ -702,14 +702,14 @@ export default function TeamRolesSettings({ currentUser }) {
                     required
                   />
                   {userForm.email && (
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: 2, display: 'block' }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
                       Login Email: {userForm.email}
                     </span>
                   )}
                 </div>
                 {isOwner && (
                   <div>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                       Role Assignment
                     </label>
                     <select
@@ -723,7 +723,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Assign to Team
                   </label>
                   <select
@@ -741,7 +741,7 @@ export default function TeamRolesSettings({ currentUser }) {
                   </select>
                 </div>
               </div>
-              <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-default)', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsUserModalOpen(false)}>
                   Cancel
                 </button>
@@ -758,16 +758,16 @@ export default function TeamRolesSettings({ currentUser }) {
       {credsDialog.isOpen && (
         <div className="modal-backdrop">
           <div className="modal-box" style={{ maxWidth: 480 }}>
-            <div className="modal-header" style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-default)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--success-bg)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Check size={20} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                     {credsDialog.title}
                   </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     for {credsDialog.name}
                   </span>
                 </div>
@@ -775,25 +775,25 @@ export default function TeamRolesSettings({ currentUser }) {
             </div>
 
             <div className="modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '0.75rem', fontSize: '0.8125rem', color: '#92400e', lineHeight: 1.4 }}>
+              <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '0.75rem', fontSize: '0.8125rem', color: 'var(--warning-text-dark)', lineHeight: 1.4 }}>
                 <strong>Security Notice:</strong> This temporary password is shown <u>once</u>. The user will be required to choose a new permanent password on initial login.
               </div>
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ background: 'var(--surface-soft)', border: '1px solid var(--border-default)', borderRadius: 10, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                     Login Email
                   </span>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', fontFamily: 'monospace', marginTop: 2 }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', fontFamily: 'monospace', marginTop: 2 }}>
                     {credsDialog.email || credsDialog.login_id}
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                     Temporary Password
                   </span>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#2563eb', fontFamily: 'monospace', letterSpacing: '0.05em', marginTop: 2 }}>
+                  <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace', letterSpacing: '0.05em', marginTop: 2 }}>
                     {credsDialog.temporary_password}
                   </div>
                 </div>
@@ -805,12 +805,12 @@ export default function TeamRolesSettings({ currentUser }) {
                 onClick={copyCredentials}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', padding: '0.625rem' }}
               >
-                {copied ? <Check size={16} color="#059669" /> : <Copy size={16} />}
+                {copied ? <Check size={16} color="var(--success-text)" /> : <Copy size={16} />}
                 <span>{copied ? 'Copied to Clipboard!' : 'Copy Credentials to Clipboard'}</span>
               </button>
             </div>
 
-            <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-default)', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 className="btn btn-primary"
@@ -828,25 +828,25 @@ export default function TeamRolesSettings({ currentUser }) {
         <div className="modal-backdrop" onClick={() => setConfirmDeactivate({ isOpen: false, type: '', targetId: '', targetName: '' })}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal-header">
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#dc2626', margin: 0 }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--danger-text)', margin: 0 }}>
                 Confirm Deactivation
               </h3>
-              <button onClick={() => setConfirmDeactivate({ isOpen: false, type: '', targetId: '', targetName: '' })} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setConfirmDeactivate({ isOpen: false, type: '', targetId: '', targetName: '' })} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
             <div className="modal-body" style={{ padding: '1.5rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#334155', margin: '0 0 1rem 0', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-body)', margin: '0 0 1rem 0', lineHeight: 1.5 }}>
                 Are you sure you want to deactivate{' '}
                 <strong>{confirmDeactivate.targetName}</strong>?
               </p>
-              <div style={{ fontSize: '0.8125rem', color: '#64748b', background: '#f8fafc', padding: '0.75rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', background: 'var(--surface-soft)', padding: '0.75rem', borderRadius: 8, border: '1px solid var(--border-default)' }}>
                 {confirmDeactivate.type === 'team'
                   ? 'Active salespersons in this team will be detached and placed into the unassigned pool. Historical sales records remain intact.'
                   : 'The user will immediately lose access to the CRM and all active login sessions will be terminated.'}
               </div>
             </div>
-            <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-default)', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
                 type="button"
                 className="btn btn-secondary"

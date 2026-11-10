@@ -211,8 +211,8 @@ Sales Director | Dakini AI CRM`
       id: "tpl-001",
       title: "Inbound Demo Follow-Up & Next Steps",
       category: "Sales Cadence",
-      badgeColor: "#2563eb",
-      badgeBg: "#dbeafe",
+      badgeColor: "var(--primary)",
+      badgeBg: "var(--primary-light)",
       subject: "Next Steps: {{company}} <> Dakini AI Discovery Session",
       snippet: "Hi {{first_name}}, Great connecting today! As discussed, Dakini AI will help {{company}}...",
       mergeTags: ["{{first_name}}", "{{company}}", "{{user_name}}", "{{next_meeting_date}}"],
@@ -237,8 +237,8 @@ Sales Director | Dakini AI CRM`
       id: "tpl-002",
       title: "Enterprise MSA & DocuSign Package Delivery",
       category: "Closing / Legal",
-      badgeColor: "#059669",
-      badgeBg: "#d1fae5",
+      badgeColor: "var(--success-text)",
+      badgeBg: "var(--success-bg)",
       subject: "Dakini AI Enterprise Agreement & DocuSign Package for {{company}}",
       snippet: "Hi {{first_name}}, Attached is the revised Master Services Agreement (MSA) reflecting...",
       mergeTags: ["{{first_name}}", "{{company}}", "{{user_name}}", "{{deal_value}}"],
@@ -261,8 +261,8 @@ Sales Director | Dakini AI CRM`
       id: "tpl-003",
       title: "Re-engagement / Pipeline Reviver",
       category: "Outbound",
-      badgeColor: "#d97706",
-      badgeBg: "#fef3c7",
+      badgeColor: "var(--warning-text)",
+      badgeBg: "var(--warning-bg)",
       subject: "Quick question regarding {{company}}'s Q4 pipeline velocity",
       snippet: "Hi {{first_name}}, I noticed {{company}} has been expanding the supply chain footprint...",
       mergeTags: ["{{first_name}}", "{{company}}", "{{user_name}}"],
@@ -282,8 +282,8 @@ Sales Director | Dakini AI CRM`
       id: "tpl-004",
       title: "Executive Sponsor Introduction & Alignment",
       category: "Executive",
-      badgeColor: "#7c3aed",
-      badgeBg: "#ede9fe",
+      badgeColor: "var(--purple-text)",
+      badgeBg: "var(--purple-bg)",
       subject: "Executive Briefing: Accelerating ROI with Dakini Autonomous Agents for {{company}}",
       snippet: "Hi {{first_name}}, Introducing our executive solutions leadership to support {{company}}...",
       mergeTags: ["{{first_name}}", "{{company}}", "{{user_name}}"],
@@ -369,9 +369,9 @@ Sales Director | Dakini AI CRM`
       {/* Toast Notification */}
       {actionAlert && (
         <div style={{
-          background: '#ecfdf5',
-          border: '1px solid #a7f3d0',
-          color: '#065f46',
+          background: 'var(--success-bg)',
+          border: '1px solid var(--success-border)',
+          color: 'var(--success-text-dark)',
           padding: '0.75rem 1.25rem',
           borderRadius: 8,
           marginBottom: '1rem',
@@ -382,7 +382,7 @@ Sales Director | Dakini AI CRM`
           gap: '0.5rem',
           boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
         }}>
-          <CheckCircle2 size={16} color="#059669" />
+          <CheckCircle2 size={16} color="var(--success-text)" />
           <span>{actionAlert}</span>
         </div>
       )}
@@ -391,14 +391,14 @@ Sales Director | Dakini AI CRM`
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
               Inbox & Communication
             </h1>
             {unreadEmailCount > 0 ? (
               <span style={{
-                background: '#eff6ff',
-                color: '#2563eb',
-                border: '1px solid #bfdbfe',
+                background: 'var(--primary-light)',
+                color: 'var(--primary)',
+                border: '1px solid var(--primary-subtle)',
                 padding: '2px 9px',
                 borderRadius: 12,
                 fontSize: '0.75rem',
@@ -408,8 +408,8 @@ Sales Director | Dakini AI CRM`
               </span>
             ) : (
               <span style={{
-                background: '#f1f5f9',
-                color: '#64748b',
+                background: 'var(--surface-alt)',
+                color: 'var(--text-muted)',
                 padding: '2px 9px',
                 borderRadius: 12,
                 fontSize: '0.75rem',
@@ -419,7 +419,7 @@ Sales Director | Dakini AI CRM`
               </span>
             )}
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 4 }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4 }}>
             Live bidirectional email communications with autonomous AI lead enrichment
           </p>
         </div>
@@ -433,9 +433,9 @@ Sales Director | Dakini AI CRM`
               showToast(`📨 New inbound email received from ${newMail.from.split('<')[0].trim()}! Unread badge count went up (+1).`);
             }}
             title="Simulate receiving an inbound email to test badge increment"
-            style={{ borderColor: '#bfdbfe', color: '#1d4ed8' }}
+            style={{ borderColor: 'var(--primary-subtle)', color: 'var(--primary-dark)' }}
           >
-            <MailPlus size={15} color="#2563eb" />
+            <MailPlus size={15} color="var(--primary)" />
             <span>Simulate Inbound Email (+1)</span>
           </button>
 
@@ -485,11 +485,11 @@ Sales Director | Dakini AI CRM`
               <Inbox size={16} />
               <span>Inbox</span>
               {unreadEmailCount > 0 ? (
-                <span className="nav-item-badge" style={{ background: '#2563eb', color: '#ffffff', fontWeight: 700 }}>
+                <span className="nav-item-badge" style={{ background: 'var(--primary)', color: '#ffffff', fontWeight: 700 }}>
                   {unreadEmailCount}
                 </span>
               ) : (
-                <span className="nav-item-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                <span className="nav-item-badge" style={{ background: 'var(--surface-alt)', color: 'var(--text-muted)' }}>
                   {emails.length}
                 </span>
               )}
@@ -505,7 +505,7 @@ Sales Director | Dakini AI CRM`
             >
               <Send size={16} />
               <span>Sent</span>
-              <span className="nav-item-badge" style={{ background: '#e2e8f0', color: '#475569' }}>
+              <span className="nav-item-badge" style={{ background: 'var(--surface-alt)', color: 'var(--text-body)' }}>
                 {sentEmails.length}
               </span>
             </button>
@@ -524,7 +524,7 @@ Sales Director | Dakini AI CRM`
             >
               <FileText size={16} />
               <span>Drafts</span>
-              <span className="nav-item-badge" style={{ background: '#fef3c7', color: '#b45309' }}>
+              <span className="nav-item-badge" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
                 {draftsList.length}
               </span>
             </button>
@@ -539,21 +539,21 @@ Sales Director | Dakini AI CRM`
             >
               <Bookmark size={16} />
               <span>Templates</span>
-              <span className="nav-item-badge" style={{ background: '#eff6ff', color: '#2563eb' }}>
+              <span className="nav-item-badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
                 {salesTemplates.length}
               </span>
             </button>
           </div>
 
-          <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '1.5rem', paddingTop: '1rem' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+          <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '1.5rem', paddingTop: '1rem' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
               Connected Mailbox
             </div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>
               {currentUser?.email || 'elena.rostova@dakini.ai'}
             </div>
-            <div style={{ fontSize: '0.6875rem', color: '#059669', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', display: 'inline-block' }} />
+            <div style={{ fontSize: '0.6875rem', color: 'var(--success-text)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success-text)', display: 'inline-block' }} />
               Google Workspace Active
             </div>
           </div>
@@ -568,7 +568,7 @@ Sales Director | Dakini AI CRM`
           {activeFolder === 'inbox' && (
             <div>
               {emails.length === 0 ? (
-                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem' }}>
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-subtle)', fontSize: '0.8125rem' }}>
                   No emails in inbox.
                 </div>
               ) : (
@@ -577,8 +577,8 @@ Sales Director | Dakini AI CRM`
                     key={em.id}
                     className={`inbox-thread-item ${selectedInboxId === em.id ? 'active' : ''}`}
                     style={{
-                      borderLeft: selectedInboxId === em.id ? '3.5px solid #2563eb' : (em.unread ? '3.5px solid #60a5fa' : '3.5px solid transparent'),
-                      backgroundColor: em.unread ? '#f0f7ff' : (selectedInboxId === em.id ? '#f8fafc' : 'transparent'),
+                      borderLeft: selectedInboxId === em.id ? '3.5px solid var(--primary)' : (em.unread ? '3.5px solid #60a5fa' : '3.5px solid transparent'),
+                      backgroundColor: em.unread ? 'var(--primary-light)' : (selectedInboxId === em.id ? 'var(--surface-soft)' : 'transparent'),
                       cursor: 'pointer',
                       transition: 'background 0.15s ease'
                     }}
@@ -600,7 +600,7 @@ Sales Director | Dakini AI CRM`
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              backgroundColor: '#2563eb',
+                              backgroundColor: 'var(--primary)',
                               display: 'inline-block',
                               flexShrink: 0
                             }}
@@ -609,7 +609,7 @@ Sales Director | Dakini AI CRM`
                         <span style={{
                           fontSize: '0.8125rem',
                           fontWeight: em.unread ? 800 : 600,
-                          color: em.unread ? '#0f172a' : '#334155',
+                          color: em.unread ? 'var(--text-main)' : 'var(--text-body)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -619,7 +619,7 @@ Sales Director | Dakini AI CRM`
                       </div>
                       <span style={{
                         fontSize: '0.6875rem',
-                        color: em.unread ? '#2563eb' : '#64748b',
+                        color: em.unread ? 'var(--primary)' : 'var(--text-muted)',
                         fontWeight: em.unread ? 700 : 400,
                         flexShrink: 0,
                         marginLeft: 4
@@ -630,7 +630,7 @@ Sales Director | Dakini AI CRM`
                     <div style={{
                       fontSize: '0.75rem',
                       fontWeight: em.unread ? 700 : 500,
-                      color: em.unread ? '#1d4ed8' : '#2563eb',
+                      color: em.unread ? 'var(--primary-dark)' : 'var(--primary)',
                       marginBottom: 4,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -638,7 +638,7 @@ Sales Director | Dakini AI CRM`
                     }}>
                       {em.subject}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: em.unread ? '#475569' : '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '0.75rem', color: em.unread ? 'var(--text-body)' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {em.snippet}
                     </div>
                   </div>
@@ -659,15 +659,15 @@ Sales Director | Dakini AI CRM`
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       To: {em.recipientName}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{em.date}</span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{em.date}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#059669', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--success-text)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {em.subject}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {em.snippet}
                   </div>
                 </div>
@@ -689,15 +689,15 @@ Sales Director | Dakini AI CRM`
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#b45309' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--warning-text)' }}>
                       [Draft] {dr.recipientName}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{dr.date.split(',')[0]}</span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{dr.date.split(',')[0]}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {dr.subject || '(No subject)'}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {dr.snippet}
                   </div>
                 </div>
@@ -728,17 +728,17 @@ Sales Director | Dakini AI CRM`
                     }}>
                       {tpl.category}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-subtle)' }}>
                       {tpl.mergeTags.length} tags
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: 2 }}>
                     {tpl.title}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {tpl.subject}
                   </div>
-                  <div style={{ fontSize: '0.6875rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {tpl.snippet}
                   </div>
                 </div>
@@ -761,8 +761,8 @@ Sales Director | Dakini AI CRM`
               {/* Linked Record Banner */}
               {currentInboxEmail.linkedRecord && (
                 <div style={{
-                  background: 'linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)',
-                  border: '1px solid #bfdbfe',
+                  background: 'var(--primary-light)',
+                  border: '1px solid var(--primary-subtle)',
                   borderRadius: 10,
                   padding: '0.75rem 1rem',
                   display: 'flex',
@@ -771,14 +771,14 @@ Sales Director | Dakini AI CRM`
                   marginBottom: '1.25rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <UserCheck size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                         Linked {currentInboxEmail.linkedRecord.type}: {currentInboxEmail.linkedRecord.name}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                         {currentInboxEmail.linkedRecord.company}
                       </div>
                     </div>
@@ -794,14 +794,14 @@ Sales Director | Dakini AI CRM`
               )}
 
               {/* Message Header */}
-              <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+              <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                     {currentInboxEmail.subject}
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                     {currentInboxEmail.unread ? (
-                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: 6 }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, background: 'var(--primary-light)', color: 'var(--primary)', padding: '3px 8px', borderRadius: 6 }}>
                         ● Unread
                       </span>
                     ) : (
@@ -820,7 +820,7 @@ Sales Director | Dakini AI CRM`
                     )}
                     <button
                       className="btn btn-ghost btn-sm"
-                      style={{ fontSize: '0.6875rem', padding: '3px 8px', height: 26, color: '#ef4444' }}
+                      style={{ fontSize: '0.6875rem', padding: '3px 8px', height: 26, color: 'var(--danger-text)' }}
                       onClick={() => {
                         deleteEmail(currentInboxEmail.id);
                         showToast('Email removed from inbox.');
@@ -833,19 +833,19 @@ Sales Director | Dakini AI CRM`
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: '0.8125rem' }}>
-                    <strong style={{ color: '#0f172a' }}>From:</strong> {currentInboxEmail.from}
+                    <strong style={{ color: 'var(--text-main)' }}>From:</strong> {currentInboxEmail.from}
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{currentInboxEmail.date}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentInboxEmail.date}</span>
                 </div>
               </div>
 
               {/* Message Body */}
-              <div style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#334155', whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.875rem', lineHeight: 1.7, color: 'var(--text-body)', whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
                 {currentInboxEmail.body}
               </div>
 
               {/* Reply Section */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '1.25rem' }}>
                 {!isReplying ? (
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button className="btn btn-primary" onClick={() => setIsReplying(true)}>
@@ -860,7 +860,7 @@ Sales Director | Dakini AI CRM`
                 ) : (
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                         Draft Response
                       </span>
                       <button className="btn btn-ghost btn-sm" onClick={() => setIsReplying(false)}>
@@ -901,8 +901,8 @@ Sales Director | Dakini AI CRM`
               {/* Linked Record Banner */}
               {currentSentEmail.linkedRecord && (
                 <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  background: 'var(--surface-soft)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 10,
                   padding: '0.75rem 1rem',
                   display: 'flex',
@@ -915,10 +915,10 @@ Sales Director | Dakini AI CRM`
                       <Send size={15} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                         Linked {currentSentEmail.linkedRecord.type}: {currentSentEmail.linkedRecord.name}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                         {currentSentEmail.linkedRecord.company}
                       </div>
                     </div>
@@ -941,40 +941,40 @@ Sales Director | Dakini AI CRM`
                   gap: 4,
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#065f46',
-                  background: '#d1fae5',
+                  color: 'var(--success-text-dark)',
+                  background: 'var(--success-bg)',
                   padding: '3px 8px',
                   borderRadius: 6
                 }}>
-                  <CheckCheck size={14} color="#059669" />
+                  <CheckCheck size={14} color="var(--success-text)" />
                   {currentSentEmail.status}
                 </span>
 
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   {currentSentEmail.date}
                 </span>
               </div>
 
               {/* Message Header */}
-              <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+              <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-default)', paddingBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
                   {currentSentEmail.subject}
                 </h2>
-                <div style={{ fontSize: '0.8125rem', color: '#475569' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-body)' }}>
                   <strong>To:</strong> {currentSentEmail.to}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                   <strong>From:</strong> {currentUser?.name || 'Elena Rostova'} &lt;{currentUser?.email || 'elena.rostova@dakini.ai'}&gt;
                 </div>
               </div>
 
               {/* Message Body */}
-              <div style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#334155', whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.875rem', lineHeight: 1.7, color: 'var(--text-body)', whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
                 {currentSentEmail.body}
               </div>
 
               {/* Actions */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => {
@@ -1000,12 +1000,12 @@ Sales Director | Dakini AI CRM`
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span className="badge badge-amber">Draft Autosaved</span>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{currentDraft.date}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentDraft.date}</span>
                 </div>
 
                 <button
                   className="btn btn-ghost btn-sm"
-                  style={{ color: '#dc2626' }}
+                  style={{ color: 'var(--danger-text)' }}
                   onClick={() => {
                     setDraftsList(draftsList.filter((d) => d.id !== currentDraft.id));
                     showToast("Draft deleted.");
@@ -1018,7 +1018,7 @@ Sales Director | Dakini AI CRM`
 
               {/* Recipient Input */}
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 3 }}>
                   To:
                 </label>
                 <input
@@ -1031,7 +1031,7 @@ Sales Director | Dakini AI CRM`
 
               {/* Subject Input */}
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 3 }}>
                   Subject:
                 </label>
                 <input
@@ -1045,7 +1045,7 @@ Sales Director | Dakini AI CRM`
 
               {/* Body Textarea */}
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 3 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 3 }}>
                   Email Body:
                 </label>
                 <textarea
@@ -1058,7 +1058,7 @@ Sales Director | Dakini AI CRM`
               </div>
 
               {/* Draft Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '1rem' }}>
                 <button
                   className="btn btn-sparkle"
                   onClick={() => {
@@ -1114,9 +1114,9 @@ Sales Director | Dakini AI CRM`
                   <span style={{
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    color: '#059669',
-                    background: '#ecfdf5',
-                    border: '1px solid #a7f3d0',
+                    color: 'var(--success-text)',
+                    background: 'var(--success-bg)',
+                    border: '1px solid var(--success-border)',
                     padding: '2px 8px',
                     borderRadius: 6,
                     display: 'flex',
@@ -1148,14 +1148,14 @@ Sales Director | Dakini AI CRM`
                 </div>
               </div>
 
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
                 {currentTemplate.title}
               </h2>
 
               {/* Subject Line Pill */}
               <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: 'var(--surface-soft)',
+                border: '1px solid var(--border-default)',
                 borderRadius: 8,
                 padding: '0.65rem 0.85rem',
                 fontSize: '0.8125rem',
@@ -1164,58 +1164,58 @@ Sales Director | Dakini AI CRM`
                 alignItems: 'center',
                 gap: '0.5rem'
               }}>
-                <strong style={{ color: '#0f172a' }}>Subject:</strong>
-                <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                <strong style={{ color: 'var(--text-main)' }}>Subject:</strong>
+                <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
                   {renderTemplateText(currentTemplate.subject)}
                 </span>
               </div>
 
               {/* Interactive Merge Variable Playground */}
               <div style={{
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                background: 'var(--primary-light)',
+                border: '1px solid var(--primary-subtle)',
                 borderRadius: 10,
                 padding: '0.85rem 1rem',
                 marginBottom: '1.25rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#1e40af', fontWeight: 700, fontSize: '0.8125rem', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary-dark)', fontWeight: 700, fontSize: '0.8125rem', marginBottom: '0.5rem' }}>
                   <Sliders size={14} />
                   <span>Customize Template Merge Variables (Live Preview)</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 2 }}>
+                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 2 }}>
                       &#123;&#123;first_name&#125;&#125;
                     </label>
                     <input
                       type="text"
                       className="input-field"
-                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: '#ffffff' }}
+                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: 'var(--bg-card)' }}
                       value={templateVars.first_name}
                       onChange={(e) => setTemplateVars({ ...templateVars, first_name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 2 }}>
+                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 2 }}>
                       &#123;&#123;company&#125;&#125;
                     </label>
                     <input
                       type="text"
                       className="input-field"
-                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: '#ffffff' }}
+                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: 'var(--bg-card)' }}
                       value={templateVars.company}
                       onChange={(e) => setTemplateVars({ ...templateVars, company: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 2 }}>
+                    <label style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 2 }}>
                       &#123;&#123;user_name&#125;&#125;
                     </label>
                     <input
                       type="text"
                       className="input-field"
-                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: '#ffffff' }}
+                      style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', background: 'var(--bg-card)' }}
                       value={currentUser?.name || templateVars.user_name}
                       onChange={(e) => setTemplateVars({ ...templateVars, user_name: e.target.value })}
                     />
@@ -1225,13 +1225,13 @@ Sales Director | Dakini AI CRM`
 
               {/* Rendered Template Body */}
               <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-default)',
                 borderRadius: 10,
                 padding: '1.25rem',
                 fontSize: '0.875rem',
                 lineHeight: 1.7,
-                color: '#1e293b',
+                color: 'var(--text-main)',
                 whiteSpace: 'pre-line',
                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
               }}>

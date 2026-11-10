@@ -176,8 +176,8 @@ export default function AssignOwnerModal({
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: '#eff6ff',
-                color: '#2563eb',
+                background: 'var(--primary-light)',
+                color: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -186,10 +186,10 @@ export default function AssignOwnerModal({
               <UserCheck size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Assign Lead Owner
               </h3>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Transfer {selectedLeadIds.length} selected lead{selectedLeadIds.length > 1 ? 's' : ''} to a sales team member
               </span>
             </div>
@@ -197,7 +197,7 @@ export default function AssignOwnerModal({
           <button
             onClick={() => !isSubmitting && onClose?.()}
             disabled={isSubmitting}
-            style={{ color: '#64748b' }}
+            style={{ color: 'var(--text-muted)' }}
           >
             <X size={20} />
           </button>
@@ -213,15 +213,15 @@ export default function AssignOwnerModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.65rem',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
+                background: 'var(--danger-bg)',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 8,
                 padding: '0.75rem 1rem',
-                color: '#991b1b',
+                color: 'var(--danger-text-dark)',
                 fontSize: '0.8125rem',
               }}
             >
-              <AlertCircle size={16} style={{ flexShrink: 0, color: '#dc2626' }} />
+              <AlertCircle size={16} style={{ flexShrink: 0, color: 'var(--danger-text)' }} />
               <span>Permission Restricted: Only Organization Owners and Team Managers can reassign leads.</span>
             </div>
           )}
@@ -234,16 +234,16 @@ export default function AssignOwnerModal({
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '0.65rem',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
+                background: 'var(--danger-bg)',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 8,
                 padding: '0.75rem 1rem',
-                color: '#991b1b',
+                color: 'var(--danger-text-dark)',
                 fontSize: '0.8125rem',
                 lineHeight: 1.4,
               }}
             >
-              <AlertCircle size={16} style={{ flexShrink: 0, color: '#dc2626', marginTop: 2 }} />
+              <AlertCircle size={16} style={{ flexShrink: 0, color: 'var(--danger-text)', marginTop: 2 }} />
               <div>
                 <strong style={{ display: 'block', marginBottom: 2 }}>Assignment Failed</strong>
                 {errorMsg}
@@ -253,7 +253,7 @@ export default function AssignOwnerModal({
 
           {/* Selected Leads Chips */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: 6 }}>
               Selected Leads ({selectedLeadIds.length})
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', maxHeight: 80, overflowY: 'auto', padding: '0.35rem 0' }}>
@@ -265,20 +265,20 @@ export default function AssignOwnerModal({
                     fontWeight: 600,
                     padding: '0.2rem 0.55rem',
                     borderRadius: 6,
-                    background: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #e2e8f0',
+                    background: 'var(--surface-alt)',
+                    color: 'var(--text-body)',
+                    border: '1px solid var(--border-default)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4
                   }}
                 >
                   {l.name}
-                  {l.company && <span style={{ color: '#64748b', fontWeight: 400 }}>({l.company})</span>}
+                  {l.company && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({l.company})</span>}
                 </span>
               ))}
               {selectedLeads.length > 6 && (
-                <span style={{ fontSize: '0.75rem', color: '#64748b', alignSelf: 'center', padding: '0.2rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center', padding: '0.2rem' }}>
                   +{selectedLeads.length - 6} more
                 </span>
               )}
@@ -287,7 +287,7 @@ export default function AssignOwnerModal({
 
           {/* Search Assignee */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'block', marginBottom: 6 }}>
               Select New Owner
             </label>
             <div className="search-bar-wrapper" style={{ width: '100%', marginBottom: '0.75rem' }}>
@@ -303,8 +303,8 @@ export default function AssignOwnerModal({
 
             {/* Users Roster List */}
             {loadingUsers ? (
-              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.8125rem' }}>
-                <Loader2 size={20} className="animate-spin" style={{ margin: '0 auto 6px auto', color: '#2563eb' }} />
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                <Loader2 size={20} className="animate-spin" style={{ margin: '0 auto 6px auto', color: 'var(--primary)' }} />
                 <span>Loading team members...</span>
               </div>
             ) : (
@@ -312,30 +312,30 @@ export default function AssignOwnerModal({
                 style={{
                   maxHeight: 220,
                   overflowY: 'auto',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border-default)',
                   borderRadius: 8,
                   padding: '0.35rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.35rem',
-                  background: '#f8fafc'
+                  background: 'var(--surface-soft)'
                 }}
               >
                 {eligibleUsers.map((u) => {
                   const isSelected = selectedUser?.id === u.id;
                   const roleStr = (u.role_name || u.role || 'salesperson').toLowerCase();
 
-                  let roleBadgeBg = '#f0fdfa';
-                  let roleBadgeColor = '#0d9488';
+                  let roleBadgeBg = 'var(--success-bg)';
+                  let roleBadgeColor = 'var(--success-text)';
                   let roleLabel = 'Salesperson';
 
                   if (roleStr.includes('owner') || roleStr.includes('admin')) {
-                    roleBadgeBg = '#f5f3ff';
-                    roleBadgeColor = '#7c3aed';
+                    roleBadgeBg = 'var(--purple-bg)';
+                    roleBadgeColor = 'var(--purple-text)';
                     roleLabel = 'Owner';
                   } else if (roleStr.includes('manager')) {
-                    roleBadgeBg = '#eff6ff';
-                    roleBadgeColor = '#2563eb';
+                    roleBadgeBg = 'var(--primary-light)';
+                    roleBadgeColor = 'var(--primary)';
                     roleLabel = 'Manager';
                   }
 
@@ -354,8 +354,8 @@ export default function AssignOwnerModal({
                         justifyContent: 'space-between',
                         padding: '0.6rem 0.75rem',
                         borderRadius: 6,
-                        background: isSelected ? '#ffffff' : 'transparent',
-                        border: isSelected ? '1.5px solid #2563eb' : '1px solid transparent',
+                        background: isSelected ? 'var(--bg-card)' : 'transparent',
+                        border: isSelected ? '1.5px solid var(--primary)' : '1px solid transparent',
                         boxShadow: isSelected ? '0 2px 4px rgba(37,99,235,0.08)' : 'none',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
@@ -367,8 +367,8 @@ export default function AssignOwnerModal({
                             width: 32,
                             height: 32,
                             borderRadius: '50%',
-                            background: isSelected ? '#2563eb' : '#e2e8f0',
-                            color: isSelected ? '#ffffff' : '#475569',
+                            background: isSelected ? 'var(--primary)' : 'var(--surface-alt)',
+                            color: isSelected ? '#ffffff' : 'var(--text-body)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -380,10 +380,10 @@ export default function AssignOwnerModal({
                           {u.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#0f172a' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: 'var(--text-main)' }}>
                             {u.name}
                           </div>
-                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                             {u.email}
                           </div>
                         </div>
@@ -397,9 +397,9 @@ export default function AssignOwnerModal({
                               fontWeight: 700,
                               padding: '0.15rem 0.5rem',
                               borderRadius: 4,
-                              background: '#fef3c7',
-                              color: '#b45309',
-                              border: '1px solid #fde68a',
+                              background: 'var(--warning-bg)',
+                              color: 'var(--warning-text-dark)',
+                              border: '1px solid var(--warning-border)',
                               letterSpacing: '0.01em',
                             }}
                           >
@@ -424,8 +424,8 @@ export default function AssignOwnerModal({
                             width: 18,
                             height: 18,
                             borderRadius: '50%',
-                            border: isSelected ? '2px solid #2563eb' : '2px solid #cbd5e1',
-                            background: isSelected ? '#2563eb' : 'transparent',
+                            border: isSelected ? '2px solid var(--primary)' : '2px solid var(--border-strong)',
+                            background: isSelected ? 'var(--primary)' : 'transparent',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -440,7 +440,7 @@ export default function AssignOwnerModal({
                 })}
 
                 {eligibleUsers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.8125rem' }}>
+                  <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                     No eligible team members found matching "{searchQuery}"
                   </div>
                 )}
@@ -455,17 +455,17 @@ export default function AssignOwnerModal({
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.65rem',
-                  background: '#fffbeb',
-                  border: '1px solid #fde68a',
+                  background: 'var(--warning-bg)',
+                  border: '1px solid var(--warning-border)',
                   borderRadius: 8,
                   padding: '0.75rem 1rem',
-                  color: '#92400e',
+                  color: 'var(--warning-text-dark)',
                   fontSize: '0.8125rem',
                   lineHeight: 1.4,
                   marginTop: '0.75rem',
                 }}
               >
-                <AlertCircle size={16} style={{ flexShrink: 0, color: '#d97706', marginTop: 2 }} />
+                <AlertCircle size={16} style={{ flexShrink: 0, color: 'var(--warning-text)', marginTop: 2 }} />
                 <div>
                   <strong style={{ display: 'block', marginBottom: 2 }}>Lead Already Assigned to this Member</strong>
                   {selectedLeads.length === 1

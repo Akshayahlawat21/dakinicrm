@@ -112,12 +112,12 @@ export default function CountryPhoneInput({
           style={{
             fontSize: '0.8125rem',
             fontWeight: 600,
-            color: '#334155',
+            color: 'var(--text-body)',
             display: 'block',
             marginBottom: 4,
           }}
         >
-          {label} {required && <span style={{ color: '#ef4444' }}>*</span>}
+          {label} {required && <span style={{ color: 'var(--danger)' }}>*</span>}
         </label>
       )}
 
@@ -140,8 +140,8 @@ export default function CountryPhoneInput({
             alignItems: 'center',
             gap: '0.45rem',
             padding: '0.55rem 0.75rem',
-            background: isDropdownOpen ? '#eff6ff' : '#f8fafc',
-            border: `1px solid ${isDropdownOpen ? '#2563eb' : 'var(--border-default, #cbd5e1)'}`,
+            background: isDropdownOpen ? 'var(--primary-light)' : 'var(--surface-soft)',
+            border: `1px solid ${isDropdownOpen ? 'var(--primary)' : 'var(--border-default)'}`,
             borderRight: 'none',
             borderTopLeftRadius: 'var(--radius-md, 8px)',
             borderBottomLeftRadius: 'var(--radius-md, 8px)',
@@ -149,7 +149,7 @@ export default function CountryPhoneInput({
             borderBottomRightRadius: 0,
             fontSize: '0.8125rem',
             fontWeight: 600,
-            color: '#1e293b',
+            color: 'var(--text-main)',
             cursor: disabled ? 'not-allowed' : 'pointer',
             userSelect: 'none',
             outline: 'none',
@@ -158,11 +158,11 @@ export default function CountryPhoneInput({
           }}
         >
           <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{selectedCountry.flag}</span>
-          <span style={{ color: '#334155', fontWeight: 700 }}>{selectedCountry.dial_code}</span>
+          <span style={{ color: 'var(--text-body)', fontWeight: 700 }}>{selectedCountry.dial_code}</span>
           <ChevronDown
             size={14}
             style={{
-              color: '#64748b',
+              color: 'var(--text-muted)',
               transform: isDropdownOpen ? 'rotate(180deg)' : 'none',
               transition: 'transform 0.15s ease',
             }}
@@ -200,10 +200,10 @@ export default function CountryPhoneInput({
             maxWidth: 380,
             minWidth: 290,
             maxHeight: 280,
-            background: '#ffffff',
-            border: '1px solid #cbd5e1',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-strong)',
             borderRadius: 8,
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 99999,
             display: 'flex',
             flexDirection: 'column',
@@ -214,14 +214,14 @@ export default function CountryPhoneInput({
           <div
             style={{
               padding: '0.5rem 0.65rem',
-              borderBottom: '1px solid #e2e8f0',
-              background: '#f8fafc',
+              borderBottom: '1px solid var(--border-default)',
+              background: 'var(--surface-soft)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
             }}
           >
-            <Search size={14} color="#64748b" />
+            <Search size={14} color="var(--text-muted)" />
             <input
               ref={searchInputRef}
               type="text"
@@ -234,7 +234,7 @@ export default function CountryPhoneInput({
                 background: 'transparent',
                 fontSize: '0.8125rem',
                 width: '100%',
-                color: '#1e293b',
+                color: 'var(--text-main)',
               }}
             />
             {searchQuery && (
@@ -245,7 +245,7 @@ export default function CountryPhoneInput({
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  color: '#94a3b8',
+                  color: 'var(--text-subtle)',
                   padding: 2,
                   display: 'flex',
                 }}
@@ -268,7 +268,7 @@ export default function CountryPhoneInput({
                 style={{
                   padding: '1rem',
                   fontSize: '0.8125rem',
-                  color: '#94a3b8',
+                  color: 'var(--text-subtle)',
                   textAlign: 'center',
                 }}
               >
@@ -289,7 +289,7 @@ export default function CountryPhoneInput({
                       gap: '0.55rem',
                       padding: '0.45rem 0.75rem',
                       background: isSelected ? '#3b82f6' : 'transparent',
-                      color: isSelected ? '#ffffff' : '#1e293b',
+                      color: isSelected ? '#ffffff' : 'var(--text-main)',
                       border: 'none',
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -299,7 +299,7 @@ export default function CountryPhoneInput({
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.background = '#f1f5f9';
+                        e.currentTarget.style.background = 'var(--surface-hover)';
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -322,7 +322,7 @@ export default function CountryPhoneInput({
                     </span>
                     <span
                       style={{
-                        color: isSelected ? '#ffffff' : '#64748b',
+                        color: isSelected ? '#ffffff' : 'var(--text-muted)',
                         fontWeight: 600,
                         fontSize: '0.75rem',
                         flexShrink: 0,

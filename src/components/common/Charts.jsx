@@ -51,7 +51,7 @@ export function RadialProgressDonut({ percent = 20, size = 74, strokeWidth = 8, 
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke="var(--border-default)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -67,7 +67,7 @@ export function RadialProgressDonut({ percent = 20, size = 74, strokeWidth = 8, 
           style={{ transition: 'stroke-dashoffset 0.8s ease' }}
         />
       </svg>
-      <span style={{ position: 'absolute', fontSize: '0.8125rem', fontWeight: 800, color: '#0f172a' }}>
+      <span style={{ position: 'absolute', fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-main)' }}>
         {percent}%
       </span>
     </div>
@@ -80,7 +80,7 @@ export function RadialProgressDonut({ percent = 20, size = 74, strokeWidth = 8, 
 export function RevenueTrendChart({ data = [] }) {
   const [hoverIndex, setHoverIndex] = useState(null);
   if (data.some((item) => item.revenue == null)) {
-    return <div style={{ padding: '1.5rem 1rem', textAlign: 'center', color: '#64748b' }}>Revenue trend contains multiple currencies. Select a single currency to compare monetary values accurately.</div>;
+    return <div style={{ padding: '1.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>Revenue trend contains multiple currencies. Select a single currency to compare monetary values accurately.</div>;
   }
   const chartData = data.map((item) => ({
     month: item.month,
@@ -89,7 +89,7 @@ export function RevenueTrendChart({ data = [] }) {
     target: item.target == null ? null : Number(item.target)
   }));
   if (!chartData.length) {
-    return <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b' }}>No revenue trend data available for this organization.</div>;
+    return <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No revenue trend data available for this organization.</div>;
   }
   const chartWidth = 460;
   const chartHeight = 180;
@@ -109,21 +109,21 @@ export function RevenueTrendChart({ data = [] }) {
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginBottom: '0.5rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#475569', fontWeight: 600 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#2563eb' }} />Actual revenue</span>
-        {targetPoints.length > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b' }}><span style={{ width: 12, borderTop: '2px dashed #94a3b8' }} />Target pace</span>}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-body)', fontWeight: 600 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)' }} />Actual revenue</span>
+        {targetPoints.length > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)' }}><span style={{ width: 12, borderTop: '2px dashed var(--text-subtle)' }} />Target pace</span>}
       </div>
       <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }} role="img" aria-label="Monthly revenue trend">
         <defs><linearGradient id="revGradientDynamic" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" /><stop offset="100%" stopColor="#2563eb" stopOpacity="0" /></linearGradient></defs>
-        {[0.25, 0.5, 0.75, 1].map((pct) => <line key={pct} x1={px} y1={chartHeight - py - pct * (chartHeight - py * 2)} x2={chartWidth - px} y2={chartHeight - py - pct * (chartHeight - py * 2)} stroke="#f1f5f9" strokeDasharray="4 4" />)}
-        {targetPath && <path d={targetPath} fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5 5" />}
+        {[0.25, 0.5, 0.75, 1].map((pct) => <line key={pct} x1={px} y1={chartHeight - py - pct * (chartHeight - py * 2)} x2={chartWidth - px} y2={chartHeight - py - pct * (chartHeight - py * 2)} stroke="var(--surface-alt)" strokeDasharray="4 4" />)}
+        {targetPath && <path d={targetPath} fill="none" stroke="var(--text-subtle)" strokeWidth="2" strokeDasharray="5 5" />}
         <path d={area} fill="url(#revGradientDynamic)" />
-        <path d={actualPath} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={actualPath} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {actualPoints.map((pt, idx) => <g key={chartData[idx].month} onMouseEnter={() => setHoverIndex(idx)} onFocus={() => setHoverIndex(idx)} tabIndex={0} style={{ cursor: 'pointer' }}>
-          <circle cx={pt.x} cy={pt.y} r={hoverIndex === idx ? 6 : 4} fill="#fff" stroke="#2563eb" strokeWidth="2.5" />
-          <text x={pt.x} y={chartHeight - 2} textAnchor="middle" fontSize="10" fill={hoverIndex === idx ? '#2563eb' : '#64748b'} fontWeight={hoverIndex === idx ? '700' : '500'}>{chartData[idx].label}</text>
+          <circle cx={pt.x} cy={pt.y} r={hoverIndex === idx ? 6 : 4} fill="var(--bg-card)" stroke="var(--primary)" strokeWidth="2.5" />
+          <text x={pt.x} y={chartHeight - 2} textAnchor="middle" fontSize="10" fill={hoverIndex === idx ? 'var(--primary)' : 'var(--text-muted)'} fontWeight={hoverIndex === idx ? '700' : '500'}>{chartData[idx].label}</text>
         </g>)}
       </svg>
-      {hovered && <div style={{ textAlign: 'center', color: '#334155', fontSize: '0.75rem', fontWeight: 700, marginTop: 4 }}>{chartData[hoverIndex].label}: ${hovered.val.toLocaleString()}</div>}
+      {hovered && <div style={{ textAlign: 'center', color: 'var(--text-body)', fontSize: '0.75rem', fontWeight: 700, marginTop: 4 }}>{chartData[hoverIndex].label}: ${hovered.val.toLocaleString()}</div>}
     </div>
   );
 }
@@ -151,14 +151,14 @@ export function PipelineStageChart({ data = [], onStageClick }) {
 
   return (
     <div style={{ width: '100%' }}>
-      {stages.length === 0 ? <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b' }}>No open pipeline data available.</div> : <><div style={{
+      {stages.length === 0 ? <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No open pipeline data available.</div> : <><div style={{
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'space-between',
         height: 180,
         gap: '0.75rem',
         padding: '0 0.5rem 0.5rem 0.5rem',
-        borderBottom: '1px solid #e2e8f0'
+        borderBottom: '1px solid var(--border-default)'
       }}>
         {stages.map((stg, i) => {
           const height = (stg.value / maxValue) * maxBarHeight;
@@ -183,7 +183,7 @@ export function PipelineStageChart({ data = [], onStageClick }) {
               <span style={{
                 fontSize: '0.6875rem',
                 fontWeight: 700,
-                color: isHovered ? '#2563eb' : '#64748b',
+                color: isHovered ? 'var(--primary)' : 'var(--text-muted)',
                 marginBottom: 6,
                 opacity: isHovered ? 1 : 0.85,
                 transition: 'all 0.15s ease'
@@ -222,7 +222,7 @@ export function PipelineStageChart({ data = [], onStageClick }) {
               <span style={{
                 fontSize: '0.6875rem',
                 fontWeight: isHovered ? 700 : 600,
-                color: isHovered ? '#2563eb' : '#475569',
+                color: isHovered ? 'var(--primary)' : 'var(--text-body)',
                 whiteSpace: 'nowrap',
                 textDecoration: isHovered ? 'underline' : 'none',
                 transition: 'all 0.15s ease'
@@ -262,21 +262,21 @@ export function LeadSourceDonutChart({ data = [], totalLeads }) {
             offset += dash;
             return circle;
           })}
-          {(!rows.length || total === 0) && <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />}
+          {(!rows.length || total === 0) && <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border-default)" strokeWidth={strokeWidth} />}
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{total.toLocaleString()}</span>
-          <span style={{ fontSize: '0.6875rem', color: '#64748b', fontWeight: 600 }}>Total Leads</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{total.toLocaleString()}</span>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Leads</span>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: 160 }}>
-        {!rows.length || total === 0 ? <div style={{ color: '#64748b', fontSize: '0.8125rem' }}>No lead source data available for this period.</div> : rows.map((item) => (
+        {!rows.length || total === 0 ? <div style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No lead source data available for this period.</div> : rows.map((item) => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8125rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: item.color, flexShrink: 0 }} />
-              <span style={{ color: '#334155', fontWeight: 500 }}>{item.label} <span style={{ color: '#64748b' }}>({item.count})</span></span>
+              <span style={{ color: 'var(--text-body)', fontWeight: 500 }}>{item.label} <span style={{ color: 'var(--text-muted)' }}>({item.count})</span></span>
             </div>
-            <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.percent.toFixed(1)}%</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.percent.toFixed(1)}%</span>
           </div>
         ))}
       </div>
@@ -293,16 +293,16 @@ export function ConversionFunnelChart({ data = [] }) {
     color: palette[index % palette.length]
   }));
   const maxCount = Math.max(1, ...steps.map((s) => s.count));
-  if (!steps.length) return <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b' }}>No conversion funnel data available for this period.</div>;
+  if (!steps.length) return <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No conversion funnel data available for this period.</div>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
       {steps.map((step) => (
         <div key={step.stage} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-body)' }}>
             <span>{step.stage}</span>
-            <span style={{ color: '#0f172a', fontWeight: 700, whiteSpace: 'nowrap' }}>{step.available ? step.count.toLocaleString() : 'N/A'}{step.percent == null ? '' : ` (${step.percent.toFixed ? step.percent.toFixed(1) : step.percent}%)`}</span>
+            <span style={{ color: 'var(--text-main)', fontWeight: 700, whiteSpace: 'nowrap' }}>{step.available ? step.count.toLocaleString() : 'N/A'}{step.percent == null ? '' : ` (${step.percent.toFixed ? step.percent.toFixed(1) : step.percent}%)`}</span>
           </div>
-          <div style={{ height: 10, background: '#f1f5f9', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ height: 10, background: 'var(--surface-alt)', borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${step.available ? Math.max(0, step.count / maxCount * 100) : 0}%`, background: step.color, borderRadius: 6, transition: 'width 0.6s ease' }} />
           </div>
         </div>

@@ -78,16 +78,16 @@ export default function ChangePasswordModal() {
   return (
     <div className="modal-backdrop" style={{ zIndex: 9999, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)' }}>
       <div className="modal-box" style={{ maxWidth: 460 }}>
-        <div className="modal-header" style={{ borderBottom: '1px solid #e2e8f0' }}>
+        <div className="modal-header" style={{ borderBottom: '1px solid var(--border-default)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <KeyRound size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Set Your Permanent Password
               </h3>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Required before accessing workspace data
               </span>
             </div>
@@ -97,13 +97,13 @@ export default function ChangePasswordModal() {
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{
-              background: '#fef3c7',
-              border: '1px solid #fde68a',
+              background: 'var(--warning-bg)',
+              border: '1px solid var(--warning-border)',
               borderRadius: 8,
               padding: '0.75rem',
               display: 'flex',
               gap: '0.625rem',
-              color: '#92400e',
+              color: 'var(--warning-text-dark)',
               fontSize: '0.8125rem',
               lineHeight: 1.4,
             }}>
@@ -115,9 +115,9 @@ export default function ChangePasswordModal() {
 
             {errorMsg && (
               <div style={{
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#dc2626',
+                background: 'var(--danger-bg)',
+                border: '1px solid var(--danger-border)',
+                color: 'var(--danger-text)',
                 padding: '0.625rem 0.875rem',
                 borderRadius: 8,
                 fontSize: '0.8125rem',
@@ -132,9 +132,9 @@ export default function ChangePasswordModal() {
 
             {successNotice && (
               <div style={{
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                color: '#059669',
+                background: 'var(--success-bg)',
+                border: '1px solid var(--success-border)',
+                color: 'var(--success-text)',
                 padding: '0.625rem 0.875rem',
                 borderRadius: 8,
                 fontSize: '0.8125rem',
@@ -148,7 +148,7 @@ export default function ChangePasswordModal() {
             )}
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Current Temporary Password
               </label>
               <div style={{ position: 'relative' }}>
@@ -164,7 +164,7 @@ export default function ChangePasswordModal() {
                 <button
                   type="button"
                   onClick={() => setShowOld(!showOld)}
-                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
                   {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -172,7 +172,7 @@ export default function ChangePasswordModal() {
             </div>
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 New Permanent Password
               </label>
               <div style={{ position: 'relative' }}>
@@ -188,18 +188,18 @@ export default function ChangePasswordModal() {
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
                   {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              <span style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: 2, display: 'block' }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
                 Must contain at least 8 characters, 1 uppercase, 1 lowercase, and 1 number.
               </span>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Confirm New Password
               </label>
               <input
@@ -213,7 +213,7 @@ export default function ChangePasswordModal() {
             </div>
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="modal-footer" style={{ borderTop: '1px solid var(--border-default)', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
             <button
               type="submit"
               className="btn btn-primary"

@@ -144,7 +144,7 @@ export default function TopBar() {
                     setIsNewMenuOpen(false);
                   }}
                 >
-                  <Plus size={14} color="#2563eb" />
+                  <Plus size={14} color="var(--primary)" />
                   {opt.label}
                 </button>
               ))}
@@ -202,7 +202,7 @@ export default function TopBar() {
                   {currentUser.role || 'Sales Representative'}
                 </div>
               </div>
-              <ChevronDown size={14} color="#64748b" />
+              <ChevronDown size={14} color="var(--text-muted)" />
             </div>
 
             {isUserMenuOpen && (
@@ -259,10 +259,10 @@ export default function TopBar() {
                   <ShieldCheck size={15} />
                   Agent Permissions
                 </button>
-                <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.35rem 0' }} />
+                <div style={{ borderTop: '1px solid var(--border-default)', margin: '0.35rem 0' }} />
                 <button
                   className="nav-item"
-                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem', color: '#dc2626' }}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', fontSize: '0.8125rem', color: 'var(--danger-text)' }}
                   onClick={() => {
                     logout();
                     setIsUserMenuOpen(false);

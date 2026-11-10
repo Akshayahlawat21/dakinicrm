@@ -502,22 +502,22 @@ export default function CalendarPage() {
   // Color & Badge helper
   const getTypeBadgeStyle = (type, completed, passed) => {
     if (completed) {
-      return { bg: '#ecfdf5', color: '#065f46', border: '#a7f3d0', label: 'COMPLETED' };
+      return { bg: 'var(--success-bg)', color: 'var(--success-text-dark)', border: 'var(--success-border)', label: 'COMPLETED' };
     }
     if (passed) {
-      return { bg: '#fef3c7', color: '#92400e', border: '#fde68a', label: 'PASSED' };
+      return { bg: 'var(--warning-bg)', color: 'var(--warning-text-dark)', border: 'var(--warning-border)', label: 'PASSED' };
     }
     switch (type) {
       case 'follow-up':
-        return { bg: '#fff7ed', color: '#c2410c', border: '#ffedd5', label: 'FOLLOW-UP' };
+        return { bg: 'var(--warning-bg)', color: 'var(--warning-text)', border: 'var(--warning-border)', label: 'FOLLOW-UP' };
       case 'call':
-        return { bg: '#f0fdf4', color: '#166534', border: '#dcfce7', label: 'CALL' };
+        return { bg: 'var(--success-bg)', color: 'var(--success-text-dark)', border: 'var(--success-border)', label: 'CALL' };
       case 'demo':
-        return { bg: '#faf5ff', color: '#7e22ce', border: '#f3e8ff', label: 'DEMO' };
+        return { bg: 'var(--purple-bg)', color: 'var(--purple-text)', border: 'rgba(168, 85, 247, 0.28)', label: 'DEMO' };
       case 'review':
-        return { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', label: 'REVIEW' };
+        return { bg: 'var(--surface-soft)', color: 'var(--text-body)', border: 'var(--border-default)', label: 'REVIEW' };
       default:
-        return { bg: '#eff6ff', color: '#1e40af', border: '#bfdbfe', label: 'MEETING' };
+        return { bg: 'var(--primary-light)', color: 'var(--primary-dark)', border: 'rgba(59, 130, 246, 0.28)', label: 'MEETING' };
     }
   };
 
@@ -526,9 +526,9 @@ export default function CalendarPage() {
       {/* Feedback Alert Toast */}
       {meetingAlert && (
         <div style={{
-          background: '#ecfdf5',
-          border: '1px solid #a7f3d0',
-          color: '#065f46',
+          background: 'var(--success-bg)',
+          border: '1px solid var(--success-border)',
+          color: 'var(--success-text-dark)',
           padding: '0.75rem 1rem',
           borderRadius: 8,
           marginBottom: '1rem',
@@ -542,12 +542,12 @@ export default function CalendarPage() {
           animation: 'fadeIn 0.2s ease-in-out'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} color="#059669" />
+            <Sparkles size={16} color="var(--success-text)" />
             <span>{meetingAlert}</span>
           </div>
           <button
             onClick={() => setMeetingAlert(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success-text-dark)' }}
           >
             <X size={15} />
           </button>
@@ -558,7 +558,7 @@ export default function CalendarPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Calendar & Follow-ups
             </h1>
             <span className="badge badge-blue" style={{ fontSize: '0.75rem' }}>
@@ -573,14 +573,14 @@ export default function CalendarPage() {
               </span>
             )}
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Real-world Indian calendar scheduling, customer demos, and executive cadences
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {/* Day / Week / Month Toggle */}
-          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 3, border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', background: 'var(--surface-alt)', borderRadius: 8, padding: 3, border: '1px solid var(--border-default)' }}>
             {['Day', 'Week', 'Month'].map((m) => (
               <button
                 key={m}
@@ -592,8 +592,8 @@ export default function CalendarPage() {
                   borderRadius: 6,
                   border: 'none',
                   cursor: 'pointer',
-                  background: viewMode === m ? '#ffffff' : 'transparent',
-                  color: viewMode === m ? '#2563eb' : '#64748b',
+                  background: viewMode === m ? 'var(--bg-card)' : 'transparent',
+                  color: viewMode === m ? 'var(--primary)' : 'var(--text-muted)',
                   boxShadow: viewMode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
@@ -612,9 +612,9 @@ export default function CalendarPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                background: '#fef2f2',
-                borderColor: '#fecaca',
-                color: '#dc2626',
+                background: 'var(--danger-bg)',
+                borderColor: 'var(--danger-border)',
+                color: 'var(--danger-text)',
                 fontWeight: 700
               }}
               title="Remove all follow-ups whose day has passed or are marked as completed"
@@ -642,15 +642,15 @@ export default function CalendarPage() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0.65rem 1rem',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-default)',
         borderRadius: 10,
         marginBottom: '1.25rem',
         flexWrap: 'wrap',
         gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Filter size={13} /> Filter:
           </span>
           {['All', 'Follow-ups', 'Upcoming', 'Completed', 'Passed'].map((tab) => (
@@ -663,9 +663,9 @@ export default function CalendarPage() {
                 fontWeight: 600,
                 borderRadius: 6,
                 border: '1px solid',
-                borderColor: statusFilter === tab ? '#2563eb' : '#e2e8f0',
-                background: statusFilter === tab ? '#eff6ff' : '#ffffff',
-                color: statusFilter === tab ? '#2563eb' : '#475569',
+                borderColor: statusFilter === tab ? 'var(--primary)' : 'var(--border-default)',
+                background: statusFilter === tab ? 'var(--primary-light)' : 'var(--bg-card)',
+                color: statusFilter === tab ? 'var(--primary)' : 'var(--text-body)',
                 cursor: 'pointer'
               }}
             >
@@ -689,7 +689,7 @@ export default function CalendarPage() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '0.75rem',
               display: 'flex',
               alignItems: 'center',
@@ -718,8 +718,8 @@ export default function CalendarPage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.75rem 1.25rem',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#f8fafc',
+                borderBottom: '1px solid var(--border-default)',
+                background: 'var(--surface-soft)',
                 flexWrap: 'wrap',
                 gap: '0.75rem'
               }}>
@@ -740,7 +740,7 @@ export default function CalendarPage() {
                   >
                     <ChevronRight size={16} />
                   </button>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginLeft: '0.5rem' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', marginLeft: '0.5rem' }}>
                     Week of {days[0].date} – {days[6].date} {days[6].year}
                   </span>
                 </div>
@@ -759,7 +759,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Days Columns Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border-default)', background: 'var(--surface-soft)' }}>
                 {days.map((d, i) => {
                   const dayEvts = filteredEvents.filter((e) => {
                     const eYear = e.year || TODAY.getFullYear();
@@ -776,11 +776,11 @@ export default function CalendarPage() {
                       style={{
                         padding: '0.85rem 0.5rem',
                         textAlign: 'center',
-                        borderRight: i < 6 ? '1px solid #e2e8f0' : 'none',
+                        borderRight: i < 6 ? '1px solid var(--border-default)' : 'none',
                         background: d.isToday
-                          ? '#eff6ff'
+                          ? 'var(--primary-light)'
                           : selectedDayIndex === i
-                          ? '#f1f5f9'
+                          ? 'var(--surface-alt)'
                           : 'transparent',
                         cursor: 'pointer',
                         transition: 'background 0.15s ease'
@@ -789,7 +789,7 @@ export default function CalendarPage() {
                       <div style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: d.isToday ? '#2563eb' : isPassed ? '#94a3b8' : '#64748b',
+                        color: d.isToday ? 'var(--primary)' : isPassed ? 'var(--text-subtle)' : 'var(--text-muted)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -801,12 +801,12 @@ export default function CalendarPage() {
                             TODAY
                           </span>
                         )}
-                        {isPassed && <span style={{ fontSize: '0.65rem', color: '#b45309' }}>•</span>}
+                        {isPassed && <span style={{ fontSize: '0.65rem', color: 'var(--warning-text)' }}>•</span>}
                       </div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: d.isToday ? '#2563eb' : isPassed ? '#64748b' : '#0f172a' }}>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: d.isToday ? 'var(--primary)' : isPassed ? 'var(--text-muted)' : 'var(--text-main)' }}>
                         {d.date}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: dayEvts.length > 0 ? '#2563eb' : '#94a3b8', fontWeight: 600 }}>
+                      <div style={{ fontSize: '0.6875rem', color: dayEvts.length > 0 ? 'var(--primary)' : 'var(--text-subtle)', fontWeight: 600 }}>
                         {dayEvts.length} {dayEvts.length === 1 ? 'event' : 'events'}
                       </div>
                     </div>
@@ -829,13 +829,13 @@ export default function CalendarPage() {
                     <div
                       key={colIdx}
                       style={{
-                        borderRight: colIdx < 6 ? '1px solid #f1f5f9' : 'none',
+                        borderRight: colIdx < 6 ? '1px solid var(--border-default)' : 'none',
                         padding: '0.5rem',
                         background: d.isToday
-                          ? 'rgba(239, 246, 255, 0.5)'
+                          ? 'var(--primary-light)'
                           : isPassed
-                          ? '#fafafa'
-                          : '#ffffff',
+                          ? 'var(--surface-soft)'
+                          : 'var(--bg-card)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.5rem'
@@ -846,10 +846,10 @@ export default function CalendarPage() {
                         onClick={() => handleOpenAddModal(colIdx, 10)}
                         style={{
                           background: 'none',
-                          border: '1px dashed #cbd5e1',
+                          border: '1px dashed var(--border-strong)',
                           borderRadius: 6,
                           padding: '0.35rem',
-                          color: '#64748b',
+                          color: 'var(--text-muted)',
                           fontSize: '0.6875rem',
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -871,7 +871,7 @@ export default function CalendarPage() {
                           <div
                             key={evt.id}
                             style={{
-                              background: evt.completed ? '#f8fafc' : badge.bg,
+                              background: evt.completed ? 'var(--surface-soft)' : badge.bg,
                               border: `1px solid ${badge.border}`,
                               borderLeft: `3.5px solid ${evt.completed ? '#10b981' : passed ? '#f59e0b' : '#2563eb'}`,
                               borderRadius: 8,
@@ -901,8 +901,8 @@ export default function CalendarPage() {
                                   title={evt.completed ? "Mark incomplete" : "Mark completed"}
                                   style={{
                                     border: 'none',
-                                    background: evt.completed ? '#10b981' : '#e2e8f0',
-                                    color: evt.completed ? '#ffffff' : '#64748b',
+                                    background: evt.completed ? '#10b981' : 'var(--surface-alt)',
+                                    color: evt.completed ? '#ffffff' : 'var(--text-muted)',
                                     borderRadius: 4,
                                     width: 18,
                                     height: 18,
@@ -922,14 +922,14 @@ export default function CalendarPage() {
                                   style={{
                                     border: 'none',
                                     background: 'none',
-                                    color: '#94a3b8',
+                                    color: 'var(--text-subtle)',
                                     padding: 2,
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center'
                                   }}
                                   onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                                  onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-subtle)')}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -938,18 +938,18 @@ export default function CalendarPage() {
 
                             <div style={{
                               fontWeight: 700,
-                              color: evt.completed ? '#64748b' : '#0f172a',
+                              color: evt.completed ? 'var(--text-muted)' : 'var(--text-main)',
                               textDecoration: evt.completed ? 'line-through' : 'none',
                               marginBottom: 2
                             }}>
                               {evt.title}
                             </div>
 
-                            <div style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.6875rem' }}>
+                            <div style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.6875rem' }}>
                               {evt.company}
                             </div>
 
-                            <div style={{ color: '#64748b', fontSize: '0.6875rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.6875rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
                               <Clock size={11} />
                               {evt.time}
                             </div>
@@ -974,8 +974,8 @@ export default function CalendarPage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.85rem 1.25rem',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#f8fafc',
+                borderBottom: '1px solid var(--border-default)',
+                background: 'var(--surface-soft)',
                 flexWrap: 'wrap',
                 gap: '0.75rem'
               }}>
@@ -997,10 +997,10 @@ export default function CalendarPage() {
                     <ChevronRight size={16} />
                   </button>
                   <div style={{ marginLeft: '0.5rem' }}>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
                       {currentSelectedDay.fullDate}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {activeDayEvents.length} {activeDayEvents.length === 1 ? 'event' : 'events'} scheduled
                       {isEventPassed({ dayNumber: currentSelectedDay.dayNumber, monthIndex: currentSelectedDay.monthIndex, year: currentSelectedDay.year }) && ' • (Day Passed)'}
                     </div>
@@ -1019,9 +1019,9 @@ export default function CalendarPage() {
                         fontWeight: 600,
                         borderRadius: 6,
                         border: '1px solid',
-                        borderColor: selectedDayIndex === idx ? '#2563eb' : '#e2e8f0',
-                        background: selectedDayIndex === idx ? '#eff6ff' : '#ffffff',
-                        color: selectedDayIndex === idx ? '#2563eb' : '#475569',
+                        borderColor: selectedDayIndex === idx ? 'var(--primary)' : 'var(--border-default)',
+                        background: selectedDayIndex === idx ? 'var(--primary-light)' : 'var(--bg-card)',
+                        color: selectedDayIndex === idx ? 'var(--primary)' : 'var(--text-body)',
                         cursor: 'pointer'
                       }}
                     >
@@ -1043,14 +1043,14 @@ export default function CalendarPage() {
                       style={{
                         display: 'grid',
                         gridTemplateColumns: '85px 1fr',
-                        borderBottom: '1px solid #f1f5f9',
+                        borderBottom: '1px solid var(--border-default)',
                         minHeight: 64,
                         alignItems: 'start',
                         padding: '0.5rem 0'
                       }}
                     >
                       {/* Hour Label */}
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', paddingTop: '0.4rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', paddingTop: '0.4rem' }}>
                         {slot.label}
                       </div>
 
@@ -1066,7 +1066,7 @@ export default function CalendarPage() {
                                 <div
                                   key={evt.id}
                                   style={{
-                                    background: evt.completed ? '#f8fafc' : badge.bg,
+                                    background: evt.completed ? 'var(--surface-soft)' : badge.bg,
                                     border: `1px solid ${badge.border}`,
                                     borderLeft: `4px solid ${evt.completed ? '#10b981' : passed ? '#f59e0b' : '#2563eb'}`,
                                     borderRadius: 8,
@@ -1083,7 +1083,7 @@ export default function CalendarPage() {
                                       <span style={{
                                         fontWeight: 800,
                                         fontSize: '0.875rem',
-                                        color: evt.completed ? '#64748b' : '#0f172a',
+                                        color: evt.completed ? 'var(--text-muted)' : 'var(--text-main)',
                                         textDecoration: evt.completed ? 'line-through' : 'none'
                                       }}>
                                         {evt.title}
@@ -1102,15 +1102,15 @@ export default function CalendarPage() {
                                       </span>
                                     </div>
 
-                                    <div style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 600 }}>
+                                    <div style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 600 }}>
                                       {evt.company}
                                     </div>
 
-                                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                                       {evt.desc}
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 6, fontSize: '0.75rem', color: '#475569', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: 6, fontSize: '0.75rem', color: 'var(--text-body)', flexWrap: 'wrap' }}>
                                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                         <Clock size={12} /> {evt.time}
                                       </span>
@@ -1144,8 +1144,8 @@ export default function CalendarPage() {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: 4,
-                                        color: '#dc2626',
-                                        borderColor: '#fee2e2'
+                                        color: 'var(--danger-text)',
+                                        borderColor: 'var(--danger-border)'
                                       }}
                                       title="Remove from calendar"
                                     >
@@ -1163,25 +1163,25 @@ export default function CalendarPage() {
                             style={{
                               height: 38,
                               borderRadius: 6,
-                              border: '1px dashed #e2e8f0',
+                              border: '1px dashed var(--border-default)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               padding: '0 0.75rem',
-                              color: '#94a3b8',
+                              color: 'var(--text-subtle)',
                               fontSize: '0.75rem',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = '#93c5fd';
-                              e.currentTarget.style.background = '#f8fafc';
-                              e.currentTarget.style.color = '#2563eb';
+                              e.currentTarget.style.borderColor = 'var(--primary)';
+                              e.currentTarget.style.background = 'var(--surface-soft)';
+                              e.currentTarget.style.color = 'var(--primary)';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor = '#e2e8f0';
+                              e.currentTarget.style.borderColor = 'var(--border-default)';
                               e.currentTarget.style.background = 'transparent';
-                              e.currentTarget.style.color = '#94a3b8';
+                              e.currentTarget.style.color = 'var(--text-subtle)';
                             }}
                           >
                             <span>Available slot</span>
@@ -1209,8 +1209,8 @@ export default function CalendarPage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.85rem 1.25rem',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#f8fafc',
+                borderBottom: '1px solid var(--border-default)',
+                background: 'var(--surface-soft)',
                 flexWrap: 'wrap',
                 gap: '0.75rem'
               }}>
@@ -1231,7 +1231,7 @@ export default function CalendarPage() {
                   >
                     <ChevronRight size={16} />
                   </button>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginLeft: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginLeft: '0.5rem' }}>
                     {currentMonthYearLabel}
                   </span>
                 </div>
@@ -1248,16 +1248,16 @@ export default function CalendarPage() {
               </div>
 
               {/* Month Day Names */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'var(--surface-soft)', borderBottom: '1px solid var(--border-default)' }}>
                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, idx) => (
-                  <div key={idx} style={{ padding: '0.65rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                  <div key={idx} style={{ padding: '0.65rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)' }}>
                     {dayName}
                   </div>
                 ))}
               </div>
 
               {/* Month Grid Cells with accurate leap year / month boundaries */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border-default)' }}>
                 {monthDays.map((cell, idx) => {
                   const eventsOnThisDay = filteredEvents.filter((e) => {
                     if (!cell.isCurrentMonth) return false;
@@ -1289,15 +1289,15 @@ export default function CalendarPage() {
                       style={{
                         minHeight: 90,
                         padding: '0.45rem',
-                        borderRight: (idx + 1) % 7 !== 0 ? '1px solid #f1f5f9' : 'none',
-                        borderBottom: '1px solid #f1f5f9',
+                        borderRight: (idx + 1) % 7 !== 0 ? '1px solid var(--border-default)' : 'none',
+                        borderBottom: '1px solid var(--border-default)',
                         background: cell.isToday
-                          ? '#eff6ff'
+                          ? 'var(--primary-light)'
                           : isPast
-                          ? '#fafafa'
+                          ? 'var(--surface-soft)'
                           : cell.isCurrentMonth
-                          ? '#ffffff'
-                          : '#fcfcfc',
+                          ? 'var(--bg-card)'
+                          : 'var(--surface-soft)',
                         cursor: cell.isCurrentMonth ? 'pointer' : 'default',
                         transition: 'background 0.15s ease'
                       }}
@@ -1313,13 +1313,13 @@ export default function CalendarPage() {
                           justifyContent: 'center',
                           borderRadius: '50%',
                           background: cell.isToday ? '#2563eb' : 'transparent',
-                          color: cell.isToday ? '#ffffff' : cell.isCurrentMonth ? '#0f172a' : '#94a3b8'
+                          color: cell.isToday ? '#ffffff' : cell.isCurrentMonth ? 'var(--text-main)' : 'var(--text-subtle)'
                         }}>
                           {cell.day}
                         </span>
 
                         {cell.month && (
-                          <span style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600 }}>
+                          <span style={{ fontSize: '0.625rem', color: 'var(--text-subtle)', fontWeight: 600 }}>
                             {cell.month}
                           </span>
                         )}
@@ -1329,7 +1329,7 @@ export default function CalendarPage() {
                             width: 6,
                             height: 6,
                             borderRadius: '50%',
-                            background: '#2563eb',
+                            background: 'var(--primary)',
                             display: 'inline-block'
                           }} />
                         )}
@@ -1344,8 +1344,8 @@ export default function CalendarPage() {
                               fontSize: '0.625rem',
                               padding: '2px 4px',
                               borderRadius: 4,
-                              background: ev.completed ? '#f1f5f9' : '#dbeafe',
-                              color: ev.completed ? '#64748b' : '#1e40af',
+                              background: ev.completed ? 'var(--surface-alt)' : 'var(--primary-light)',
+                              color: ev.completed ? 'var(--text-muted)' : 'var(--primary-dark)',
                               textDecoration: ev.completed ? 'line-through' : 'none',
                               fontWeight: 600,
                               whiteSpace: 'nowrap',
@@ -1359,7 +1359,7 @@ export default function CalendarPage() {
                         ))}
 
                         {eventsOnThisDay.length > 2 && (
-                          <div style={{ fontSize: '0.625rem', color: '#2563eb', fontWeight: 700 }}>
+                          <div style={{ fontSize: '0.625rem', color: 'var(--primary)', fontWeight: 700 }}>
                             +{eventsOnThisDay.length - 2} more
                           </div>
                         )}
@@ -1377,7 +1377,7 @@ export default function CalendarPage() {
         <div className="crm-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'fit-content' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 {viewMode === 'Day' ? `${currentSelectedDay.day} ${currentSelectedDay.date} Agenda` : `Agenda: ${currentSelectedDay.day} ${currentSelectedDay.date}`}
               </h3>
               <button
@@ -1389,7 +1389,7 @@ export default function CalendarPage() {
                 <Plus size={13} /> Follow-up
               </button>
             </div>
-            <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Confirmed demos, meetings & customer follow-ups
             </p>
           </div>
@@ -1397,8 +1397,8 @@ export default function CalendarPage() {
           {/* Quick Clean Up button if passed or completed items exist on this day */}
           {activeDayEvents.some((ev) => ev.completed || isEventPassed(ev)) && (
             <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fee2e2',
+              background: 'var(--danger-bg)',
+              border: '1px solid var(--danger-border)',
               borderRadius: 8,
               padding: '0.6rem 0.75rem',
               display: 'flex',
@@ -1406,7 +1406,7 @@ export default function CalendarPage() {
               justifyContent: 'space-between',
               gap: '0.5rem'
             }}>
-              <span style={{ fontSize: '0.6875rem', color: '#991b1b', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--danger-text-dark)', fontWeight: 600 }}>
                 Clean up passed / done items
               </span>
               <button
@@ -1440,7 +1440,7 @@ export default function CalendarPage() {
                     style={{
                       padding: '0.85rem',
                       borderRadius: 10,
-                      background: evt.completed ? '#f8fafc' : badge.bg,
+                      background: evt.completed ? 'var(--surface-soft)' : badge.bg,
                       border: `1px solid ${badge.border}`,
                       borderLeft: `4px solid ${evt.completed ? '#10b981' : passed ? '#f59e0b' : '#2563eb'}`,
                       opacity: evt.completed ? 0.75 : 1,
@@ -1460,8 +1460,8 @@ export default function CalendarPage() {
                           title={evt.completed ? "Mark incomplete" : "Mark done"}
                           style={{
                             border: 'none',
-                            background: evt.completed ? '#10b981' : '#e2e8f0',
-                            color: evt.completed ? '#ffffff' : '#475569',
+                            background: evt.completed ? '#10b981' : 'var(--surface-alt)',
+                            color: evt.completed ? '#ffffff' : 'var(--text-body)',
                             borderRadius: 4,
                             width: 22,
                             height: 22,
@@ -1478,8 +1478,8 @@ export default function CalendarPage() {
                           title="Remove follow-up"
                           style={{
                             border: 'none',
-                            background: '#fee2e2',
-                            color: '#dc2626',
+                            background: 'var(--danger-bg)',
+                            color: 'var(--danger-text)',
                             borderRadius: 4,
                             width: 22,
                             height: 22,
@@ -1497,21 +1497,21 @@ export default function CalendarPage() {
                     <div style={{
                       fontSize: '0.875rem',
                       fontWeight: 700,
-                      color: evt.completed ? '#64748b' : '#0f172a',
+                      color: evt.completed ? 'var(--text-muted)' : 'var(--text-main)',
                       textDecoration: evt.completed ? 'line-through' : 'none'
                     }}>
                       {evt.title}
                     </div>
 
-                    <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, marginTop: 1 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginTop: 1 }}>
                       {evt.company}
                     </div>
 
-                    <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: 4 }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginTop: 4 }}>
                       {evt.desc}
                     </p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: '0.6875rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                       <Clock size={11} /> {evt.time}
                     </div>
 
@@ -1523,15 +1523,15 @@ export default function CalendarPage() {
               <div style={{
                 padding: '2rem 1rem',
                 textAlign: 'center',
-                border: '1px dashed #e2e8f0',
+                border: '1px dashed var(--border-default)',
                 borderRadius: 10,
-                color: '#94a3b8'
+                color: 'var(--text-subtle)'
               }}>
                 <CalendarIcon size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#64748b' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                   No follow-ups for this day
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 4 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginTop: 4 }}>
                   Stay on top of accounts by scheduling a cadence call.
                 </p>
                 <button
@@ -1566,7 +1566,7 @@ export default function CalendarPage() {
           padding: '1rem'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: 'var(--bg-card)',
             borderRadius: 16,
             maxWidth: 520,
             width: '100%',
@@ -1576,23 +1576,23 @@ export default function CalendarPage() {
             {/* Modal Header */}
             <div style={{
               padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid #e2e8f0',
+              borderBottom: '1px solid var(--border-default)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#f8fafc'
+              background: 'var(--surface-soft)'
             }}>
               <div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
                   Schedule Customer Follow-up / Event
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   Creates an engagement event and synchronizes with cadence alerts
                 </p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer' }}
               >
                 <X size={18} />
               </button>
@@ -1602,7 +1602,7 @@ export default function CalendarPage() {
             <form onSubmit={handleCreateEventSubmit} style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Title */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                   Follow-up / Event Title *
                 </label>
                 <input
@@ -1619,7 +1619,7 @@ export default function CalendarPage() {
               {/* Type & Duration */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                     Engagement Type
                   </label>
                   <select
@@ -1636,7 +1636,7 @@ export default function CalendarPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                     Duration
                   </label>
                   <select
@@ -1654,7 +1654,7 @@ export default function CalendarPage() {
 
               {/* Company / Lead */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                   Related Account / Company
                 </label>
                 <input
@@ -1675,7 +1675,7 @@ export default function CalendarPage() {
               {/* Day of Week & Hour */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                     Scheduled Day
                   </label>
                   <select
@@ -1692,7 +1692,7 @@ export default function CalendarPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                     Start Time
                   </label>
                   <select
@@ -1711,7 +1711,7 @@ export default function CalendarPage() {
 
               {/* Description / Notes */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
                   Agenda / Follow-up Notes
                 </label>
                 <textarea
@@ -1724,7 +1724,7 @@ export default function CalendarPage() {
               </div>
 
               {/* Sync to Tasks & To-Dos checkbox */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#475569', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-body)', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={newSyncTask}

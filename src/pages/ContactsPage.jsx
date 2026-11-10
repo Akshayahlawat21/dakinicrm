@@ -48,12 +48,12 @@ export default function ContactsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Contacts
             </h1>
             <span className="badge badge-blue">{(contacts || []).length} total</span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Buyers and decision makers across your accounts
           </p>
         </div>
@@ -138,25 +138,25 @@ export default function ContactsPage() {
                           {getInitials(contact)}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{displayName}</div>
-                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{displayIndustry}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{displayName}</div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{displayIndustry}</div>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 600, color: '#2563eb' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
                         {displayAccount}
                       </span>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 500, color: '#334155' }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text-body)' }}>
                         {displayTitle}
                       </span>
                     </td>
                     <td>
                       <div style={{ fontSize: '0.8125rem' }}>
-                        <div style={{ color: '#0f172a', fontWeight: 600 }}>{displayEmail}</div>
-                        <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{displayPhone}</div>
+                        <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{displayEmail}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{displayPhone}</div>
                       </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -214,9 +214,9 @@ export default function ContactsPage() {
           </table>
 
           {filteredContacts.length === 0 && !isLoadingData && (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-              <Users size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>No contacts found</div>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <Users size={36} color="var(--text-subtle)" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-body)' }}>No contacts found</div>
               <div style={{ fontSize: '0.8125rem', marginTop: 4 }}>Try clearing search or create a new contact</div>
             </div>
           )}

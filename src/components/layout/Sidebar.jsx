@@ -90,7 +90,7 @@ export default function Sidebar() {
                 <span className="sidebar-brand-text">Dakini AI</span>
                 <span className="sidebar-brand-badge">CRM</span>
               </div>
-              <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>Sales Enterprise</span>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Sales Enterprise</span>
             </div>
           )}
         </div>
@@ -159,10 +159,10 @@ export default function Sidebar() {
             D
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Dakini AI Org
             </div>
-            <div style={{ fontSize: '0.6875rem', color: '#2563eb', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--primary)', fontWeight: 600 }}>
               Enterprise Plan
             </div>
           </div>

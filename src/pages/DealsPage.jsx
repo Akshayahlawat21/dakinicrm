@@ -113,7 +113,7 @@ export default function DealsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Deals & Active Pipeline
             </h1>
             <span className="badge badge-blue" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
@@ -123,16 +123,16 @@ export default function DealsPage() {
               Total: ${totalPipeline.toLocaleString()}
             </span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Salesforce-inspired Kanban pipeline with stage velocity & probability tracking
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8125rem' }}>
-            <TrendingUp size={16} color="#2563eb" />
-            <span style={{ fontWeight: 600, color: '#1e40af' }}>Won this month:</span>
-            <strong style={{ color: '#2563eb' }}>${wonTotal.toLocaleString()}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary-light)', border: '1px solid var(--primary-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8125rem' }}>
+            <TrendingUp size={16} color="var(--primary)" />
+            <span style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>Won this month:</span>
+            <strong style={{ color: 'var(--primary)' }}>${wonTotal.toLocaleString()}</strong>
           </div>
 
           <button
@@ -213,9 +213,9 @@ export default function DealsPage() {
             marginBottom: '1.25rem',
             padding: '0.85rem 1.15rem',
             borderRadius: 10,
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#991b1b',
+            background: 'var(--danger-bg)',
+            border: '1px solid var(--danger-border)',
+            color: 'var(--danger-text-dark)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -224,7 +224,7 @@ export default function DealsPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <AlertTriangle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+            <AlertTriangle size={18} color="var(--danger)" style={{ flexShrink: 0 }} />
             <div>
               <strong style={{ fontSize: '0.875rem' }}>Permission Denied:</strong>{' '}
               <span style={{ fontSize: '0.85rem' }}>{permissionError}</span>
@@ -235,7 +235,7 @@ export default function DealsPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#991b1b',
+              color: 'var(--danger-text-dark)',
               fontWeight: 700,
               cursor: 'pointer',
               fontSize: '1.2rem',
@@ -251,11 +251,11 @@ export default function DealsPage() {
 
       {/* Selected Deal Stage Path Chevron (Salesforce Path Component) */}
       {selectedDeal && (
-        <div className="crm-card" style={{ marginBottom: '1.5rem', background: '#ffffff' }}>
+        <div className="crm-card" style={{ marginBottom: '1.5rem', background: 'var(--bg-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Selected Opportunity</span>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Selected Opportunity</span>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 {selectedDeal.name} (${selectedDeal.value.toLocaleString()})
               </h2>
             </div>
@@ -263,8 +263,8 @@ export default function DealsPage() {
               <button
                 className="btn btn-outline btn-sm"
                 style={{
-                  color: canDeleteDeals ? '#ef4444' : '#94a3b8',
-                  borderColor: canDeleteDeals ? '#fca5a5' : '#cbd5e1',
+                  color: canDeleteDeals ? 'var(--danger)' : 'var(--text-subtle)',
+                  borderColor: canDeleteDeals ? 'var(--danger-border)' : 'var(--border-strong)',
                   cursor: canDeleteDeals ? 'pointer' : 'not-allowed',
                   opacity: canDeleteDeals ? 1 : 0.65,
                 }}
@@ -310,7 +310,7 @@ export default function DealsPage() {
                     setSelectedDeal({ ...selectedDeal, stage: stg });
                   }}
                 >
-                  {isPast && <CheckCircle size={13} color="#2563eb" />}
+                  {isPast && <CheckCircle size={13} color="var(--primary)" />}
                   <span>{stg}</span>
                 </div>
               );
@@ -537,7 +537,7 @@ export default function DealsPage() {
 
                     <div className="kanban-cards-stack">
                       {stageDeals.length === 0 ? (
-                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem' }}>
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-subtle)', fontSize: '0.8125rem' }}>
                           No deals in this stage
                         </div>
                       ) : (

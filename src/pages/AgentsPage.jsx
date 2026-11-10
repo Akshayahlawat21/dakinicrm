@@ -25,12 +25,12 @@ export default function AgentsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Dakini AI Autonomous Agents
             </h1>
             <span className="badge badge-blue">Sales Intelligence Suite</span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Configure autonomous worker agents, approval modes, and action guardrails
           </p>
         </div>
@@ -51,7 +51,7 @@ export default function AgentsPage() {
           >
             {t}
             {t === 'Approvals' && approvals.length > 0 && (
-              <span className="tab-count-pill" style={{ background: '#fef3c7', color: '#d97706' }}>
+              <span className="tab-count-pill" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
                 {approvals.length}
               </span>
             )}
@@ -68,7 +68,7 @@ export default function AgentsPage() {
                 key={ag.id}
                 className="crm-card"
                 style={{
-                  border: selectedAgent.id === ag.id ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                  border: selectedAgent.id === ag.id ? '2px solid var(--primary)' : '1px solid var(--border-default)',
                   boxShadow: selectedAgent.id === ag.id ? '0 4px 14px rgba(37,99,235,0.15)' : undefined,
                   cursor: 'pointer'
                 }}
@@ -89,10 +89,10 @@ export default function AgentsPage() {
                       <Sparkles size={20} />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
                         {ag.name}
                       </h3>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {ag.tasksThisWeek} tasks completed this week
                       </div>
                     </div>
@@ -104,12 +104,12 @@ export default function AgentsPage() {
                   </span>
                 </div>
 
-                <p style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-body)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
                   {ag.role}
                 </p>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem', fontSize: '0.75rem' }}>
-                  <span style={{ color: '#64748b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.75rem', fontSize: '0.75rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>
                     <strong>Last action:</strong> {ag.lastAction}
                   </span>
                   <span className="badge badge-blue">{ag.approvalMode}</span>
@@ -121,19 +121,19 @@ export default function AgentsPage() {
           {/* Right Selected Agent Inspector & Guardrails */}
           <div className="crm-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShieldCheck size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                   {selectedAgent.name}
                 </h3>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Agent Guardrails & Permissions</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Agent Guardrails & Permissions</span>
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Primary Directive & Goal
               </label>
               <textarea
@@ -145,21 +145,21 @@ export default function AgentsPage() {
             </div>
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.5rem' }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: '0.5rem' }}>
                 Allowed Autonomous Actions
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8125rem' }}>
                 {['Read Salesforce Leads & CRM Telemetry', 'Calculate & Update ICP Fit Scores', 'Draft Outbound Customer Emails', 'Advance Deal Stages in Active Pipeline'].map((act, i) => (
                   <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input type="checkbox" defaultChecked={i < 3} style={{ accentColor: '#2563eb' }} />
-                    <span style={{ color: '#334155' }}>{act}</span>
+                    <input type="checkbox" defaultChecked={i < 3} style={{ accentColor: 'var(--primary)' }} />
+                    <span style={{ color: 'var(--text-body)' }}>{act}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Human-in-the-Loop Mode
               </label>
               <select className="input-field" defaultValue={selectedAgent.approvalMode}>
@@ -169,7 +169,7 @@ export default function AgentsPage() {
               </select>
             </div>
 
-            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '0.5rem' }}>
               <button className="btn btn-secondary" style={{ flex: 1 }}>
                 <RotateCcw size={14} /> One-Click Undo
               </button>
@@ -184,22 +184,22 @@ export default function AgentsPage() {
       {activeTab === 'Approvals' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 800 }}>
           {approvals.length === 0 ? (
-            <div className="crm-card" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-              <CheckCircle size={36} color="#10b981" style={{ margin: '0 auto 0.75rem auto' }} />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>Approval Queue Clean</h3>
+            <div className="crm-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <CheckCircle size={36} color="var(--success)" style={{ margin: '0 auto 0.75rem auto' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>Approval Queue Clean</h3>
               <p>No actions require manual review right now.</p>
             </div>
           ) : (
             approvals.map((appr) => (
               <div key={appr.id} className="crm-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>{appr.title}</h3>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>{appr.title}</h3>
                   <span className="badge badge-amber">Waiting for {currentUser?.name ? currentUser.name.split(' ')[0] : 'Review'}</span>
                 </div>
-                <div style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 700, marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 700, marginBottom: '0.5rem' }}>
                   Target: {appr.entity}
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-body)', marginBottom: '1rem', background: 'var(--surface-soft)', padding: '0.75rem', borderRadius: 8, border: '1px solid var(--border-default)' }}>
                   {appr.preview}
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>

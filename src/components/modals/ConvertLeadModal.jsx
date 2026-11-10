@@ -69,14 +69,14 @@ export default function ConvertLeadModal() {
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Convert Lead: {leadToConvert.name}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Transform this qualified prospect into active CRM records
             </span>
           </div>
-          <button onClick={() => setIsConvertModalOpen(false)} style={{ color: '#64748b' }}>
+          <button onClick={() => setIsConvertModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
             <X size={20} />
           </button>
         </div>
@@ -88,8 +88,8 @@ export default function ConvertLeadModal() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#eff6ff',
-              border: '1px solid #bfdbfe',
+              background: 'var(--primary-light)',
+              border: '1px solid var(--primary-subtle)',
               borderRadius: 12,
               padding: '1rem'
             }}>
@@ -98,53 +98,53 @@ export default function ConvertLeadModal() {
                 const existingAcc = (accounts || []).find((a) => (a.name || '').toLowerCase().trim() === targetComp);
                 return (
                   <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: existingAcc ? '#059669' : '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: existingAcc ? 'var(--success-text)' : 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
                       <Building2 size={18} />
                     </div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: existingAcc ? '#059669' : '#0f172a' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: existingAcc ? 'var(--success-text)' : 'var(--text-main)' }}>
                       {existingAcc ? 'Existing Account' : 'New Account'}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', color: existingAcc ? '#059669' : '#64748b' }}>
+                    <div style={{ fontSize: '0.6875rem', color: existingAcc ? 'var(--success-text)' : 'var(--text-muted)' }}>
                       {existingAcc ? `${existingAcc.name} (Reused)` : (accountName || leadToConvert.company || leadToConvert.name)}
                     </div>
                   </div>
                 );
               })()}
 
-              <ArrowRight size={18} color="#2563eb" />
+              <ArrowRight size={18} color="var(--primary)" />
 
               {(() => {
                 const normEmail = (contactEmail || leadToConvert.email || '').trim().toLowerCase();
                 const existingCon = normEmail ? (contacts || []).find(c => (c.email || '').trim().toLowerCase() === normEmail) : null;
                 return (
                   <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: existingCon ? '#059669' : '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: existingCon ? 'var(--success-text)' : 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
                       <User size={18} />
                     </div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: existingCon ? '#059669' : '#0f172a' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: existingCon ? 'var(--success-text)' : 'var(--text-main)' }}>
                       {existingCon ? 'Existing Contact' : 'New Contact'}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', color: existingCon ? '#059669' : '#64748b' }}>
+                    <div style={{ fontSize: '0.6875rem', color: existingCon ? 'var(--success-text)' : 'var(--text-muted)' }}>
                       {existingCon ? `${existingCon.name || contactName} (Reused)` : (contactName || leadToConvert.name)}
                     </div>
                   </div>
                 );
               })()}
 
-              <ArrowRight size={18} color="#2563eb" />
+              <ArrowRight size={18} color="var(--primary)" />
 
               <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: createDeal ? '#2563eb' : '#94a3b8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: createDeal ? 'var(--primary)' : 'var(--text-subtle)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px auto' }}>
                   <Handshake size={18} />
                 </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>Opportunity</div>
-                <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{createDeal ? 'Pipeline Deal' : 'Skipped'}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>Opportunity</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{createDeal ? 'Pipeline Deal' : 'Skipped'}</div>
               </div>
             </div>
 
             {/* Account Details */}
             <div>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Account Name (Company)
               </label>
               <input
@@ -159,7 +159,7 @@ export default function ConvertLeadModal() {
             {/* Contact Details */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                   Contact Name
                 </label>
                 <input
@@ -171,7 +171,7 @@ export default function ConvertLeadModal() {
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                   Email Address
                 </label>
                 <input
@@ -185,7 +185,7 @@ export default function ConvertLeadModal() {
             </div>
 
             {/* Deal Toggle & Fields */}
-            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '1rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.85rem' }}>
                 <input
                   type="checkbox"
@@ -193,7 +193,7 @@ export default function ConvertLeadModal() {
                   onChange={(e) => setCreateDeal(e.target.checked)}
                   style={{ width: 16, height: 16, accentColor: '#2563eb' }}
                 />
-                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   Create Opportunity Deal in Active Pipeline
                 </span>
               </label>
@@ -202,7 +202,7 @@ export default function ConvertLeadModal() {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '0.75rem' }}>
                     <div>
-                      <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                         Opportunity Name
                       </label>
                       <input
@@ -213,7 +213,7 @@ export default function ConvertLeadModal() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                         Deal Amount ($)
                       </label>
                       <input
@@ -234,8 +234,8 @@ export default function ConvertLeadModal() {
                     if (!activeExistingDeal) return null;
                     return (
                       <div style={{
-                        background: '#fffbeb',
-                        border: '1px solid #fde68a',
+                        background: 'var(--warning-bg)',
+                        border: '1px solid var(--warning-border)',
                         borderRadius: 8,
                         padding: '0.65rem 0.85rem',
                         display: 'flex',
@@ -243,8 +243,8 @@ export default function ConvertLeadModal() {
                         alignItems: 'flex-start',
                         marginTop: '0.75rem'
                       }}>
-                        <AlertCircle size={16} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
-                        <div style={{ fontSize: '0.75rem', color: '#92400e', lineHeight: 1.4 }}>
+                        <AlertCircle size={16} color="var(--warning-text)" style={{ marginTop: 2, flexShrink: 0 }} />
+                        <div style={{ fontSize: '0.75rem', color: 'var(--warning-text-dark)', lineHeight: 1.4 }}>
                           <strong>Active Deal Notice:</strong> An active deal <em>"{activeExistingDeal.name}"</em> (${Number(activeExistingDeal.amount || activeExistingDeal.value || 0).toLocaleString()}, Stage: {activeExistingDeal.stage}) already exists for {accountName || leadToConvert.company}. Converting creates a separate opportunity or repeat purchase while preserving all history.
                         </div>
                       </div>

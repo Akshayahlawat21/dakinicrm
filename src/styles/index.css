@@ -35,17 +35,27 @@
 
   /* Functional Status Colors */
   --success: #10b981;
+  --success-text: #059669;
+  --success-text-dark: #065f46;
   --success-bg: #ecfdf5;
   --success-border: #a7f3d0;
   --warning: #f59e0b;
+  --warning-text: #d97706;
+  --warning-text-dark: #92400e;
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
   --danger: #ef4444;
+  --danger-text: #dc2626;
+  --danger-text-dark: #991b1b;
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
   --info: #0284c7;
+  --info-text: #0284c7;
   --info-bg: #f0f9ff;
   --info-border: #bae6fd;
+  --purple-text: #7c3aed;
+  --purple-bg: #f5f3ff;
+  --purple-border: #ddd6fe;
 
   /* Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -100,20 +110,30 @@ body.dark-mode {
 
   /* Typography Colors in Dark Mode */
   --text-main: #f8fafc;            /* Crisp off-white heading */
-  --text-body: #cbd5e1;            /* Readable light slate body */
-  --text-muted: #94a3b8;           /* Muted secondary labels */
-  --text-subtle: #64748b;          /* Placeholders & disabled */
-  --text-inverse: #0b0f19;
+  --text-body: #e2e8f0;            /* High-contrast light slate body */
+  --text-muted: #94a3b8;           /* Clear secondary labels */
+  --text-subtle: #94a3b8;          /* Readable placeholders & metadata */
+  --text-inverse: #ffffff;         /* Crisp white text on primary buttons */
 
   /* Functional Status in Dark Mode */
+  --success-text: #34d399;
+  --success-text-dark: #6ee7b7;
   --success-bg: rgba(16, 185, 129, 0.15);
   --success-border: rgba(16, 185, 129, 0.35);
+  --warning-text: #fbbf24;
+  --warning-text-dark: #fcd34d;
   --warning-bg: rgba(245, 158, 11, 0.15);
   --warning-border: rgba(245, 158, 11, 0.35);
+  --danger-text: #f87171;
+  --danger-text-dark: #fca5a5;
   --danger-bg: rgba(239, 68, 68, 0.15);
   --danger-border: rgba(239, 68, 68, 0.35);
+  --info-text: #38bdf8;
   --info-bg: rgba(2, 132, 199, 0.15);
   --info-border: rgba(2, 132, 199, 0.35);
+  --purple-text: #c4b5fd;
+  --purple-bg: rgba(139, 92, 246, 0.16);
+  --purple-border: rgba(139, 92, 246, 0.35);
 
   /* Dark mode shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
@@ -371,5 +391,24 @@ input, select, textarea {
   background: rgba(148, 163, 184, 0.2);
   color: #cbd5e1;
   border-color: rgba(148, 163, 184, 0.4);
+}
+
+[data-theme="dark"] .nav-item.active {
+  color: var(--primary-dark);
+}
+
+[data-theme="dark"] .kanban-column {
+  background: var(--surface-soft);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] .lead-detail-header {
+  background: var(--bg-card);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] ::placeholder {
+  color: var(--text-subtle);
+  opacity: 1;
 }
 

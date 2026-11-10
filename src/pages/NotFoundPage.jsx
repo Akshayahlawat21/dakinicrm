@@ -34,11 +34,11 @@ export default function NotFoundPage() {
         <Compass size={32} />
       </div>
 
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+      <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
         404 — Page Not Found
       </h1>
 
-      <p style={{ fontSize: '0.9375rem', color: '#64748b', maxWidth: 440, marginBottom: '1.75rem', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted)', maxWidth: 440, marginBottom: '1.75rem', lineHeight: 1.5 }}>
         The page you are looking for does not exist, has been removed, or is temporarily unavailable.
       </p>
 

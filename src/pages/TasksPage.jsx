@@ -39,7 +39,7 @@ export default function TasksPage() {
           gap: '0.5rem',
           fontSize: '0.8125rem',
           fontWeight: 700,
-          color: isRed ? '#dc2626' : '#475569',
+          color: isRed ? 'var(--danger-text)' : 'var(--text-body)',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
           marginBottom: '0.65rem'
@@ -57,8 +57,8 @@ export default function TasksPage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.85rem 1.25rem',
-                borderBottom: '1px solid #f1f5f9',
-                background: tsk.completed ? '#f8fafc' : '#ffffff',
+                borderBottom: '1px solid var(--border-default)',
+                background: tsk.completed ? 'var(--surface-soft)' : 'var(--bg-card)',
                 transition: 'background 0.15s ease'
               }}
             >
@@ -73,7 +73,7 @@ export default function TasksPage() {
                   <div style={{
                     fontSize: '0.875rem',
                     fontWeight: 600,
-                    color: tsk.completed ? '#94a3b8' : '#0f172a',
+                    color: tsk.completed ? 'var(--text-subtle)' : 'var(--text-main)',
                     textDecoration: tsk.completed ? 'line-through' : 'none',
                     display: 'flex',
                     alignItems: 'center',
@@ -86,7 +86,7 @@ export default function TasksPage() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                     Assigned to: {tsk.owner}
                   </div>
                 </div>
@@ -108,15 +108,15 @@ export default function TasksPage() {
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#94a3b8',
+                      color: 'var(--text-subtle)',
                       cursor: 'pointer',
                       padding: 4,
                       display: 'flex',
                       alignItems: 'center',
                       borderRadius: 4
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger-text)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-subtle)')}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -134,10 +134,10 @@ export default function TasksPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
             Tasks & Action Queue
           </h1>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Sales cadences, scheduled customer follow-ups and AI action approvals
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function TasksPage() {
 
       {/* Quick-add Line at top (as requested in spec) */}
       <div className="crm-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <Plus size={18} color="#2563eb" />
+        <Plus size={18} color="var(--primary)" />
         <input
           type="text"
           placeholder="Quick-add task: type description and press Enter..."
@@ -188,9 +188,9 @@ export default function TasksPage() {
       {renderTaskGroup("Completed", completedTasks)}
 
       {tasks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-          <CheckSquare size={40} color="#cbd5e1" style={{ margin: '0 auto 1rem' }} />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>No Tasks Yet</h3>
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+          <CheckSquare size={40} color="var(--border-strong)" style={{ margin: '0 auto 1rem' }} />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>No Tasks Yet</h3>
           <p style={{ fontSize: '0.875rem' }}>Use the quick-add line above to add a new task or follow-up.</p>
         </div>
       )}

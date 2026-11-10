@@ -102,12 +102,12 @@ export default function CampaignsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Campaigns
             </h1>
             <span className="badge badge-blue">{campaigns.length} total</span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Roadshows, webinars, demand generation, and budget tracking
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function CampaignsPage() {
                         {camp.status}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                           {camp.type}
                         </span>
                         <button
@@ -172,60 +172,60 @@ export default function CampaignsPage() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#94a3b8',
+                            color: 'var(--text-subtle)',
                             cursor: 'pointer',
                             padding: 2,
                             borderRadius: 4,
                             display: 'flex',
                             alignItems: 'center'
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger-text)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-subtle)')}
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
 
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
                       {camp.name}
                     </h3>
 
                     {/* Spend Progress Bar */}
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
                         <span>Budget Spent: ${(camp.spent || 0).toLocaleString()} / ${(camp.budget || 0).toLocaleString()}</span>
-                        <span style={{ color: '#2563eb' }}>{spendPct}%</span>
+                        <span style={{ color: 'var(--primary)' }}>{spendPct}%</span>
                       </div>
-                      <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: 8, background: 'var(--border-default)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.min(100, spendPct)}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #2563eb 100%)', borderRadius: 4 }} />
                       </div>
                     </div>
 
                     {/* Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: 10, border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', background: 'var(--surface-soft)', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--border-default)', textAlign: 'center' }}>
                       <div>
-                        <span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>Leads</span>
-                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{camp.leadsGenerated || 0}</strong>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>Leads</span>
+                        <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{camp.leadsGenerated || 0}</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>Pipeline</span>
-                        <strong style={{ fontSize: '1rem', color: '#2563eb' }}>${((camp.pipelineValue || 0) / 1000).toFixed(0)}k</strong>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>Pipeline</span>
+                        <strong style={{ fontSize: '1rem', color: 'var(--primary)' }}>${((camp.pipelineValue || 0) / 1000).toFixed(0)}k</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>ROI</span>
-                        <strong style={{ fontSize: '1rem', color: '#10b981' }}>{camp.roi || '0%'}</strong>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>ROI</span>
+                        <strong style={{ fontSize: '1rem', color: 'var(--success-text)' }}>{camp.roi || '0%'}</strong>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => setTelemetryCampaign(camp)}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
                     >
-                      <Activity size={14} color="#2563eb" />
+                      <Activity size={14} color="var(--primary)" />
                       <span>View Campaign Telemetry</span>
                     </button>
                   </div>
@@ -235,12 +235,12 @@ export default function CampaignsPage() {
           </div>
 
           {filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#ffffff', borderRadius: 12, border: '1px dashed #cbd5e1', marginTop: '1rem' }}>
-              <Megaphone size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--bg-card)', borderRadius: 12, border: '1px dashed var(--border-strong)', marginTop: '1rem' }}>
+              <Megaphone size={36} color="var(--text-subtle)" style={{ margin: '0 auto 0.75rem' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.25rem' }}>
                 No campaigns found in this view
               </h3>
-              <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 Get started by launching an enterprise roadshow, digital webinar, or ad campaign.
               </p>
               <button className="btn btn-primary btn-sm" onClick={() => setIsCreateModalOpen(true)}>
@@ -283,10 +283,10 @@ export default function CampaignsPage() {
                   <Megaphone size={18} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
                     Create New Campaign
                   </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Set budget, outreach channel, and target pipeline metrics
                   </span>
                 </div>
@@ -294,7 +294,7 @@ export default function CampaignsPage() {
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 <X size={20} />
               </button>
@@ -304,7 +304,7 @@ export default function CampaignsPage() {
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {/* Quick Templates */}
                 <div>
-                  <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.03em' }}>
+                  <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.03em' }}>
                     Quick Campaign Presets
                   </span>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -322,9 +322,9 @@ export default function CampaignsPage() {
                           fontWeight: 600,
                           padding: '0.3rem 0.6rem',
                           borderRadius: 6,
-                          background: '#f1f5f9',
-                          border: '1px solid #cbd5e1',
-                          color: '#334155',
+                          background: 'var(--surface-alt)',
+                          border: '1px solid var(--border-strong)',
+                          color: 'var(--text-body)',
                           cursor: 'pointer'
                         }}
                       >
@@ -336,7 +336,7 @@ export default function CampaignsPage() {
 
                 {/* Campaign Name */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                     Campaign Name *
                   </label>
                   <input
@@ -354,7 +354,7 @@ export default function CampaignsPage() {
                 {/* Type & Status */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Channel / Type
                     </label>
                     <select
@@ -373,7 +373,7 @@ export default function CampaignsPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Status
                     </label>
                     <select
@@ -392,7 +392,7 @@ export default function CampaignsPage() {
                 {/* Budget & Spent */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Total Budget ($ USD) *
                     </label>
                     <input
@@ -409,7 +409,7 @@ export default function CampaignsPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Initial Spent ($ USD)
                     </label>
                     <input
@@ -428,7 +428,7 @@ export default function CampaignsPage() {
                 {/* Leads & Target Pipeline */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Target Leads Generated
                     </label>
                     <input
@@ -444,7 +444,7 @@ export default function CampaignsPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                       Estimated Pipeline Value ($)
                     </label>
                     <input
@@ -496,52 +496,52 @@ export default function CampaignsPage() {
           >
             <div className="modal-header">
               <div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
                   Campaign Telemetry & Signals
                 </h3>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   {telemetryCampaign.name}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setTelemetryCampaign(null)}
-                style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+              <div style={{ background: 'var(--surface-soft)', padding: '0.85rem', borderRadius: 8, border: '1px solid var(--border-default)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>Channel Architecture:</span>
-                  <strong style={{ fontSize: '0.8125rem', color: '#0f172a' }}>{telemetryCampaign.type}</strong>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Channel Architecture:</span>
+                  <strong style={{ fontSize: '0.8125rem', color: 'var(--text-main)' }}>{telemetryCampaign.type}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>Current Status:</span>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Current Status:</span>
                   <span className={`badge ${telemetryCampaign.status === 'Active' ? 'badge-green' : 'badge-blue'}`}>
                     {telemetryCampaign.status}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>Budget Utilization:</span>
-                  <strong style={{ fontSize: '0.8125rem', color: '#2563eb' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Budget Utilization:</span>
+                  <strong style={{ fontSize: '0.8125rem', color: 'var(--primary)' }}>
                     ${(telemetryCampaign.spent || 0).toLocaleString()} / ${(telemetryCampaign.budget || 0).toLocaleString()}
                   </strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>Estimated ROI:</span>
-                  <strong style={{ fontSize: '0.8125rem', color: '#10b981' }}>{telemetryCampaign.roi || '320%'}</strong>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Estimated ROI:</span>
+                  <strong style={{ fontSize: '0.8125rem', color: 'var(--success-text)' }}>{telemetryCampaign.roi || '320%'}</strong>
                 </div>
               </div>
 
-              <div style={{ padding: '0.85rem', borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#1d4ed8', fontWeight: 700, fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
+              <div style={{ padding: '0.85rem', borderRadius: 8, background: 'var(--primary-light)', border: '1px solid var(--primary-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary-dark)', fontWeight: 700, fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
                   <Sparkles size={16} />
                   <span>Dakini AI Telemetry Insight</span>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#1e40af', margin: 0, lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--primary-dark)', margin: 0, lineHeight: 1.45 }}>
                   This campaign is outperforming peer benchmarks by 28%. Conversion velocity is highest with enterprise tier logistics and operations executives. Recommend reallocating unspent budget to inbound retargeting.
                 </p>
               </div>

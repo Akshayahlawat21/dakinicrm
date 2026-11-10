@@ -154,10 +154,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {analyticsError && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', color: '#991b1b', fontSize: '0.875rem' }}>
+      {analyticsError && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid var(--danger-border)', borderRadius: 8, background: 'var(--danger-bg)', color: 'var(--danger-text-dark)', fontSize: '0.875rem' }}>
         <strong>Analytics unavailable.</strong> {analyticsError} Check the Layer 9 service, tenant configuration, and gateway route, then refresh.
       </div>}
-      {analyticsLoading && <div aria-live="polite" style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.8125rem' }}>Loading live Layer 9 analytics...</div>}
+      {analyticsLoading && <div aria-live="polite" style={{ marginBottom: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Loading live Layer 9 analytics...</div>}
 
       {/* Row 1: Primary KPI Cards */}
       <div className="kpi-grid-top">
@@ -182,16 +182,16 @@ export default function DashboardPage() {
             <div className="kpi-title">Active pipeline</div>
             <div className="kpi-value">{analyticsLoading ? '—' : money(overview.open_pipeline_value)}</div>
             <div className="kpi-subtext">
-              <span style={{ fontWeight: 600, color: '#2563eb' }}>{Number(overview.open_opportunities) || 0} open opportunities</span>
+              <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{Number(overview.open_opportunities) || 0} open opportunities</span>
               <span>• Live Layer 9 data</span>
             </div>
           </div>
           <div style={{ marginTop: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
               <span>Weighted pipeline value</span>
-              <span style={{ color: '#0f172a' }}>{money(overview.weighted_pipeline_value)}</span>
+              <span style={{ color: 'var(--text-main)' }}>{money(overview.weighted_pipeline_value)}</span>
             </div>
-            <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: 8, background: 'var(--border-default)', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{ width: `${Math.max(0, Math.min(100, Number(overview.open_pipeline_value) ? (Number(overview.weighted_pipeline_value || 0) / Number(overview.open_pipeline_value)) * 100 : 0))}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #2563eb 100%)', borderRadius: 4 }} />
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
             <div>
               <div className="kpi-title">Sales target</div>
               <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading ? '—' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : '—')}</div>
-              <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                 Actual {analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : '—'} · selected period
               </div>
               <div style={{ marginTop: '0.5rem' }}>
@@ -221,33 +221,33 @@ export default function DashboardPage() {
       <div className="kpi-grid-bottom">
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Total leads</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{Number(overview.total_leads) || 0}</div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Leads created in selected period</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total leads</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>{Number(overview.total_leads) || 0}</div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Leads created in selected period</span>
           </div>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Trophy size={22} />
           </div>
         </div>
 
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Open opportunities</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{Number(overview.open_opportunities) || 0}</div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>In active pipeline</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Open opportunities</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>{Number(overview.open_opportunities) || 0}</div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>In active pipeline</span>
           </div>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--primary-light)', color: 'var(--info-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Briefcase size={22} />
           </div>
         </div>
 
         <div className="crm-card" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Conversion rate</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{overview.conversion_metric_available ? `${Number(overview.lead_conversion_rate_percent) || 0}%` : '—'}</div>
-            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Lead conversion rate</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Conversion rate</span>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>{overview.conversion_metric_available ? `${Number(overview.lead_conversion_rate_percent) || 0}%` : '—'}</div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Lead conversion rate</span>
           </div>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--success-bg)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle size={22} />
           </div>
         </div>
@@ -313,7 +313,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {analytics.team.length === 0 ? <tr><td colSpan="5" style={{ color: '#64748b', textAlign: 'center', padding: '1rem' }}>No quota records found for this period.</td></tr> : analytics.team.map((rep) => (
+                {analytics.team.length === 0 ? <tr><td colSpan="5" style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>No quota records found for this period.</td></tr> : analytics.team.map((rep) => (
                   <tr key={rep.user_id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -321,8 +321,8 @@ export default function DashboardPage() {
                           width: 28,
                           height: 28,
                           borderRadius: '50%',
-                          background: '#eff6ff',
-                          color: '#2563eb',
+                          background: 'var(--primary-light)',
+                          color: 'var(--primary)',
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           display: 'flex',
@@ -331,18 +331,18 @@ export default function DashboardPage() {
                         }}>
                           {String(rep.name || 'U').split(' ').map(n => n[0]).join('')}
                         </div>
-                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{rep.name}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{rep.name}</span>
                       </div>
                     </td>
                     <td>{money(rep.target_amount, rep.currency || 'USD')}</td>
-                    <td style={{ fontWeight: 700, color: '#10b981' }}>{money(rep.won_revenue, rep.currency || 'USD')}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--success-text)' }}>{money(rep.won_revenue, rep.currency || 'USD')}</td>
                     <td>{money(rep.open_pipeline_value, rep.currency || 'USD')}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 100 }}>
-                        <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, height: '100%', background: '#2563eb', borderRadius: 3 }} />
+                        <div style={{ flex: 1, height: 6, background: 'var(--border-default)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(0, Math.min(100, Number(rep.attainment_percent) || 0))}%`, height: '100%', background: 'var(--primary)', borderRadius: 3 }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{rep.attainment_percent == null ? "—" : `${rep.attainment_percent}%`}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-body)' }}>{rep.attainment_percent == null ? "—" : `${rep.attainment_percent}%`}</span>
                       </div>
                     </td>
                   </tr>
@@ -371,9 +371,9 @@ export default function DashboardPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {approvals.length === 0 ? (
-              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b' }}>
-                <CheckCircle size={32} color="#10b981" style={{ margin: '0 auto 0.5rem auto' }} />
-                <p style={{ fontWeight: 600, color: '#0f172a' }}>All Autonomous Tasks Approved</p>
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <CheckCircle size={32} color="var(--success)" style={{ margin: '0 auto 0.5rem auto' }} />
+                <p style={{ fontWeight: 600, color: 'var(--text-main)' }}>All Autonomous Tasks Approved</p>
                 <p style={{ fontSize: '0.75rem' }}>Dakini Copilot is monitoring leads and inbound triggers.</p>
               </div>
             ) : (
@@ -381,23 +381,23 @@ export default function DashboardPage() {
                 <div
                   key={appr.id}
                   style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: 'var(--surface-soft)',
+                    border: '1px solid var(--border-default)',
                     borderRadius: 10,
                     padding: '0.85rem',
                     transition: 'border-color 0.15s ease'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       {appr.title}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#2563eb', fontWeight: 600 }}>{appr.agent}</span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--primary)', fontWeight: 600 }}>{appr.agent}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>
                     {appr.entity}
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: '#475569', margin: '0.35rem 0 0.65rem 0' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-body)', margin: '0.35rem 0 0.65rem 0' }}>
                     {appr.preview}
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -429,7 +429,7 @@ export default function DashboardPage() {
       <div className="crm-card" style={{ marginTop: '1.25rem' }}>
         <div className="chart-card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calendar size={18} color="#2563eb" />
+            <Calendar size={18} color="var(--primary)" />
             <div>
               <h3 className="chart-card-title">Today's Priority Tasks</h3>
               <p className="chart-card-subtitle">Scheduled customer touchpoints & meetings</p>
@@ -445,12 +445,12 @@ export default function DashboardPage() {
             <div style={{
               padding: '1.25rem',
               textAlign: 'center',
-              color: '#059669',
+              color: 'var(--success-text)',
               fontSize: '0.8125rem',
               fontWeight: 600,
-              background: '#ecfdf5',
+              background: 'var(--success-bg)',
               borderRadius: 8,
-              border: '1px solid #a7f3d0'
+              border: '1px solid var(--success-border)'
             }}>
               ✓ All priority tasks completed!
             </div>
@@ -464,8 +464,8 @@ export default function DashboardPage() {
                 justifyContent: 'space-between',
                 padding: '0.75rem 1rem',
                 borderRadius: 8,
-                background: tsk.completed ? '#f8fafc' : '#ffffff',
-                border: '1px solid #e2e8f0'
+                background: tsk.completed ? 'var(--surface-soft)' : 'var(--bg-card)',
+                border: '1px solid var(--border-default)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -473,18 +473,18 @@ export default function DashboardPage() {
                   type="checkbox"
                   checked={tsk.completed}
                   onChange={() => toggleTask(tsk.id)}
-                  style={{ width: 18, height: 18, accentColor: '#2563eb', cursor: 'pointer' }}
+                  style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
                 />
                 <div>
                   <div style={{
                     fontSize: '0.875rem',
                     fontWeight: 600,
-                    color: tsk.completed ? '#94a3b8' : '#0f172a',
+                    color: tsk.completed ? 'var(--text-subtle)' : 'var(--text-main)',
                     textDecoration: tsk.completed ? 'line-through' : 'none'
                   }}>
                     {tsk.title}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     Linked to: <strong>{tsk.record}</strong> • Assigned to {tsk.owner}
                   </div>
                 </div>

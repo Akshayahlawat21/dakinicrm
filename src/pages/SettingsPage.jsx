@@ -107,9 +107,9 @@ export default function SettingsPage() {
         <div className="crm-card" style={{ padding: '2rem' }}>
           {savedNotice && (
             <div style={{
-              background: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              color: '#059669',
+              background: 'var(--success-bg)',
+              border: '1px solid var(--success-border)',
+              color: 'var(--success-text)',
               padding: '0.75rem 1rem',
               borderRadius: 8,
               fontSize: '0.8125rem',
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                  style={{ color: 'var(--danger-text)', borderColor: 'var(--danger-border)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
                   onClick={logout}
                 >
                   <LogOut size={16} />

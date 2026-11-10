@@ -44,8 +44,8 @@ export class ErrorBoundary extends React.Component {
               width: 56,
               height: 56,
               borderRadius: '50%',
-              background: '#fef2f2',
-              color: '#dc2626',
+              background: 'var(--danger-bg)',
+              color: 'var(--danger-text)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -54,10 +54,10 @@ export class ErrorBoundary extends React.Component {
           >
             <AlertTriangle size={28} />
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
             Something went wrong
           </h2>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', maxWidth: 460, marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: 460, marginBottom: '1.5rem' }}>
             {this.state.error?.message || 'An unexpected rendering error occurred. The application state has been preserved.'}
           </p>
           <div style={{ display: 'flex', gap: '0.75rem' }}>

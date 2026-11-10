@@ -143,11 +143,11 @@ export default function CommandPalette() {
           display: 'flex',
           alignItems: 'center',
           padding: '1rem 1.25rem',
-          borderBottom: '1px solid #e2e8f0',
-          background: '#ffffff',
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-card)',
           gap: '0.75rem'
         }}>
-          <Search size={20} color="#2563eb" />
+          <Search size={20} color="var(--primary)" />
           <input
             type="text"
             placeholder="Type a command, search records or ask Dakini AI..."
@@ -159,7 +159,7 @@ export default function CommandPalette() {
               border: 'none',
               outline: 'none',
               fontSize: '1rem',
-              color: '#0f172a',
+              color: 'var(--text-main)',
               background: 'transparent'
             }}
           />
@@ -168,7 +168,7 @@ export default function CommandPalette() {
 
         <div style={{ maxHeight: 360, overflowY: 'auto', padding: '0.5rem' }}>
           {results.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
               No records found matching "{query}"
             </div>
           ) : (
@@ -190,7 +190,7 @@ export default function CommandPalette() {
                     cursor: 'pointer',
                     transition: 'background 0.15s ease'
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -198,8 +198,8 @@ export default function CommandPalette() {
                       width: 32,
                       height: 32,
                       borderRadius: 6,
-                      background: item.type === 'ai' ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)' : '#eff6ff',
-                      color: item.type === 'ai' ? '#ffffff' : '#2563eb',
+                      background: item.type === 'ai' ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)' : 'var(--primary-light)',
+                      color: item.type === 'ai' ? '#ffffff' : 'var(--primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
@@ -207,15 +207,15 @@ export default function CommandPalette() {
                       <Icon size={16} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>
                         {item.title}
                       </div>
                       {item.sub && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.sub}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.sub}</div>
                       )}
                     </div>
                   </div>
-                  <ArrowRight size={14} color="#94a3b8" />
+                  <ArrowRight size={14} color="var(--text-subtle)" />
                 </div>
               );
             })
@@ -224,13 +224,13 @@ export default function CommandPalette() {
 
         <div style={{
           padding: '0.65rem 1.25rem',
-          background: '#f8fafc',
-          borderTop: '1px solid #e2e8f0',
+          background: 'var(--surface-soft)',
+          borderTop: '1px solid var(--border-default)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           fontSize: '0.6875rem',
-          color: '#64748b'
+          color: 'var(--text-muted)'
         }}>
           <span>Navigate with mouse or keyboard</span>
           <span>Press <strong>ESC</strong> to exit</span>

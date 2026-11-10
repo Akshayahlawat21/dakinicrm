@@ -3,9 +3,9 @@ import { useCRM } from '../../context/CRMContext';
 import { X, Lock, Mail, Shield, ArrowRight, CheckCircle2, AlertCircle, Crown, Briefcase, UserCheck } from 'lucide-react';
 
 const PRESETS = [
-  { role: 'Owner', name: 'Elena Rostova', email: 'elena.rostova@dakini.ai', password: 'dakini_secure_2026', icon: Crown, color: '#2563eb', bg: '#eff6ff' },
-  { role: 'Manager', name: 'Marcus Vance', email: 'marcus.vance@dakini.ai', password: 'dakini_secure_2026', icon: Briefcase, color: '#059669', bg: '#ecfdf5' },
-  { role: 'Sales Rep', name: 'Dev Singhania', email: 'dev.singhania@dakini.ai', password: 'dakini_secure_2026', icon: UserCheck, color: '#d97706', bg: '#fffbeb' },
+  { role: 'Owner', name: 'Elena Rostova', email: 'elena.rostova@dakini.ai', password: 'dakini_secure_2026', icon: Crown, color: 'var(--primary)', bg: 'var(--primary-light)' },
+  { role: 'Manager', name: 'Marcus Vance', email: 'marcus.vance@dakini.ai', password: 'dakini_secure_2026', icon: Briefcase, color: 'var(--success-text)', bg: 'var(--success-bg)' },
+  { role: 'Sales Rep', name: 'Dev Singhania', email: 'dev.singhania@dakini.ai', password: 'dakini_secure_2026', icon: UserCheck, color: 'var(--warning-text)', bg: 'var(--warning-bg)' },
 ];
 
 export default function SignInModal() {
@@ -64,10 +64,10 @@ export default function SignInModal() {
               <Shield size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 Sign In to Dakini CRM
               </h3>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                 Enter your credentials to continue
               </span>
             </div>
@@ -75,7 +75,7 @@ export default function SignInModal() {
           <button
             type="button"
             onClick={() => setIsSignInModalOpen(false)}
-            style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             <X size={20} />
           </button>
@@ -89,9 +89,9 @@ export default function SignInModal() {
                 style={{
                   padding: '0.65rem 0.85rem',
                   borderRadius: 8,
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#dc2626',
+                  background: 'var(--danger-bg)',
+                  border: '1px solid var(--danger-border)',
+                  color: 'var(--danger-text)',
                   fontSize: '0.8125rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -105,7 +105,7 @@ export default function SignInModal() {
 
             {/* Quick Role Presets */}
             <div>
-              <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.03em' }}>
+              <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.03em' }}>
                 Select Role Preset
               </span>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
@@ -120,8 +120,8 @@ export default function SignInModal() {
                       style={{
                         padding: '0.45rem 0.5rem',
                         borderRadius: 8,
-                        border: isSel ? `2px solid ${p.color}` : '1px solid #e2e8f0',
-                        background: isSel ? p.bg : '#ffffff',
+                        border: isSel ? `2px solid ${p.color}` : '1px solid var(--border-default)',
+                        background: isSel ? p.bg : 'var(--bg-card)',
                         cursor: 'pointer',
                         textAlign: 'left',
                         display: 'flex',
@@ -132,11 +132,11 @@ export default function SignInModal() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <Icon size={13} color={p.color} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSel ? p.color : '#1e293b' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSel ? p.color : 'var(--text-main)' }}>
                           {p.role}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.65rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {p.name.split(' ')[0]}
                       </span>
                     </button>
@@ -146,13 +146,13 @@ export default function SignInModal() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                 Work Email Address
               </label>
               <div style={{ position: 'relative' }}>
                 <Mail
                   size={16}
-                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
+                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-subtle)' }}
                 />
                 <input
                   type="email"
@@ -167,13 +167,13 @@ export default function SignInModal() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                 Password
               </label>
               <div style={{ position: 'relative' }}>
                 <Lock
                   size={16}
-                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
+                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-subtle)' }}
                 />
                 <input
                   type="password"
@@ -188,7 +188,7 @@ export default function SignInModal() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-body)', marginBottom: '0.35rem' }}>
                 Tenant Organization ID
               </label>
               <input

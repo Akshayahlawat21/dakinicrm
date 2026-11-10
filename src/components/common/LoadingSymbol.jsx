@@ -44,14 +44,14 @@ export default function LoadingSymbol({
           width: 44,
           height: 44,
           borderRadius: '50%',
-          border: '3px solid #e2e8f0',
-          borderTopColor: '#2563eb',
+          border: '3px solid var(--border-default)',
+          borderTopColor: 'var(--primary)',
           marginBottom: '0.85rem',
         }}
         className="animate-spin"
       />
       {message && (
-        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#64748b' }}>
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)' }}>
           {message}
         </span>
       )}

@@ -38,7 +38,7 @@
 }
 .btn-secondary:hover {
   background: var(--surface-hover);
-  border-color: #cbd5e1;
+  border-color: var(--border-active);
 }
 
 .btn-outline {
@@ -98,7 +98,7 @@
   transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 .crm-card:hover {
-  border-color: #cbd5e1;
+  border-color: var(--border-active);
 }
 
 /* Status & Tag Badges */
@@ -141,9 +141,9 @@
   border: 1px solid var(--danger-border);
 }
 .badge-gray {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--surface-alt);
+  color: var(--text-body);
+  border: 1px solid var(--border-default);
 }
 
 /* Inputs & Form Fields */
@@ -190,13 +190,13 @@
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 .search-kbd {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--surface-alt);
+  color: var(--text-body);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-default);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -216,7 +216,7 @@
   font-size: 0.875rem;
 }
 .crm-table th {
-  background: #f8fafc;
+  background: var(--surface-soft);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 0.75rem;
@@ -237,7 +237,7 @@
   cursor: pointer;
 }
 .crm-table tbody tr:hover {
-  background: #f8fafc;
+  background: var(--surface-hover);
 }
 .crm-table tbody tr.selected {
   background: var(--primary-light);
@@ -274,8 +274,8 @@
   font-size: 0.75rem;
   padding: 0.1rem 0.5rem;
   border-radius: var(--radius-full);
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--surface-alt);
+  color: var(--text-body);
 }
 .tab-btn.active .tab-count-pill {
   background: var(--primary-light);
@@ -287,7 +287,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  background: #f1f5f9;
+  background: var(--surface-alt);
   border-radius: var(--radius-md);
   padding: 0.25rem;
   gap: 4px;
@@ -315,7 +315,7 @@
   color: var(--primary);
 }
 .path-step.completed {
-  background: #eff6ff;
+  background: var(--primary-light);
   color: var(--primary);
   border-left: 3px solid var(--primary);
 }
@@ -366,7 +366,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  background: #f8fafc;
+  background: var(--surface-soft);
   border-bottom-left-radius: var(--radius-xl);
   border-bottom-right-radius: var(--radius-xl);
 }

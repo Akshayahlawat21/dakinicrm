@@ -76,12 +76,12 @@ export default function AccountsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Accounts & Companies
             </h1>
             <span className="badge badge-blue">{(accounts || []).length} total</span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Enterprise company profiles, contract ARR, and stakeholder hierarchies
           </p>
         </div>
@@ -186,8 +186,8 @@ export default function AccountsPage() {
                             width: 34,
                             height: 34,
                             borderRadius: 8,
-                            background: '#eff6ff',
-                            color: '#2563eb',
+                            background: 'var(--primary-light)',
+                            color: 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -197,13 +197,13 @@ export default function AccountsPage() {
                           <Building2 size={18} />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{displayName}</div>
-                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{displayLocation}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{displayName}</div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{displayLocation}</div>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <span style={{ color: '#334155', fontWeight: 500 }}>{displayIndustry}</span>
+                      <span style={{ color: 'var(--text-body)', fontWeight: 500 }}>{displayIndustry}</span>
                     </td>
                     <td>
                       {displayWebsite ? (
@@ -211,7 +211,7 @@ export default function AccountsPage() {
                           href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ color: '#2563eb', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                          style={{ color: 'var(--primary)', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Globe size={13} />
@@ -219,7 +219,7 @@ export default function AccountsPage() {
                           <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <span style={{ color: '#94a3b8' }}>—</span>
+                        <span style={{ color: 'var(--text-subtle)' }}>—</span>
                       )}
                     </td>
                     <td>
@@ -229,13 +229,13 @@ export default function AccountsPage() {
                       </span>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{contactsCount}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{contactsCount}</span>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{dealsCount}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{dealsCount}</span>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{arrFormatted}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{arrFormatted}</span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
@@ -257,7 +257,7 @@ export default function AccountsPage() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: isOwner ? '#94a3b8' : '#cbd5e1',
+                            color: isOwner ? 'var(--text-subtle)' : 'var(--border-strong)',
                             cursor: isOwner ? 'pointer' : 'not-allowed',
                             padding: 4,
                             borderRadius: 4,
@@ -266,15 +266,15 @@ export default function AccountsPage() {
                             opacity: isOwner ? 1 : 0.4
                           }}
                           onMouseEnter={(e) => {
-                            if (isOwner) e.currentTarget.style.color = '#ef4444';
+                            if (isOwner) e.currentTarget.style.color = 'var(--danger-text)';
                           }}
                           onMouseLeave={(e) => {
-                            if (isOwner) e.currentTarget.style.color = '#94a3b8';
+                            if (isOwner) e.currentTarget.style.color = 'var(--text-subtle)';
                           }}
                         >
                           <Trash2 size={15} />
                         </button>
-                        <ChevronRight size={16} color="#94a3b8" />
+                        <ChevronRight size={16} color="var(--text-subtle)" />
                       </div>
                     </td>
                   </tr>
@@ -285,9 +285,9 @@ export default function AccountsPage() {
           </table>
 
           {filteredAccounts.length === 0 && !isLoadingData && (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-              <Building2 size={36} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>No accounts found</div>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <Building2 size={36} color="var(--text-subtle)" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-body)' }}>No accounts found</div>
               <div style={{ fontSize: '0.8125rem', marginTop: 4 }}>Try clearing search or launch a new account</div>
             </div>
           )}
@@ -304,8 +304,8 @@ export default function AccountsPage() {
             bottom: 0,
             width: 440,
             maxWidth: 'calc(100vw - 380px)',
-            background: '#ffffff',
-            borderLeft: '1px solid #e2e8f0',
+            background: 'var(--bg-card)',
+            borderLeft: '1px solid var(--border-default)',
             boxShadow: '-4px 0 25px rgba(0,0,0,0.1)',
             zIndex: 45,
             display: 'flex',
@@ -314,13 +314,13 @@ export default function AccountsPage() {
             animation: 'slideLeft 0.2s ease',
           }}
         >
-          <div style={{ padding: '1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Building2 size={20} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                   {selectedAccount.name || 'Account Details'}
                 </h3>
                 <span className="badge badge-green">
@@ -330,7 +330,7 @@ export default function AccountsPage() {
             </div>
             <button
               onClick={() => setSelectedAccount(null)}
-              style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
             >
               ✕
             </button>
@@ -338,12 +338,12 @@ export default function AccountsPage() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Account Health Metric */}
-            <div className="crm-card" style={{ background: '#f8fafc' }}>
+            <div className="crm-card" style={{ background: 'var(--surface-soft)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8125rem', fontWeight: 600 }}>
                 <span>Account Health Score</span>
-                <strong style={{ color: '#2563eb' }}>{selectedAccount.healthScore || 92}%</strong>
+                <strong style={{ color: 'var(--primary)' }}>{selectedAccount.healthScore || 92}%</strong>
               </div>
-              <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: 8, background: 'var(--border-default)', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{ width: `${selectedAccount.healthScore || 92}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8 0%, #2563eb 100%)', borderRadius: 4 }} />
               </div>
             </div>
@@ -364,32 +364,32 @@ export default function AccountsPage() {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <div className="crm-card" style={{ padding: '0.85rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Contract ARR</span>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{drawerArrFormatted}</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Contract ARR</span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{drawerArrFormatted}</div>
                     </div>
                     <div className="crm-card" style={{ padding: '0.85rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Key Contacts</span>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{drawerContactsCount} {drawerContactsCount === 1 ? 'Contact' : 'Contacts'}</div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Key Contacts</span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{drawerContactsCount} {drawerContactsCount === 1 ? 'Contact' : 'Contacts'}</div>
                     </div>
                   </div>
 
                   {/* Account Info */}
                   <div className="crm-card">
-                    <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
                       Company Metadata
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#64748b' }}>Industry</span>
+                        <span style={{ color: 'var(--text-muted)' }}>Industry</span>
                         <span style={{ fontWeight: 600 }}>{selectedAccount.industry || 'Logistics & Tech'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#64748b' }}>Location</span>
+                        <span style={{ color: 'var(--text-muted)' }}>Location</span>
                         <span style={{ fontWeight: 600 }}>{selectedAccount.city || selectedAccount.address || 'Global'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#64748b' }}>Website</span>
-                        <span style={{ fontWeight: 600, color: '#2563eb' }}>{selectedAccount.website || '—'}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>Website</span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{selectedAccount.website || '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -398,15 +398,15 @@ export default function AccountsPage() {
                   <div className="crm-card">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <Users size={16} color="#2563eb" />
-                        <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                        <Users size={16} color="var(--primary)" />
+                        <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                           Associated Contacts
                         </h4>
                       </div>
                       <span className="badge badge-blue">{drawerContacts.length}</span>
                     </div>
                     {drawerContacts.length === 0 ? (
-                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-subtle)', fontStyle: 'italic', padding: '0.5rem 0' }}>
                         No contacts linked to this account yet.
                       </div>
                     ) : (
@@ -416,21 +416,21 @@ export default function AccountsPage() {
                             key={c.id}
                             style={{
                               padding: '0.6rem 0.75rem',
-                              background: '#f8fafc',
+                              background: 'var(--surface-soft)',
                               borderRadius: 8,
-                              border: '1px solid #e2e8f0',
+                              border: '1px solid var(--border-default)',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '0.2rem',
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>{c.name}</span>
-                              <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, background: '#eff6ff', padding: '0.1rem 0.45rem', borderRadius: 4 }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.85rem' }}>{c.name}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, background: 'var(--primary-light)', padding: '0.1rem 0.45rem', borderRadius: 4 }}>
                                 {c.title || 'Decision Maker'}
                               </span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                               {c.email && c.email !== '—' && (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                   <Mail size={12} /> {c.email}
@@ -452,15 +452,15 @@ export default function AccountsPage() {
                   <div className="crm-card">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <Briefcase size={16} color="#059669" />
-                        <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                        <Briefcase size={16} color="var(--success-text)" />
+                        <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                           Related Deals & Pipeline
                         </h4>
                       </div>
                       <span className="badge badge-green">{drawerDeals.length}</span>
                     </div>
                     {drawerDeals.length === 0 ? (
-                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-subtle)', fontStyle: 'italic', padding: '0.5rem 0' }}>
                         No active deals linked to this account yet.
                       </div>
                     ) : (
@@ -470,26 +470,26 @@ export default function AccountsPage() {
                             key={d.id}
                             style={{
                               padding: '0.6rem 0.75rem',
-                              background: '#f8fafc',
+                              background: 'var(--surface-soft)',
                               borderRadius: 8,
-                              border: '1px solid #e2e8f0',
+                              border: '1px solid var(--border-default)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
                             }}
                           >
                             <div>
-                              <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>{d.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
-                                Stage: <strong style={{ color: '#0f172a' }}>{d.stage || 'Qualified'}</strong>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.85rem' }}>{d.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                Stage: <strong style={{ color: 'var(--text-main)' }}>{d.stage || 'Qualified'}</strong>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.9rem' }}>
+                              <div style={{ fontWeight: 800, color: 'var(--success-text)', fontSize: '0.9rem' }}>
                                 ${Number(d.value || d.amount || 0).toLocaleString()}
                               </div>
                               {d.owner && (
-                                <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>{d.owner}</div>
+                                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{d.owner}</div>
                               )}
                             </div>
                           </div>
@@ -502,10 +502,10 @@ export default function AccountsPage() {
             })()}
           </div>
 
-          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button
               className="btn btn-outline"
-              style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+              style={{ color: 'var(--danger-text)', borderColor: 'var(--danger-border)' }}
               onClick={() => {
                 if (window.confirm(`Delete account "${selectedAccount.name}"?`)) {
                   deleteAccount(selectedAccount.id);

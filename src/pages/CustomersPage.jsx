@@ -79,16 +79,16 @@ export default function CustomersPage() {
 
       // Determine customer tier based on contract value
       let tier = 'Growth';
-      let tierColor = '#0d9488';
-      let tierBg = '#f0fdfa';
+      let tierColor = 'var(--success-text)';
+      let tierBg = 'var(--success-bg)';
       if (dealAmount >= 50000) {
         tier = 'Enterprise';
-        tierColor = '#7c3aed';
-        tierBg = '#f5f3ff';
+        tierColor = 'var(--purple-text)';
+        tierBg = 'var(--purple-bg)';
       } else if (dealAmount >= 25000) {
         tier = 'Mid-Market';
-        tierColor = '#2563eb';
-        tierBg = '#eff6ff';
+        tierColor = 'var(--primary)';
+        tierBg = 'var(--primary-light)';
       }
 
       // Close date formatting
@@ -195,7 +195,7 @@ export default function CustomersPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Customers
             </h1>
             <span className="badge badge-blue" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
@@ -206,7 +206,7 @@ export default function CustomersPage() {
               Total Won Revenue: ${totalRevenue.toLocaleString()}
             </span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: 2 }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 2 }}>
             Closed-won client directory with account stakeholders, contract values, and relationship lifecycle
           </p>
         </div>
@@ -233,71 +233,71 @@ export default function CustomersPage() {
 
       {/* 2. Key Metrics Bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Won Customers
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BadgeCheck size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {wonCustomers.length}
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
             <TrendingUp size={13} />
             100% conversion rate from won stage
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Total Won Revenue
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--success-bg)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <DollarSign size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success-text)' }}>
             ${totalRevenue.toLocaleString()}
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4, display: 'block' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
             Cumulative revenue booked
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Average Deal (ACV)
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-bg)', color: 'var(--purple-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Award size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             ${avgContractValue.toLocaleString()}
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4, display: 'block' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
             Average contract size
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Avg. Client Health
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--danger-bg)', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <HeartHandshake size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {avgHealth}%
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
             <ShieldCheck size={13} />
             Excellent retention stability
           </span>
@@ -376,7 +376,7 @@ export default function CustomersPage() {
                     onClick={() => setSelectedCustomer(cust)}
                     style={{
                       cursor: 'pointer',
-                      background: isSelected ? '#f8fafc' : undefined,
+                      background: isSelected ? 'var(--surface-soft)' : undefined,
                       transition: 'background 0.15s ease'
                     }}
                   >
@@ -388,8 +388,8 @@ export default function CustomersPage() {
                             width: 38,
                             height: 38,
                             borderRadius: 10,
-                            background: '#eff6ff',
-                            color: '#2563eb',
+                            background: 'var(--primary-light)',
+                            color: 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -401,7 +401,7 @@ export default function CustomersPage() {
                           {cust.company.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.875rem' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.875rem' }}>
                             {cust.company}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 2 }}>
@@ -417,7 +417,7 @@ export default function CustomersPage() {
                             >
                               {cust.tier}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                               {cust.industry}
                             </span>
                           </div>
@@ -428,15 +428,15 @@ export default function CustomersPage() {
                     {/* Won Deal & Contract Value */}
                     <td>
                       <div>
-                        <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--success-text)', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                           ${cust.dealAmount.toLocaleString()}
                           <span
                             style={{
                               fontSize: '0.6875rem',
                               fontWeight: 700,
-                              background: '#ecfdf5',
-                              color: '#059669',
-                              border: '1px solid #a7f3d0',
+                              background: 'var(--success-bg)',
+                              color: 'var(--success-text)',
+                              border: '1px solid var(--success-border)',
                               padding: '0.1rem 0.4rem',
                               borderRadius: 9999,
                             }}
@@ -444,7 +444,7 @@ export default function CustomersPage() {
                             Won
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: 2, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cust.dealName}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginTop: 2, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cust.dealName}>
                           {cust.dealName}
                         </div>
                       </div>
@@ -453,13 +453,13 @@ export default function CustomersPage() {
                     {/* Primary Stakeholder */}
                     <td>
                       <div>
-                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.8125rem' }}>
                           {cust.primaryContact.name}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           {cust.primaryContact.title}
                         </div>
-                        <div style={{ fontSize: '0.6875rem', color: '#2563eb', marginTop: 1 }}>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary)', marginTop: 1 }}>
                           {cust.primaryContact.email}
                         </div>
                       </div>
@@ -473,8 +473,8 @@ export default function CustomersPage() {
                             width: 24,
                             height: 24,
                             borderRadius: '50%',
-                            background: '#e2e8f0',
-                            color: '#334155',
+                            background: 'var(--surface-alt)',
+                            color: 'var(--text-body)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -484,7 +484,7 @@ export default function CustomersPage() {
                         >
                           {cust.owner.charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)' }}>
                           {cust.owner}
                         </span>
                       </div>
@@ -492,7 +492,7 @@ export default function CustomersPage() {
 
                     {/* Close Date */}
                     <td>
-                      <span style={{ fontSize: '0.8125rem', color: '#475569' }}>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-body)' }}>
                         {cust.closeDate}
                       </span>
                     </td>
@@ -504,10 +504,10 @@ export default function CustomersPage() {
                           <span className="badge-dot" />
                           {cust.status}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: '#64748b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                           <span>Health: {cust.healthScore}%</span>
-                          <div style={{ width: 45, height: 4, background: '#e2e8f0', borderRadius: 2 }}>
-                            <div style={{ width: `${cust.healthScore}%`, height: '100%', background: '#10b981', borderRadius: 2 }} />
+                          <div style={{ width: 45, height: 4, background: 'var(--surface-alt)', borderRadius: 2 }}>
+                            <div style={{ width: `${cust.healthScore}%`, height: '100%', background: 'var(--success)', borderRadius: 2 }} />
                           </div>
                         </div>
                       </div>
@@ -535,13 +535,13 @@ export default function CustomersPage() {
 
           {/* Empty State */}
           {filteredCustomers.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748b' }}>
-              <BadgeCheck size={42} color="#94a3b8" style={{ margin: '0 auto 0.75rem' }} />
-              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#334155' }}>
+            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
+              <BadgeCheck size={42} color="var(--text-subtle)" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-body)' }}>
                 No won customers found
               </div>
               <div style={{ fontSize: '0.8125rem', marginTop: 4, maxWidth: 360, margin: '4px auto 1rem auto' }}>
-                Deals transitioned to the <strong style={{ color: '#059669' }}>Won</strong> stage in Deals & Pipeline will automatically appear here with complete customer and stakeholder profiles.
+                Deals transitioned to the <strong style={{ color: 'var(--success-text)' }}>Won</strong> stage in Deals & Pipeline will automatically appear here with complete customer and stakeholder profiles.
               </div>
               <button className="btn btn-primary btn-sm" onClick={() => navigateTo('deals')}>
                 <Handshake size={14} />
@@ -562,9 +562,9 @@ export default function CustomersPage() {
             bottom: 0,
             width: 480,
             maxWidth: '90vw',
-            background: '#ffffff',
-            borderLeft: '1px solid #e2e8f0',
-            boxShadow: '-6px 0 30px rgba(0,0,0,0.12)',
+            background: 'var(--bg-card)',
+            borderLeft: '1px solid var(--border-default)',
+            boxShadow: '-6px 0 30px rgba(0,0,0,0.2)',
             zIndex: 50,
             display: 'flex',
             flexDirection: 'column',
@@ -572,13 +572,13 @@ export default function CustomersPage() {
           }}
         >
           {/* Drawer Header */}
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 10, background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.1rem' }}>
                 {selectedCustomer.company.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                   {selectedCustomer.company}
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: 3 }}>
@@ -603,7 +603,7 @@ export default function CustomersPage() {
             </div>
             <button
               onClick={() => setSelectedCustomer(null)}
-              style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', padding: '0.25rem' }}
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', padding: '0.25rem' }}
               title="Close Drawer"
             >
               ✕
@@ -613,72 +613,72 @@ export default function CustomersPage() {
           {/* Drawer Body Scroll */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Top Value Summary Card */}
-            <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%)', border: '1px solid #bfdbfe', borderRadius: 12, padding: '1.1rem' }}>
+            <div style={{ background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--success-bg) 100%)', border: '1px solid var(--primary-subtle)', borderRadius: 12, padding: '1.1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                     Total Contract Value
                   </span>
-                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#065f46', marginTop: 2 }}>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--success-text-dark)', marginTop: 2 }}>
                     ${selectedCustomer.dealAmount.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', marginTop: 2 }}>
                     Closed-Won on {selectedCustomer.closeDate}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>Account Health</span>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#2563eb' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Account Health</span>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
                     {selectedCustomer.healthScore}%
                   </div>
-                  <span style={{ fontSize: '0.6875rem', color: '#10b981', fontWeight: 600 }}>Prime Condition</span>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--success)', fontWeight: 600 }}>Prime Condition</span>
                 </div>
               </div>
             </div>
 
             {/* Primary Stakeholder Card */}
-            <div className="crm-card" style={{ padding: '1rem', border: '1px solid #e2e8f0' }}>
+            <div className="crm-card" style={{ padding: '1rem', border: '1px solid var(--border-default)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <User size={15} color="#2563eb" />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <User size={15} color="var(--primary)" />
                   Primary Decision Maker
                 </span>
                 <span className="badge badge-blue" style={{ fontSize: '0.6875rem' }}>Verified Stakeholder</span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--purple-bg)', color: 'var(--purple-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                   {selectedCustomer.primaryContact.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
                     {selectedCustomer.primaryContact.name}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                     {selectedCustomer.primaryContact.title}
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8125rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
-                  <Mail size={14} color="#64748b" />
-                  <a href={`mailto:${selectedCustomer.primaryContact.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-body)' }}>
+                  <Mail size={14} color="var(--text-muted)" />
+                  <a href={`mailto:${selectedCustomer.primaryContact.email}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
                     {selectedCustomer.primaryContact.email}
                   </a>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
-                  <Phone size={14} color="#64748b" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-body)' }}>
+                  <Phone size={14} color="var(--text-muted)" />
                   <span>{selectedCustomer.primaryContact.phone}</span>
                 </div>
               </div>
             </div>
 
             {/* Won Opportunity Details */}
-            <div className="crm-card" style={{ padding: '1rem', border: '1px solid #e2e8f0' }}>
+            <div className="crm-card" style={{ padding: '1rem', border: '1px solid var(--border-default)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Handshake size={15} color="#059669" />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Handshake size={15} color="var(--success-text)" />
                   Closed-Won Opportunity
                 </span>
                 <button
@@ -692,26 +692,26 @@ export default function CustomersPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Opportunity Name</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a', textAlign: 'right', maxWidth: 220 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Opportunity Name</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)', textAlign: 'right', maxWidth: 220 }}>
                     {selectedCustomer.dealName}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Pipeline Stage</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Pipeline Stage</span>
                   <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
                     100% Closed Won
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Account Executive</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Account Executive</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
                     {selectedCustomer.owner}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Close Date</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Close Date</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
                     {selectedCustomer.closeDate}
                   </span>
                 </div>
@@ -719,10 +719,10 @@ export default function CustomersPage() {
             </div>
 
             {/* Company Profile Details */}
-            <div className="crm-card" style={{ padding: '1rem', border: '1px solid #e2e8f0' }}>
+            <div className="crm-card" style={{ padding: '1rem', border: '1px solid var(--border-default)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Building2 size={15} color="#2563eb" />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Building2 size={15} color="var(--primary)" />
                   Company Profile
                 </span>
                 <button
@@ -736,51 +736,51 @@ export default function CustomersPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Industry</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Industry</span>
                   <span style={{ fontWeight: 600 }}>{selectedCustomer.industry}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Headquarters</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Headquarters</span>
                   <span style={{ fontWeight: 600 }}>{selectedCustomer.city}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Website</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Website</span>
                   {selectedCustomer.website ? (
                     <a
                       href={selectedCustomer.website.startsWith('http') ? selectedCustomer.website : `https://${selectedCustomer.website}`}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                       <Globe size={13} />
                       {selectedCustomer.website}
                       <ExternalLink size={12} />
                     </a>
                   ) : (
-                    <span style={{ color: '#94a3b8' }}>—</span>
+                    <span style={{ color: 'var(--text-subtle)' }}>—</span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Post-Sale Onboarding Roadmap */}
-            <div className="crm-card" style={{ padding: '1rem', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.85rem' }}>
-                <Sparkles size={15} color="#7c3aed" />
+            <div className="crm-card" style={{ padding: '1rem', border: '1px solid var(--border-default)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.85rem' }}>
+                <Sparkles size={15} color="var(--purple-text)" />
                 Customer Success Journey
               </span>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <CheckCircle2 size={18} color="#10b981" />
-                    <div style={{ width: 2, height: 24, background: '#10b981', marginTop: 2 }} />
+                    <CheckCircle2 size={18} color="var(--success)" />
+                    <div style={{ width: 2, height: 24, background: 'var(--success)', marginTop: 2 }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       Deal Closed Won & Signed
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Contract verified for ${selectedCustomer.dealAmount.toLocaleString()}
                     </div>
                   </div>
@@ -788,14 +788,14 @@ export default function CustomersPage() {
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <CheckCircle2 size={18} color="#10b981" />
-                    <div style={{ width: 2, height: 24, background: '#2563eb', marginTop: 2 }} />
+                    <CheckCircle2 size={18} color="var(--success)" />
+                    <div style={{ width: 2, height: 24, background: 'var(--primary)', marginTop: 2 }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       Sales-to-CS Handover Completed
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Assigned to Customer Success Representative
                     </div>
                   </div>
@@ -803,16 +803,16 @@ export default function CustomersPage() {
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#eff6ff', border: '2px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} />
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--primary-light)', border: '2px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)' }} />
                     </div>
-                    <div style={{ width: 2, height: 24, background: '#e2e8f0', marginTop: 2 }} />
+                    <div style={{ width: 2, height: 24, background: 'var(--border-default)', marginTop: 2 }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#2563eb' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--primary)' }}>
                       Provisioning & System Integration
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Active platform setup in progress
                     </div>
                   </div>
@@ -820,13 +820,13 @@ export default function CustomersPage() {
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Clock size={18} color="#94a3b8" />
+                    <Clock size={18} color="var(--text-subtle)" />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#64748b' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                       Quarterly Business Review & Renewal
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
                       Scheduled in 90 days
                     </div>
                   </div>
@@ -836,7 +836,7 @@ export default function CustomersPage() {
           </div>
 
           {/* Drawer Footer */}
-          <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', background: '#f8fafc' }}>
+          <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-default)', display: 'flex', gap: '0.75rem', background: 'var(--surface-soft)' }}>
             <button
               className="btn btn-secondary"
               style={{ flex: 1 }}

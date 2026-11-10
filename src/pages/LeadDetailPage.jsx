@@ -259,10 +259,10 @@ export default function LeadDetailPage() {
 
   const renderItems = (items) => {
     if (!Array.isArray(items) || items.length === 0) {
-      return <p style={{ color: '#64748b', fontSize: '0.875rem' }}>No specific points identified from this transcript.</p>;
+      return <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No specific points identified from this transcript.</p>;
     }
     return (
-      <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'grid', gap: '0.45rem', color: '#334155', fontSize: '0.875rem' }}>
+      <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'grid', gap: '0.45rem', color: 'var(--text-body)', fontSize: '0.875rem' }}>
         {items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
       </ul>
     );
@@ -277,10 +277,10 @@ export default function LeadDetailPage() {
             <ChevronLeft size={16} />
             <span>Leads</span>
           </button>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {lead.name || 'Lead Record'}
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
             {lead.industry || 'Enterprise Technology'}, from a {(lead.source || 'Website').toLowerCase()}
           </p>
         </div>
@@ -313,7 +313,7 @@ export default function LeadDetailPage() {
             {(lead.name || 'Lead Record').split(' ').map((n) => n[0]).join('')}
           </div>
 
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {lead.name || 'Lead Record'}
           </h2>
 
@@ -333,11 +333,11 @@ export default function LeadDetailPage() {
           {/* Quick Contact Action Icons */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <a href={`tel:${lead.phone}`} className="btn btn-secondary btn-sm" title="Call">
-              <Phone size={14} color="#2563eb" />
+              <Phone size={14} color="var(--primary)" />
               <span>Call</span>
             </a>
             <a href={`mailto:${lead.email}`} className="btn btn-secondary btn-sm" title="Email">
-              <Mail size={14} color="#2563eb" />
+              <Mail size={14} color="var(--primary)" />
               <span>Email</span>
             </a>
           </div>
@@ -351,7 +351,7 @@ export default function LeadDetailPage() {
 
             <div className="lead-meta-row">
               <span className="lead-meta-label">Email</span>
-              <span className="lead-meta-value" style={{ color: '#2563eb' }}>{lead.email}</span>
+              <span className="lead-meta-value" style={{ color: 'var(--primary)' }}>{lead.email}</span>
             </div>
 
             <div className="lead-meta-row">
@@ -366,7 +366,7 @@ export default function LeadDetailPage() {
 
             <div className="lead-meta-row">
               <span className="lead-meta-label">Account</span>
-              <span className="lead-meta-value" style={{ color: '#2563eb', cursor: 'pointer' }} onClick={() => navigateTo('accounts')}>
+              <span className="lead-meta-value" style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigateTo('accounts')}>
                 {lead.company || lead.name || 'Enterprise Corp'}
               </span>
             </div>
@@ -374,7 +374,7 @@ export default function LeadDetailPage() {
             {lead.interested_product && (
               <div className="lead-meta-row">
                 <span className="lead-meta-label">Interested Product</span>
-                <span className="lead-meta-value" style={{ color: '#1d4ed8', fontWeight: 700 }}>
+                <span className="lead-meta-value" style={{ color: 'var(--primary-dark)', fontWeight: 700 }}>
                   📦 {lead.interested_product}
                 </span>
               </div>
@@ -394,7 +394,7 @@ export default function LeadDetailPage() {
               >
                 {t}
                 {t === 'Activity' && leadActivities.length > 0 && (
-                  <span style={{ marginLeft: 6, fontSize: '0.7rem', padding: '1px 6px', borderRadius: 999, background: '#dbeafe', color: '#1d4ed8', fontWeight: 800 }}>
+                  <span style={{ marginLeft: 6, fontSize: '0.7rem', padding: '1px 6px', borderRadius: 999, background: 'var(--primary-light)', color: 'var(--primary-dark)', fontWeight: 800 }}>
                     {leadActivities.length}
                   </span>
                 )}
@@ -408,25 +408,25 @@ export default function LeadDetailPage() {
               <section className="crm-card transcript-card" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <FileText size={21} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>Call Transcript</h2>
-                      <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Paste the salesperson and customer conversation below.</p>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>Call Transcript</h2>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Paste the salesperson and customer conversation below.</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Product Discussed for this lead */}
-                <label style={{ display: 'grid', gap: '0.35rem', margin: '0.9rem 0 0.65rem', color: '#334155', fontSize: '0.82rem', fontWeight: 700 }}>
+                <label style={{ display: 'grid', gap: '0.35rem', margin: '0.9rem 0 0.65rem', color: 'var(--text-body)', fontSize: '0.82rem', fontWeight: 700 }}>
                   <span>Product discussed</span>
                   <input
                     value={productName}
                     onChange={(event) => setProductName(event.target.value)}
                     placeholder="Enter product name (e.g. CRM Software)"
                     maxLength={120}
-                    style={{ width: '100%', padding: '0.7rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: 9, background: '#fff', color: '#0f172a' }}
+                    style={{ width: '100%', padding: '0.7rem 0.8rem', border: '1px solid var(--border-strong)', borderRadius: 9, background: 'var(--bg-card)', color: 'var(--text-main)' }}
                   />
                 </label>
 
@@ -439,13 +439,13 @@ export default function LeadDetailPage() {
                   aria-label="Call transcript"
                   style={{
                     width: '100%', resize: 'vertical', minHeight: 180, padding: '0.9rem',
-                    border: '1px solid #cbd5e1', borderRadius: 10, background: '#fff',
-                    color: '#0f172a', lineHeight: 1.6, outlineColor: '#2563eb'
+                    border: '1px solid var(--border-strong)', borderRadius: 10, background: 'var(--bg-card)',
+                    color: 'var(--text-main)', lineHeight: 1.6, outlineColor: 'var(--primary)'
                   }}
                 />
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{transcript.length.toLocaleString()} / 80,000 characters</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{transcript.length.toLocaleString()} / 80,000 characters</span>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-secondary" onClick={() => { setTranscript(''); setAnalysis(null); setAnalysisError(''); }} disabled={isAnalyzing || (!transcript && !analysis)}>
                       Clear
@@ -458,7 +458,7 @@ export default function LeadDetailPage() {
                 </div>
 
                 {analysisError && (
-                  <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginTop: '1rem', padding: '0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 9, color: '#991b1b', fontSize: '0.85rem' }}>
+                  <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginTop: '1rem', padding: '0.8rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 9, color: 'var(--danger-text-dark)', fontSize: '0.85rem' }}>
                     <AlertCircle size={17} style={{ flexShrink: 0, marginTop: 2 }} />
                     <span>{analysisError}</span>
                   </div>
@@ -468,40 +468,40 @@ export default function LeadDetailPage() {
               <section className="crm-card" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ede9fe', color: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--purple-bg)', color: 'var(--purple-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Sparkles size={21} />
                     </div>
                     <div>
-                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>AI Analysis Results</h2>
-                      <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Summary and improvements for {lead.name || 'this lead'}.</p>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>AI Analysis Results</h2>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Summary and improvements for {lead.name || 'this lead'}.</p>
                     </div>
                   </div>
                   {analysis && <span className="badge badge-green"><CheckCircle2 size={13} style={{ marginRight: 4 }} /> Analysis complete</span>}
                 </div>
 
                 {!analysis && !isAnalyzing && (
-                  <div style={{ textAlign: 'center', padding: '1.6rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
-                    <ClipboardList size={28} style={{ margin: '0 auto 0.55rem', color: '#94a3b8' }} />
-                    <p style={{ fontWeight: 700, color: '#475569', marginBottom: 3 }}>Your call report will appear here</p>
+                  <div style={{ textAlign: 'center', padding: '1.6rem 1rem', border: '1px dashed var(--border-strong)', borderRadius: 10, color: 'var(--text-muted)' }}>
+                    <ClipboardList size={28} style={{ margin: '0 auto 0.55rem', color: 'var(--text-subtle)' }} />
+                    <p style={{ fontWeight: 700, color: 'var(--text-body)', marginBottom: 3 }}>Your call report will appear here</p>
                     <p style={{ fontSize: '0.82rem' }}>Paste a transcript and click Analyze with AI.</p>
                   </div>
                 )}
 
                 {isAnalyzing && (
-                  <div style={{ textAlign: 'center', padding: '1.6rem', color: '#475569' }}>
-                    <LoaderCircle size={25} className="animate-spin" style={{ margin: '0 auto 0.5rem', color: '#2563eb' }} />
+                  <div style={{ textAlign: 'center', padding: '1.6rem', color: 'var(--text-body)' }}>
+                    <LoaderCircle size={25} className="animate-spin" style={{ margin: '0 auto 0.5rem', color: 'var(--primary)' }} />
                     <p style={{ fontWeight: 700 }}>Analyzing conversation…</p>
-                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Layer 5 is preparing the summary and improvements.</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Layer 5 is preparing the summary and improvements.</p>
                   </div>
                 )}
 
                 {analysis && (
                   <div style={{ display: 'grid', gap: '1rem' }}>
-                    <div style={{ border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 10, padding: '1rem' }}>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#1d4ed8', marginBottom: '0.55rem' }}>
+                    <div style={{ border: '1px solid var(--primary-subtle)', background: 'var(--primary-light)', borderRadius: 10, padding: '1rem' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: 'var(--primary-dark)', marginBottom: '0.55rem' }}>
                         <FileText size={17} /> Summary
                       </h3>
-                      <p style={{ color: '#1e293b', lineHeight: 1.65, fontSize: '0.9rem' }}>{analysis.summary?.call_summary || 'No summary was returned.'}</p>
+                      <p style={{ color: 'var(--text-main)', lineHeight: 1.65, fontSize: '0.9rem' }}>{analysis.summary?.call_summary || 'No summary was returned.'}</p>
                       {[
                         ['Positive feedback', analysis.summary?.positive_feedback],
                         ['Negative feedback / concerns', analysis.summary?.negative_feedback],
@@ -510,15 +510,15 @@ export default function LeadDetailPage() {
                       ].map(([label, items]) => (
                         Array.isArray(items) && items.length > 0 ? (
                           <div key={label} style={{ marginTop: '0.8rem' }}>
-                            <p style={{ fontWeight: 700, color: '#334155', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
+                            <p style={{ fontWeight: 700, color: 'var(--text-body)', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
                             {renderItems(items)}
                           </div>
                         ) : null
                       ))}
                     </div>
 
-                    <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: 10, padding: '1rem' }}>
-                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: '#c2410c', marginBottom: '0.65rem' }}>
+                    <div style={{ border: '1px solid var(--warning-border)', background: 'var(--warning-bg)', borderRadius: 10, padding: '1rem' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', color: 'var(--warning-text)', marginBottom: '0.65rem' }}>
                         <Lightbulb size={18} /> Improvements
                       </h3>
                       {[
@@ -528,7 +528,7 @@ export default function LeadDetailPage() {
                         ['Next steps', analysis.improvements?.next_steps],
                       ].map(([label, items]) => (
                         <div key={label} style={{ marginTop: '0.75rem' }}>
-                          <p style={{ fontWeight: 700, color: '#7c2d12', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
+                          <p style={{ fontWeight: 700, color: 'var(--warning-text-dark)', fontSize: '0.82rem', marginBottom: '0.35rem' }}>{label}</p>
                           {renderItems(items)}
                         </div>
                       ))}
@@ -545,15 +545,15 @@ export default function LeadDetailPage() {
               <section className="crm-card" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
                       Interactions & Activity
                     </h2>
-                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       All recorded calls, tasks, and touchpoints with {lead.name} in your organization scope.
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 999, background: '#f1f5f9', color: '#475569', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 999, background: 'var(--surface-alt)', color: 'var(--text-body)', fontWeight: 700 }}>
                       {isOwner ? 'Scope: Owner (All Reps)' : isManager ? 'Scope: Manager (Team)' : 'Scope: Salesperson (My Records)'}
                     </span>
                     <button
@@ -568,17 +568,17 @@ export default function LeadDetailPage() {
 
                 {/* Quick Activity Logging Form */}
                 {showLogForm && (
-                  <form onSubmit={handleCreateQuickActivity} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem' }}>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  <form onSubmit={handleCreateQuickActivity} style={{ background: 'var(--surface-soft)', border: '1px solid var(--border-default)', borderRadius: 10, padding: '1rem', marginBottom: '1.25rem' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
                       Log New Activity with {lead.name}
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-body)' }}>
                         Activity Type
                         <select
                           value={newActivityType}
                           onChange={(e) => setNewActivityType(e.target.value)}
-                          style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                          style={{ padding: '0.55rem', border: '1px solid var(--border-strong)', borderRadius: 7, background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         >
                           <option value="call">📞 Phone Call</option>
                           <option value="task">✓ Task / Follow-up</option>
@@ -587,7 +587,7 @@ export default function LeadDetailPage() {
                         </select>
                       </label>
 
-                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                      <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-body)' }}>
                         Subject
                         <input
                           type="text"
@@ -595,17 +595,17 @@ export default function LeadDetailPage() {
                           onChange={(e) => setNewActivitySubject(e.target.value)}
                           placeholder="e.g. Discovery Call with Client"
                           required
-                          style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                          style={{ padding: '0.55rem', border: '1px solid var(--border-strong)', borderRadius: 7, background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         />
                       </label>
 
                       {newActivityType === 'task' && (
-                        <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                        <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-body)' }}>
                           Priority
                           <select
                             value={newActivityPriority}
                             onChange={(e) => setNewActivityPriority(e.target.value)}
-                            style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                            style={{ padding: '0.55rem', border: '1px solid var(--border-strong)', borderRadius: 7, background: 'var(--bg-card)', color: 'var(--text-main)' }}
                           >
                             <option value="High">High</option>
                             <option value="Medium">Medium</option>
@@ -615,14 +615,14 @@ export default function LeadDetailPage() {
                       )}
                     </div>
 
-                    <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '0.75rem' }}>
+                    <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-body)', marginBottom: '0.75rem' }}>
                       Notes / Outcome
                       <textarea
                         value={newActivityNotes}
                         onChange={(e) => setNewActivityNotes(e.target.value)}
                         placeholder="Details of the discussion, next steps, or customer feedback..."
                         rows={3}
-                        style={{ padding: '0.55rem', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff' }}
+                        style={{ padding: '0.55rem', border: '1px solid var(--border-strong)', borderRadius: 7, background: 'var(--bg-card)', color: 'var(--text-main)' }}
                       />
                     </label>
 
@@ -639,9 +639,9 @@ export default function LeadDetailPage() {
 
                 {/* Activity Feed */}
                 {leadActivities.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2.5rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
-                    <Calendar size={32} style={{ margin: '0 auto 0.6rem', color: '#94a3b8' }} />
-                    <p style={{ fontWeight: 700, color: '#334155', marginBottom: 4 }}>No activities recorded yet for {lead.name}</p>
+                  <div style={{ textAlign: 'center', padding: '2.5rem 1rem', border: '1px dashed var(--border-strong)', borderRadius: 10, color: 'var(--text-muted)' }}>
+                    <Calendar size={32} style={{ margin: '0 auto 0.6rem', color: 'var(--text-subtle)' }} />
+                    <p style={{ fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>No activities recorded yet for {lead.name}</p>
                     <p style={{ fontSize: '0.82rem' }}>Log a phone call or use the Overview tab to analyze a transcript.</p>
                   </div>
                 ) : (
@@ -654,9 +654,9 @@ export default function LeadDetailPage() {
                           alignItems: 'flex-start',
                           gap: '0.85rem',
                           padding: '0.9rem',
-                          border: '1px solid #e2e8f0',
+                          border: '1px solid var(--border-default)',
                           borderRadius: 10,
-                          background: act.type === 'call' ? '#f0fdf4' : '#fff',
+                          background: act.type === 'call' ? 'var(--success-bg)' : 'var(--bg-card)',
                         }}
                       >
                         {/* Type Icon */}
@@ -669,8 +669,8 @@ export default function LeadDetailPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: act.type === 'call' ? '#dcfce7' : act.type === 'task' ? '#eff6ff' : '#f1f5f9',
-                            color: act.type === 'call' ? '#15803d' : act.type === 'task' ? '#2563eb' : '#475569',
+                            background: act.type === 'call' ? 'var(--success-bg)' : act.type === 'task' ? 'var(--primary-light)' : 'var(--surface-alt)',
+                            color: act.type === 'call' ? 'var(--success-text-dark)' : act.type === 'task' ? 'var(--primary)' : 'var(--text-body)',
                           }}
                         >
                           {act.type === 'call' ? <Phone size={18} /> : act.type === 'task' ? <CheckCircle size={18} /> : <Clock size={18} />}
@@ -680,11 +680,11 @@ export default function LeadDetailPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                 {act.subject}
                               </span>
                               {act.product && (
-                                <span style={{ fontSize: '0.72rem', background: '#eff6ff', color: '#1d4ed8', padding: '2px 7px', borderRadius: 6, fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.72rem', background: 'var(--primary-light)', color: 'var(--primary-dark)', padding: '2px 7px', borderRadius: 6, fontWeight: 700 }}>
                                   📦 {act.product}
                                 </span>
                               )}
@@ -695,28 +695,28 @@ export default function LeadDetailPage() {
                                     padding: '2px 7px',
                                     borderRadius: 6,
                                     fontWeight: 700,
-                                    background: act.sentiment === 'positive' ? '#dcfce7' : act.sentiment === 'negative' ? '#fee2e2' : '#f1f5f9',
-                                    color: act.sentiment === 'positive' ? '#15803d' : act.sentiment === 'negative' ? '#b91c1c' : '#475569',
+                                    background: act.sentiment === 'positive' ? 'var(--success-bg)' : act.sentiment === 'negative' ? 'var(--danger-bg)' : 'var(--surface-alt)',
+                                    color: act.sentiment === 'positive' ? 'var(--success-text-dark)' : act.sentiment === 'negative' ? 'var(--danger-text-dark)' : 'var(--text-body)',
                                   }}
                                 >
                                   {act.sentiment}
                                 </span>
                               )}
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                               {new Date(act.timestamp).toLocaleDateString()}
                             </span>
                           </div>
 
                           {act.summary && (
-                            <p style={{ color: '#334155', fontSize: '0.85rem', lineHeight: 1.5, marginTop: 4 }}>
+                            <p style={{ color: 'var(--text-body)', fontSize: '0.85rem', lineHeight: 1.5, marginTop: 4 }}>
                               {act.summary}
                             </p>
                           )}
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, fontSize: '0.75rem', color: '#64748b' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             <span>Rep: <strong>{act.rep}</strong></span>
-                            {act.outcome && <span>Outcome: <strong style={{ color: '#059669' }}>{act.outcome}</strong></span>}
+                            {act.outcome && <span>Outcome: <strong style={{ color: 'var(--success-text)' }}>{act.outcome}</strong></span>}
                           </div>
                         </div>
                       </div>
@@ -730,23 +730,23 @@ export default function LeadDetailPage() {
           {/* TAB 3: SIGNALS */}
           {activeTab === 'Signals' && (
             <div className="crm-card" style={{ padding: '1.35rem' }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
                 Lead Scoring Breakdown
               </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                 Algorithmic purchase intent signals evaluated for {lead.name}.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 {Object.entries(lead.scoreBreakdown || {}).map(([metric, val]) => (
-                  <div key={metric} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  <div key={metric} style={{ background: 'var(--surface-soft)', border: '1px solid var(--border-default)', borderRadius: 10, padding: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                       {metric.replace(/([A-Z])/g, ' $1')}
                     </div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2563eb', margin: '0.25rem 0' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)', margin: '0.25rem 0' }}>
                       {val}%
                     </div>
-                    <div style={{ width: '100%', height: 6, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
-                      <div style={{ width: `${val}%`, height: '100%', background: '#2563eb' }} />
+                    <div style={{ width: '100%', height: 6, background: 'var(--border-default)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: `${val}%`, height: '100%', background: 'var(--primary)' }} />
                     </div>
                   </div>
                 ))}
@@ -757,16 +757,16 @@ export default function LeadDetailPage() {
           {/* TAB 4: NOTES */}
           {activeTab === 'Notes' && (
             <div className="crm-card" style={{ padding: '1.35rem' }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
                 Notes on {lead.name}
               </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 Internal notes visible to authorized sales reps and managers.
               </p>
               <textarea
                 placeholder="Add a new private note about this prospect..."
                 rows={4}
-                style={{ width: '100%', padding: '0.8rem', border: '1px solid #cbd5e1', borderRadius: 9, background: '#fff' }}
+                style={{ width: '100%', padding: '0.8rem', border: '1px solid var(--border-strong)', borderRadius: 9, background: 'var(--bg-card)', color: 'var(--text-main)' }}
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
                 <button type="button" className="btn btn-primary btn-sm">Save Note</button>
@@ -777,15 +777,15 @@ export default function LeadDetailPage() {
           {/* TAB 5: DOCUMENTS */}
           {activeTab === 'Documents' && (
             <div className="crm-card" style={{ padding: '1.35rem' }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
                 Attached Documents
               </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 Proposals, contracts, and decks for {lead.company || lead.name}.
               </p>
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', border: '1px dashed #cbd5e1', borderRadius: 10, color: '#64748b' }}>
-                <FileText size={28} style={{ margin: '0 auto 0.5rem', color: '#94a3b8' }} />
-                <p style={{ fontWeight: 700, color: '#334155' }}>No documents attached</p>
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', border: '1px dashed var(--border-strong)', borderRadius: 10, color: 'var(--text-muted)' }}>
+                <FileText size={28} style={{ margin: '0 auto 0.5rem', color: 'var(--text-subtle)' }} />
+                <p style={{ fontWeight: 700, color: 'var(--text-body)' }}>No documents attached</p>
                 <p style={{ fontSize: '0.8rem' }}>Upload proposals and contracts for this account.</p>
               </div>
             </div>
@@ -795,28 +795,28 @@ export default function LeadDetailPage() {
         {/* COLUMN 3: Related Associations */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="crm-card">
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.85rem' }}>
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.85rem' }}>
               Associations
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.8125rem' }}>
               <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: '#f8fafc', borderRadius: 8, cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: 'var(--surface-soft)', borderRadius: 8, cursor: 'pointer' }}
                 onClick={() => navigateTo('accounts')}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={16} color="#2563eb" />
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{lead.company}</span>
+                  <Building2 size={16} color="var(--primary)" />
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{lead.company}</span>
                 </div>
-                <ArrowRight size={14} color="#94a3b8" />
+                <ArrowRight size={14} color="var(--text-subtle)" />
               </div>
 
               <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: '#f8fafc', borderRadius: 8, cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem', background: 'var(--surface-soft)', borderRadius: 8, cursor: 'pointer' }}
                 onClick={() => navigateTo('deals')}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Briefcase size={16} color="#2563eb" />
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>Deals: 1 Active</span>
+                  <Briefcase size={16} color="var(--primary)" />
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Deals: 1 Active</span>
                 </div>
                 <span className="badge badge-green">$35,000</span>
               </div>

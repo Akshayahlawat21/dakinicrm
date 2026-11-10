@@ -2,6 +2,7 @@ from backend.app.data.models.base import Base, UUIDMixin, TimestampMixin, SoftDe
 from backend.app.data.models.organization import Organization, Role, Permission, RolePermission, Team, TeamMember
 from backend.app.data.models.user import User
 from backend.app.data.models.lead import Lead, LeadSignal, LeadConversion
+from backend.app.data.models.lead_import import LeadImportBatch
 from backend.app.data.models.account import Account
 from backend.app.data.models.contact import Contact
 from backend.app.data.models.deal import Opportunity, Deal, Product, DealProduct
@@ -27,6 +28,7 @@ __all__ = [
     "Lead",
     "LeadSignal",
     "LeadConversion",
+    "LeadImportBatch",
     "Account",
     "Contact",
     "Opportunity",

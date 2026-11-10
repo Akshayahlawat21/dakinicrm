@@ -54,6 +54,8 @@ export function CRMProvider({ children }) {
   // const [campaigns, setCampaigns] = useState(initialCampaigns);
   // const [tasks, setTasks] = useState(initialTasks);
   const [leads, setLeads] = useState([]);
+  const [totalLeadsCount, setTotalLeadsCount] = useState(0);
+  const [overallLeadsCount, setOverallLeadsCount] = useState(0);
 
   // Transcript analyses stored in browser-local storage
   const [transcriptAnalyses, setTranscriptAnalyses] = useState(() => {
@@ -172,6 +174,9 @@ export function CRMProvider({ children }) {
       }
 
       if (leadsRes.status === 'fulfilled' && leadsRes.value?.success && Array.isArray(leadsRes.value.data?.data)) {
+        const total = leadsRes.value.data.total ?? leadsRes.value.data.data.length;
+        setTotalLeadsCount(total);
+        setOverallLeadsCount(total);
         loadedLeads = leadsRes.value.data.data.map((l) => ({
           ...l,
           title: l.title || '',
@@ -320,6 +325,44 @@ export function CRMProvider({ children }) {
     } finally {
       setIsLoadingData(false);
     }
+  };
+
+  const fetchLeadsPage = async (page = 1, pageSize = 50, status = null, search = null) => {
+    setIsLoadingData(true);
+    try {
+      const skip = (page - 1) * pageSize;
+      const params = { skip, limit: pageSize };
+      if (status && status !== 'All') {
+        params.status = status;
+      }
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
+      const res = await gatewayApi.getLeads(params);
+      if (res.success && Array.isArray(res.data?.data)) {
+        const total = res.data.total ?? res.data.data.length;
+        setTotalLeadsCount(total);
+        if ((!status || status === 'All') && (!search || !search.trim())) {
+          setOverallLeadsCount(total);
+        }
+        const mapped = res.data.data.map((l) => ({
+          ...l,
+          title: l.title || '',
+          website: l.website || null,
+          source: l.source || 'Website',
+          owner: l.owner || currentUser?.name || 'Sales Representative',
+          company: l.company || l.name,
+          score: l.score || 85,
+        }));
+        setLeads(mapped);
+        return { success: true, leads: mapped, total };
+      }
+    } catch (err) {
+      console.warn('[CRMContext] fetchLeadsPage error:', err);
+    } finally {
+      setIsLoadingData(false);
+    }
+    return { success: false, total: 0 };
   };
 
   const fetchProducts = async () => {
@@ -580,6 +623,8 @@ export function CRMProvider({ children }) {
         }
         // Add to state only when server confirms creation
         setLeads((prev) => [persistedLead, ...prev]);
+        setTotalLeadsCount((c) => c + 1);
+        setOverallLeadsCount((c) => c + 1);
         return { success: true, data: persistedLead };
       } else {
         const errorMsg =
@@ -600,6 +645,8 @@ export function CRMProvider({ children }) {
     const idsToDelete = new Set(Array.isArray(leadIds) ? leadIds : [leadIds]);
     // Instant removal on screen
     setLeads((prev) => prev.filter((l) => !idsToDelete.has(l.id)));
+    setTotalLeadsCount((c) => Math.max(0, c - idsToDelete.size));
+    setOverallLeadsCount((c) => Math.max(0, c - idsToDelete.size));
     for (const id of idsToDelete) {
       try {
         await gatewayApi.deleteLead(id);
@@ -1714,6 +1761,9 @@ export function CRMProvider({ children }) {
         setIsNotificationsOpen,
         leads,
         setLeads,
+        totalLeadsCount,
+        overallLeadsCount,
+        fetchLeadsPage,
         transcriptAnalyses,
         addTranscriptAnalysis,
         deleteTranscriptAnalysis,

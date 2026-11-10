@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
+import { gatewayApi } from '../services/api';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import AssignOwnerModal from '../components/modals/AssignOwnerModal';
 import {
@@ -11,6 +12,7 @@ import {
   List,
   Kanban,
   Sparkles,
+  ChevronLeft,
   ChevronRight,
   UserCheck,
   Check,
@@ -21,10 +23,48 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+function getPageNumbers(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+}
+
+function downloadAuditCsv(audit) {
+  if (!audit || !audit.error_sample) return;
+  const headers = ['Row Number', 'Lead Name', 'Email / Contact', 'Category', 'Diagnostic Reason'];
+  const rows = audit.error_sample.map((item) => {
+    const isDup = item.is_duplicate || (item.error || '').toLowerCase().includes('duplicate');
+    const category = item.allowed ? 'Allowed Duplicate (Imported)' : isDup ? 'Skipped Duplicate' : 'Validation Error';
+    const contact = item.email || item.phone || '';
+    const cleanReason = `"${(item.error || '').replace(/"/g, '""')}"`;
+    const cleanName = `"${(item.name || '').replace(/"/g, '""')}"`;
+    return [item.row || '', cleanName, contact, category, cleanReason].join(',');
+  });
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `import_diagnostics_${audit.file_name || 'leads'}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function LeadsPage() {
   const {
     leads,
     setLeads,
+    totalLeadsCount,
+    fetchLeadsPage,
     deleteLeads,
     navigateTo,
     setSelectedLead,
@@ -37,6 +77,7 @@ export default function LeadsPage() {
     isLoadingData,
     currentUser,
     isAgentDockOpen,
+    fetchSupabaseData,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('All');
@@ -47,104 +88,190 @@ export default function LeadsPage() {
   const [isAssignOwnerOpen, setIsAssignOwnerOpen] = useState(false);
   const [leadIdToAssign, setLeadIdToAssign] = useState(null);
   const [importNotification, setImportNotification] = useState(null);
+  const [importAuditReport, setImportAuditReport] = useState(null);
+  const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
+  const [auditFilterTab, setAuditFilterTab] = useState('all'); // 'all' | 'duplicates' | 'errors'
+  const [visibleIssuesCount, setVisibleIssuesCount] = useState(100);
+  const [importHistory, setImportHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [drawerMode, setDrawerMode] = useState('details'); // 'details' | 'history'
+  const [selectedDuplicateRows, setSelectedDuplicateRows] = useState(() => new Set());
+  const [isAllowingDuplicates, setIsAllowingDuplicates] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const fileInputRef = useRef(null);
+
+  // Fetch paginated leads whenever page, pageSize, statusFilter or searchQuery changes (with 250ms debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (typeof fetchLeadsPage === 'function') {
+        const apiStatus = statusFilter !== 'All' ? statusFilter : null;
+        fetchLeadsPage(page, pageSize, apiStatus, searchQuery);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [page, pageSize, statusFilter, searchQuery]);
+
+  const totalEffectiveCount = totalLeadsCount || leads.length;
+  const totalPages = Math.ceil(totalEffectiveCount / pageSize) || 1;
 
   const userRole = (currentUser?.role || currentUser?.roles?.[0] || 'salesperson').toLowerCase();
   const isOwner = userRole.includes('owner') || userRole.includes('admin') || userRole.includes('director');
   const isManager = userRole.includes('manager');
 
+  const fetchImportHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await gatewayApi.getLeadImportHistory();
+      if (res.success && res.data?.data) {
+        setImportHistory(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load import history:', err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchImportHistory();
+  }, [currentUser]);
+
+  const pendingDuplicateItems = useMemo(() => {
+    if (!importAuditReport?.error_sample) return [];
+    return importAuditReport.error_sample.filter((item) => {
+      const isDup = item.is_duplicate || (item.error || '').toLowerCase().includes('duplicate');
+      return isDup && !item.allowed && item.lead_data;
+    });
+  }, [importAuditReport]);
+
+  const handleToggleDuplicateRow = (rowNum) => {
+    setSelectedDuplicateRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowNum)) {
+        next.delete(rowNum);
+      } else {
+        next.add(rowNum);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllDuplicates = (checked) => {
+    if (checked) {
+      setSelectedDuplicateRows(new Set(pendingDuplicateItems.map((d) => d.row)));
+    } else {
+      setSelectedDuplicateRows(new Set());
+    }
+  };
+
+  const handleAllowSelectedDuplicates = async () => {
+    if (!importAuditReport?.batch_id || selectedDuplicateRows.size === 0 || isAllowingDuplicates) return;
+    setIsAllowingDuplicates(true);
+    try {
+      const allowAll = selectedDuplicateRows.size === pendingDuplicateItems.length;
+      const rowNumbers = allowAll ? [] : Array.from(selectedDuplicateRows);
+      const res = await gatewayApi.allowImportDuplicates(importAuditReport.batch_id, {
+        rowNumbers,
+        allowAll,
+      });
+
+      if (res.success && res.data?.data) {
+        const updatedBatch = res.data.data;
+        setImportAuditReport(updatedBatch);
+        const addedCount = updatedBatch.newly_inserted || selectedDuplicateRows.size;
+        setSelectedDuplicateRows(new Set());
+        setImportNotification({
+          type: 'success',
+          message: `Successfully allowed & imported ${addedCount.toLocaleString()} duplicate lead(s) into CRM.`,
+          hasDiagnostics: true,
+        });
+        fetchImportHistory();
+        if (typeof fetchSupabaseData === 'function') {
+          await fetchSupabaseData();
+        }
+        if (typeof fetchLeadsPage === 'function') {
+          const apiStatus = statusFilter !== 'All' ? statusFilter : null;
+          await fetchLeadsPage(page, pageSize, apiStatus, searchQuery);
+        }
+      } else {
+        const errorMsg = res.error?.message || res.data?.message || 'Failed to allow selected duplicates';
+        setImportNotification({
+          type: 'error',
+          message: `Duplicate override error: ${errorMsg}`,
+          hasDiagnostics: true,
+        });
+      }
+    } catch (err) {
+      setImportNotification({
+        type: 'error',
+        message: `Duplicate override error: ${err.message}`,
+        hasDiagnostics: true,
+      });
+    } finally {
+      setIsAllowingDuplicates(false);
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setPage(1);
+  };
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target.result;
-        let newLeadsToAdd = [];
-
-        if (file.name.endsWith('.json')) {
-          const parsed = JSON.parse(text);
-          const rawItems = Array.isArray(parsed) ? parsed : (parsed.leads || [parsed]);
-          newLeadsToAdd = rawItems.map((item, idx) => ({
-            id: `lead-import-${Date.now()}-${idx}`,
-            name: item.name || 'Imported Lead',
-            company: item.company || 'Unknown Company',
-            title: item.title || '',
-            status: item.status || 'New',
-            score: Number(item.score) || 75,
-            email: item.email || `lead${idx}@imported.com`,
-            phone: item.phone || '+91 98000 00000',
-            owner: item.owner || currentUser?.name || 'Sales Representative',
-            industry: item.industry || 'Enterprise Technology',
-            lastContact: 'Just now',
-            scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
-            timeline: [
-              {
-                id: `t-${Date.now()}-${idx}`,
-                type: 'system',
-                title: 'Lead imported',
-                description: `Imported from file ${file.name}`,
-                time: 'Just now'
-              }
-            ]
-          }));
-        } else {
-          // CSV / Text parsing
-          const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-          if (lines.length > 0) {
-            const firstLine = lines[0].toLowerCase();
-            const hasHeader = firstLine.includes('name') || firstLine.includes('company');
-            const dataLines = hasHeader ? lines.slice(1) : lines;
-
-            newLeadsToAdd = dataLines.map((line, idx) => {
-              const cols = line.split(/[,;\t]/).map((c) => c.replace(/^["']|["']$/g, '').trim());
-              return {
-                id: `lead-csv-${Date.now()}-${idx}`,
-                name: cols[0] || `Imported Lead ${idx + 1}`,
-                company: cols[1] || 'Imported Corp',
-                title: cols[2] || '',
-                status: cols[3] || 'New',
-                score: Number(cols[4]) || 80,
-                email: cols[5] || `lead${idx}@imported.com`,
-                phone: cols[6] || '+91 98000 00000',
-                owner: currentUser?.name || 'Sales Representative',
-                industry: 'Enterprise Technology',
-                lastContact: 'Just now',
-                scoreBreakdown: { websiteDemo: 70, emailEngagement: 60, companyFit: 80, sourceQuality: 75 },
-                timeline: [
-                  {
-                    id: `t-${Date.now()}-${idx}`,
-                    type: 'system',
-                    title: 'Lead imported',
-                    description: `Imported from ${file.name}`,
-                    time: 'Just now'
-                  }
-                ]
-              };
-            });
-          }
-        }
-
-        if (newLeadsToAdd.length > 0) {
-          setLeads((prev) => [...newLeadsToAdd, ...prev]);
-          setImportNotification(`Successfully imported ${newLeadsToAdd.length} leads from ${file.name}`);
-          setTimeout(() => setImportNotification(null), 4000);
-        } else {
-          setImportNotification('File contained no valid records to import.');
-          setTimeout(() => setImportNotification(null), 3000);
-        }
-      } catch (err) {
-        setImportNotification(`Import error: ${err.message}`);
-        setTimeout(() => setImportNotification(null), 4000);
-      }
-    };
-    reader.readAsText(file);
+    // Reset input so user can pick same file name if needed
     e.target.value = '';
+
+    setImportNotification({
+      type: 'loading',
+      message: `⏳ Processing bulk import for ${file.name}...`,
+      hasDiagnostics: false,
+    });
+
+    try {
+      const res = await gatewayApi.bulkImportLeads(file);
+      if (res.success && res.data?.data) {
+        const d = res.data.data;
+        setImportAuditReport(d);
+        setSelectedDuplicateRows(new Set());
+        setDrawerMode('details');
+        const hasDiagnostics = (d.duplicate_count > 0 || d.error_count > 0 || (d.error_sample && d.error_sample.length > 0));
+        setImportNotification({
+          type: 'success',
+          message: `Successfully imported ${d.inserted_count} leads (${d.duplicate_count} duplicates skipped, ${d.error_count} errors logged)`,
+          hasDiagnostics,
+        });
+
+        // Automatically open the diagnostics drawer so user sees what succeeded, skipped, and errored!
+        setIsImportDrawerOpen(true);
+        fetchImportHistory();
+
+        // Instantly reload leads from live Supabase DB
+        if (typeof fetchSupabaseData === 'function') {
+          await fetchSupabaseData();
+        }
+      } else {
+        const errorMsg = res.error?.message || res.data?.message || 'Bulk import failed';
+        setImportNotification({
+          type: 'error',
+          message: `Import error: ${errorMsg}`,
+          hasDiagnostics: false,
+        });
+      }
+    } catch (err) {
+      setImportNotification({
+        type: 'error',
+        message: `Import error: ${err.message}`,
+        hasDiagnostics: false,
+      });
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -157,9 +284,10 @@ export default function LeadsPage() {
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
       const matchSearch =
-        l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.owner.toLowerCase().includes(searchQuery.toLowerCase());
+        (l.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (l.company || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (l.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (l.owner || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchStatus = statusFilter === 'All' ? true : l.status === statusFilter;
 
@@ -212,7 +340,9 @@ export default function LeadsPage() {
             <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
               Leads
             </h1>
-            <span className="badge badge-blue">{filteredLeads.length} total</span>
+            <span className="badge badge-blue">
+              {totalEffectiveCount.toLocaleString()} total
+            </span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
             Track, score and convert prospective accounts into pipeline revenue
@@ -268,6 +398,26 @@ export default function LeadsPage() {
             onChange={handleFileUpload}
           />
 
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              fetchImportHistory();
+              setDrawerMode(importAuditReport ? 'details' : 'history');
+              setIsImportDrawerOpen(true);
+            }}
+            title="Open audit logs and persistent history of bulk lead imports"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              borderColor: '#bbf7d0',
+              background: '#f0fdf4',
+              color: '#15803d',
+            }}
+          >
+            <span>📊 Import History</span>
+          </button>
+
           <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV or JSON file">
             <Upload size={14} />
             <span>Import</span>
@@ -296,7 +446,7 @@ export default function LeadsPage() {
           >
             {tab}
             <span className="tab-count-pill">
-              {tab === 'All' ? leads.length : leads.filter((l) => tab === 'Hot' ? l.score >= 90 : l.status === tab).length}
+              {tab === 'All' ? totalEffectiveCount.toLocaleString() : leads.filter((l) => tab === 'Hot' ? l.score >= 90 : l.status === tab).length}
             </span>
           </button>
         ))}
@@ -319,7 +469,7 @@ export default function LeadsPage() {
               placeholder="Search leads by name, company, or owner..."
               className="search-input"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
             />
           </div>
 
@@ -327,7 +477,10 @@ export default function LeadsPage() {
             className="input-field"
             style={{ width: 140 }}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="All">All Statuses</option>
             <option value="New">New</option>
@@ -343,6 +496,7 @@ export default function LeadsPage() {
             onClick={() => {
               setSearchQuery('');
               setStatusFilter('All');
+              setPage(1);
             }}
           >
             Clear filters
@@ -355,26 +509,60 @@ export default function LeadsPage() {
         <div
           style={{
             padding: '0.65rem 1rem',
-            background: '#ecfdf5',
-            border: '1px solid #a7f3d0',
+            background: importNotification.type === 'error' ? '#fef2f2' : '#ecfdf5',
+            border: `1px solid ${importNotification.type === 'error' ? '#fecaca' : '#a7f3d0'}`,
             borderRadius: 8,
-            color: '#065f46',
+            color: importNotification.type === 'error' ? '#991b1b' : '#065f46',
             fontSize: '0.8125rem',
             fontWeight: 600,
             marginBottom: '1rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '1rem',
             animation: 'fadeIn 0.2s ease',
           }}
         >
-          <span>✓ {importNotification}</span>
-          <button
-            onClick={() => setImportNotification(null)}
-            style={{ background: 'none', border: 'none', color: '#065f46', cursor: 'pointer', fontWeight: 700 }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1 }}>
+            <span>{importNotification.type === 'error' ? '⚠️' : importNotification.type === 'loading' ? '⏳' : '✓'}</span>
+            <span>{typeof importNotification === 'string' ? importNotification : importNotification.message}</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            {importNotification?.hasDiagnostics && (
+              <button
+                onClick={() => setIsImportDrawerOpen(true)}
+                style={{
+                  background: '#047857',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <span>🔍 View Log & Details</span>
+              </button>
+            )}
+            <button
+              onClick={() => setImportNotification(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: importNotification.type === 'error' ? '#991b1b' : '#065f46',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -717,6 +905,123 @@ export default function LeadsPage() {
           })}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginTop: '1.25rem',
+          padding: '0.85rem 1.25rem',
+          background: '#ffffff',
+          borderRadius: 10,
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: '#64748b' }}>
+          <span>
+            Showing <strong style={{ color: '#0f172a' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
+            <strong style={{ color: '#0f172a' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
+            <strong style={{ color: '#0f172a' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
+          </span>
+
+          <span style={{ color: '#cbd5e1' }}>|</span>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              style={{
+                fontSize: '0.8125rem',
+                padding: '0.2rem 0.5rem',
+                borderRadius: 6,
+                border: '1px solid #cbd5e1',
+                background: '#f8fafc',
+                color: '#334155',
+                cursor: 'pointer',
+              }}
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Page buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: '0.35rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              opacity: page <= 1 ? 0.4 : 1,
+              cursor: page <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronLeft size={14} />
+            <span>Prev</span>
+          </button>
+
+          {getPageNumbers(page, totalPages).map((p, idx) =>
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: '#94a3b8' }}>
+                …
+              </span>
+            ) : (
+              <button
+                key={`page-${p}`}
+                onClick={() => setPage(p)}
+                style={{
+                  minWidth: 32,
+                  height: 32,
+                  padding: '0 0.5rem',
+                  borderRadius: 6,
+                  fontSize: '0.8125rem',
+                  fontWeight: page === p ? 700 : 500,
+                  border: '1px solid',
+                  borderColor: page === p ? '#2563eb' : '#e2e8f0',
+                  background: page === p ? '#2563eb' : '#ffffff',
+                  color: page === p ? '#ffffff' : '#334155',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {p}
+              </button>
+            )
+          )}
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: '0.35rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              opacity: page >= totalPages ? 0.4 : 1,
+              cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <span>Next</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
       </>
       )}
 
@@ -823,6 +1128,601 @@ export default function LeadsPage() {
                 + Convert
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Import Audit Slide-out Drawer */}
+      {isImportDrawerOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 64,
+            right: isAgentDockOpen ? 360 : 0,
+            bottom: 0,
+            width: 500,
+            maxWidth: 'calc(100vw - 380px)',
+            background: '#ffffff',
+            borderLeft: '1px solid #e2e8f0',
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+            zIndex: 46,
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            animation: 'slideLeft 0.2s ease',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: '1.15rem 1.25rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.15rem' }}>📊</span>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Bulk Import Audit
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
+                {importAuditReport && (
+                  <button
+                    onClick={() => setDrawerMode('details')}
+                    style={{
+                      padding: '0.25rem 0.65rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      borderRadius: 6,
+                      border: '1px solid',
+                      borderColor: drawerMode === 'details' ? '#2563eb' : '#cbd5e1',
+                      background: drawerMode === 'details' ? '#eff6ff' : '#ffffff',
+                      color: drawerMode === 'details' ? '#2563eb' : '#64748b',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Current Batch
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setDrawerMode('history');
+                    fetchImportHistory();
+                  }}
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    borderRadius: 6,
+                    border: '1px solid',
+                    borderColor: drawerMode === 'history' ? '#2563eb' : '#cbd5e1',
+                    background: drawerMode === 'history' ? '#eff6ff' : '#ffffff',
+                    color: drawerMode === 'history' ? '#2563eb' : '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📜 History Log ({importHistory.length})
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsImportDrawerOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748b',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+                fontWeight: 700,
+                padding: '4px 8px',
+                borderRadius: 4,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Mode 1: Persistent History Log Table */}
+          {drawerMode === 'history' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+              <div
+                style={{
+                  marginBottom: '1rem',
+                  padding: '0.5rem 0.75rem',
+                  background: '#f1f5f9',
+                  borderRadius: 6,
+                  fontSize: '0.75rem',
+                  color: '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>
+                  <strong>Role Scope:</strong>{' '}
+                  {isOwner
+                    ? 'Owner (All organization imports)'
+                    : isManager
+                    ? 'Manager (Squad imports)'
+                    : 'Salesperson (My imports)'}
+                </span>
+                <button
+                  onClick={fetchImportHistory}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+
+              {isLoadingHistory ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>
+                  ⏳ Loading persistent import history...
+                </div>
+              ) : importHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#475569' }}>No Import Batches Found</div>
+                  <div style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>
+                    Click [↑ Import] on the Leads page to upload your first lead batch.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {importHistory.map((batch) => {
+                    const formattedDate = batch.created_at
+                      ? new Date(batch.created_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '';
+                    return (
+                      <div
+                        key={batch.batch_id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 8,
+                          padding: '0.9rem',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#0f172a' }}>
+                            📄 {batch.file_name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: '#ecfdf5',
+                              color: '#065f46',
+                            }}
+                          >
+                            {batch.status}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>By: <strong style={{ color: '#334155' }}>{batch.user_name}</strong> ({batch.user_role})</span>
+                          <span>{formattedDate}</span>
+                        </div>
+
+                        {/* Metric pills */}
+                        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: '#f0fdf4',
+                              color: '#15803d',
+                              border: '1px solid #bbf7d0',
+                              borderRadius: 4,
+                              padding: '2px 6px',
+                            }}
+                          >
+                            +{batch.inserted_count.toLocaleString()} Inserted
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: '#fffbeb',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
+                              borderRadius: 4,
+                              padding: '2px 6px',
+                            }}
+                          >
+                            {batch.duplicate_count.toLocaleString()} Duplicates
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
+                              borderRadius: 4,
+                              padding: '2px 6px',
+                            }}
+                          >
+                            {batch.error_count.toLocaleString()} Errors
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid #f1f5f9' }}>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setImportAuditReport(batch);
+                              setSelectedDuplicateRows(new Set());
+                              setDrawerMode('details');
+                            }}
+                            style={{ flex: 1, fontSize: '0.75rem', justifyContent: 'center' }}
+                          >
+                            🔍 View Diagnostics
+                          </button>
+                          {batch.error_sample && batch.error_sample.length > 0 && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => downloadAuditCsv(batch)}
+                              title="Download diagnostics CSV for this batch"
+                              style={{ fontSize: '0.75rem', padding: '0 0.5rem' }}
+                            >
+                              <Download size={13} />
+                              <span>CSV</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mode 2: Detailed Diagnostics for Selected / Current Batch */}
+          {drawerMode === 'details' && importAuditReport && (
+            <>
+              {/* Stat Cards Overview */}
+              <div style={{ padding: '1.25rem 1.25rem 0.75rem 1.25rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                  Inspecting file: <strong style={{ color: '#0f172a' }}>{importAuditReport.file_name}</strong>
+                  {importAuditReport.user_name && (
+                    <span> • Imported by: <strong>{importAuditReport.user_name}</strong></span>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: 8,
+                      padding: '0.65rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a' }}>
+                      {importAuditReport.inserted_count.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#15803d', textTransform: 'uppercase' }}>
+                      ✓ Inserted
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: 8,
+                      padding: '0.65rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706' }}>
+                      {importAuditReport.duplicate_count.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#b45309', textTransform: 'uppercase' }}>
+                      ⚠️ Duplicates
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: 8,
+                      padding: '0.65rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626' }}>
+                      {importAuditReport.error_count.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#b91c1c', textTransform: 'uppercase' }}>
+                      ❌ Errors
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '1rem' }}>
+                  {[
+                    { id: 'all', label: `All Issues (${(importAuditReport.error_sample || []).length.toLocaleString()})` },
+                    {
+                      id: 'duplicates',
+                      label: `Duplicates (${(importAuditReport.error_sample || []).filter(e => e.is_duplicate || (e.error || '').toLowerCase().includes('duplicate')).length.toLocaleString()})`,
+                    },
+                    {
+                      id: 'errors',
+                      label: `Errors (${(importAuditReport.error_sample || []).filter(e => !(e.is_duplicate || (e.error || '').toLowerCase().includes('duplicate'))).length.toLocaleString()})`,
+                    },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setAuditFilterTab(t.id);
+                        setVisibleIssuesCount(100);
+                      }}
+                      style={{
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        border: '1px solid',
+                        borderColor: auditFilterTab === t.id ? '#2563eb' : '#e2e8f0',
+                        background: auditFilterTab === t.id ? '#eff6ff' : '#ffffff',
+                        color: auditFilterTab === t.id ? '#2563eb' : '#64748b',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Allow Duplicates Action Bar (Select All + Import Selected) */}
+                {pendingDuplicateItems.length > 0 && (auditFilterTab === 'all' || auditFilterTab === 'duplicates') && (
+                  <div
+                    style={{
+                      marginTop: '0.85rem',
+                      padding: '0.6rem 0.75rem',
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#92400e',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          pendingDuplicateItems.length > 0 &&
+                          pendingDuplicateItems.every((d) => selectedDuplicateRows.has(d.row))
+                        }
+                        onChange={(e) => handleSelectAllDuplicates(e.target.checked)}
+                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#d97706' }}
+                      />
+                      <span>Select All Duplicates ({pendingDuplicateItems.length.toLocaleString()})</span>
+                    </label>
+
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={selectedDuplicateRows.size === 0 || isAllowingDuplicates}
+                      onClick={handleAllowSelectedDuplicates}
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '0.3rem 0.65rem',
+                        opacity: selectedDuplicateRows.size === 0 || isAllowingDuplicates ? 0.55 : 1,
+                        cursor: selectedDuplicateRows.size === 0 || isAllowingDuplicates ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {isAllowingDuplicates
+                        ? '⏳ Importing...'
+                        : `✓ Allow & Import (${selectedDuplicateRows.size.toLocaleString()})`}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Scrollable Error / Duplicate Diagnostics List */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+                {(!importAuditReport.error_sample || importAuditReport.error_sample.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#16a34a' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>100% Clean Upload!</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.25rem' }}>
+                      All {importAuditReport.total_rows} rows were successfully inserted without any duplicate or validation issues.
+                    </div>
+                  </div>
+                ) : (
+                  (() => {
+                    const allFiltered = importAuditReport.error_sample.filter(item => {
+                      const isDup = item.is_duplicate || (item.error || '').toLowerCase().includes('duplicate');
+                      if (auditFilterTab === 'duplicates') return isDup;
+                      if (auditFilterTab === 'errors') return !isDup;
+                      return true;
+                    });
+                    const displayed = allFiltered.slice(0, visibleIssuesCount);
+
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                          {displayed.map((item, idx) => {
+                            const isDup = item.is_duplicate || (item.error || '').toLowerCase().includes('duplicate');
+                            const isAllowed = Boolean(item.allowed);
+                            const canSelect = isDup && !isAllowed && Boolean(item.lead_data);
+                            const isChecked = canSelect && selectedDuplicateRows.has(item.row);
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '0.75rem',
+                                  borderRadius: 8,
+                                  border: '1px solid',
+                                  borderColor: isAllowed ? '#bbf7d0' : isChecked ? '#2563eb' : isDup ? '#fde68a' : '#fecaca',
+                                  background: isAllowed ? '#f0fdf4' : isChecked ? '#eff6ff' : isDup ? '#fffdf7' : '#fffaf0',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.35rem',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                    {canSelect && (
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => handleToggleDuplicateRow(item.row)}
+                                        aria-label={`Allow duplicate row ${item.row}`}
+                                        style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#2563eb' }}
+                                      />
+                                    )}
+                                    <span
+                                      style={{
+                                        fontSize: '0.6875rem',
+                                        fontWeight: 800,
+                                        padding: '0.15rem 0.4rem',
+                                        borderRadius: 4,
+                                        background: isAllowed ? '#dcfce7' : isDup ? '#fef3c7' : '#fee2e2',
+                                        color: isAllowed ? '#15803d' : isDup ? '#92400e' : '#991b1b',
+                                      }}
+                                    >
+                                      ROW {item.row}
+                                    </span>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b' }}>
+                                      {item.name || '(Missing Name)'}
+                                    </span>
+                                  </div>
+                                  <span
+                                    style={{
+                                      fontSize: '0.625rem',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                      color: isAllowed ? '#16a34a' : isDup ? '#d97706' : '#dc2626',
+                                    }}
+                                  >
+                                    {isAllowed ? '✓ Allowed & Imported' : isDup ? 'Skipped Duplicate' : 'Validation Error'}
+                                  </span>
+                                </div>
+
+                                {item.email && (
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                    Contact: <code style={{ color: '#0f172a', background: 'rgba(0,0,0,0.04)', padding: '1px 4px', borderRadius: 3 }}>{item.email}</code>
+                                  </div>
+                                )}
+
+                                <div style={{ fontSize: '0.75rem', color: isAllowed ? '#166534' : isDup ? '#78350f' : '#7f1d1d', lineHeight: 1.4 }}>
+                                  {item.error}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {allFiltered.length > visibleIssuesCount && (
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'center' }}>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setVisibleIssuesCount(prev => prev + 200)}
+                              style={{ fontSize: '0.75rem', flex: 1, justifyContent: 'center' }}
+                            >
+                              Load Next 200 (Showing {visibleIssuesCount} of {allFiltered.length.toLocaleString()})
+                            </button>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setVisibleIssuesCount(allFiltered.length)}
+                              style={{ fontSize: '0.75rem', justifyContent: 'center' }}
+                            >
+                              Show All ({allFiltered.length.toLocaleString()})
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Footer Actions */}
+          <div
+            style={{
+              padding: '0.85rem 1.25rem',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              display: 'flex',
+              gap: '0.75rem',
+            }}
+          >
+            {drawerMode === 'details' && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setDrawerMode('history')}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <span>← History</span>
+              </button>
+            )}
+
+            {drawerMode === 'details' && importAuditReport?.error_sample && importAuditReport.error_sample.length > 0 && (
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                onClick={() => downloadAuditCsv(importAuditReport)}
+                title="Download CSV containing all skipped rows and error reasons"
+              >
+                <Download size={14} />
+                <span>Download Diagnostics CSV ({importAuditReport.error_sample.length.toLocaleString()} rows)</span>
+              </button>
+            )}
+
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ minWidth: 80 }}
+              onClick={() => setIsImportDrawerOpen(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

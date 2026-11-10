@@ -39,6 +39,11 @@ class Lead(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
         index=True,
     )
     interested_product: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("lead_import_batches.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Relationships
     assigned_user: Mapped["User"] = relationship("User", foreign_keys=[assigned_to])

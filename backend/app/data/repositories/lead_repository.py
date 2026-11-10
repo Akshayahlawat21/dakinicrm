@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional, List
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.data.models.lead import Lead, LeadSignal, LeadConversion
 from backend.app.data.repositories.base import BaseRepository, phones_match
@@ -91,6 +91,7 @@ class LeadRepository(BaseRepository[Lead]):
         skip: int = 0,
         limit: int = 50,
         filters: Optional[dict] = None,
+        search: Optional[str] = None,
     ) -> tuple[List[Lead], int]:
         tenant_uuid = self._parse_uuid(tenant_id)
         base_filter = [
@@ -102,6 +103,23 @@ class LeadRepository(BaseRepository[Lead]):
             for field, val in filters.items():
                 if hasattr(Lead, field) and val is not None:
                     base_filter.append(getattr(Lead, field) == val)
+
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            from backend.app.data.models.user import User
+            user_matches = select(User.id).where(
+                User.name.ilike(term),
+                User.organization_id == tenant_uuid,
+            )
+            base_filter.append(
+                or_(
+                    Lead.name.ilike(term),
+                    Lead.company.ilike(term),
+                    Lead.email.ilike(term),
+                    Lead.phone.ilike(term),
+                    Lead.assigned_to.in_(user_matches),
+                )
+            )
 
         count_stmt = select(func.count(Lead.id)).where(*base_filter)
         count_res = await self.session.execute(count_stmt)

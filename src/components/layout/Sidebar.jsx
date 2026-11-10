@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { currentTab, navigateTo, sidebarCollapsed, setSidebarCollapsed, leads, deals, tasks, approvals, unreadEmailCount } = useCRM();
+  const { currentTab, navigateTo, sidebarCollapsed, setSidebarCollapsed, leads, totalLeadsCount, overallLeadsCount, deals, tasks, approvals, unreadEmailCount } = useCRM();
 
   const wonDealsCount = (deals || []).filter((d) => {
     const s = String(d?.stage || '').toLowerCase().trim();
@@ -45,7 +45,7 @@ export default function Sidebar() {
       items: [
         { id: "accounts", label: "Accounts", icon: Building2 },
         { id: "contacts", label: "Contacts", icon: Users },
-        { id: "leads", label: "Leads", icon: UserCheck, count: leads.length },
+        { id: "leads", label: "Leads", icon: UserCheck, count: overallLeadsCount || totalLeadsCount || leads.length },
         { id: "campaigns", label: "Campaigns", icon: Megaphone },
         { id: "deals", label: "Deals & Pipeline", icon: Handshake, count: deals.length },
         { id: "customers", label: "Customers", icon: BadgeCheck, count: wonDealsCount }
@@ -128,7 +128,9 @@ export default function Sidebar() {
                     <>
                       <span className="nav-item-label">{item.label}</span>
                       {item.count !== undefined && item.count > 0 && (
-                        <span className="nav-item-badge">{item.count}</span>
+                        <span className="nav-item-badge">
+                          {typeof item.count === 'number' ? item.count.toLocaleString() : item.count}
+                        </span>
                       )}
                     </>
                   )}

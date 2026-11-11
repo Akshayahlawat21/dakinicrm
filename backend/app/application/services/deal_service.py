@@ -5,10 +5,12 @@ from backend.app.application.context import RequestContext
 from backend.app.application.permissions import PermissionService
 from backend.app.application.exceptions import BadRequestError, NotFoundError
 from backend.app.data.models.deal import Deal
+from backend.app.data.models.pipeline import PipelineStage
 from backend.app.data.repositories.deal_repository import DealRepository
 from backend.app.data.repositories.team_repository import TeamRepository
 from backend.app.data.repositories.user_repository import UserRepository
 from backend.app.data.repositories.audit_repository import AuditLogRepository
+from backend.app.data.repositories.pipeline_repository import PipelineRepository
 from backend.app.data.exceptions import RecordNotFoundError
 
 VALID_STAGES = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"]
@@ -45,6 +47,7 @@ class DealService:
         self.team_repo = TeamRepository(session)
         self.user_repo = UserRepository(session)
         self.audit_repo = AuditLogRepository(session)
+        self.pipeline_repo = PipelineRepository(session)
 
     async def get_deal(self, ctx: RequestContext, deal_id: str | uuid.UUID) -> Deal:
         try:
@@ -108,6 +111,115 @@ class DealService:
             tenant_id=ctx.tenant_id, skip=skip, limit=limit, filters=filters
         )
 
+    async def _resolve_target_stage(
+        self,
+        ctx: RequestContext,
+        stage_name: Optional[str] = None,
+        stage_id: Optional[str | uuid.UUID] = None,
+        pipeline_id: Optional[str | uuid.UUID] = None,
+    ) -> tuple[PipelineStage, PipelineStage]:
+        """
+        Resolves `(selected_stage, core_org_stage)` dynamically from pipeline_stages.
+        - `selected_stage`: exact target stage ('org' or caller's 'personal').
+        - `core_org_stage`: shared 'org' root stage used on Deal.stage / Deal.stage_id.
+        """
+        default_pipe = await self.pipeline_repo.ensure_default_pipeline(ctx.tenant_id)
+        target_pipe_id = uuid.UUID(str(pipeline_id)) if pipeline_id else default_pipe.id
+        visible = await self.pipeline_repo.list_visible_stages(ctx.tenant_id, target_pipe_id, ctx.user_id)
+
+        selected: Optional[PipelineStage] = None
+        if stage_id:
+            selected = next((s for s in visible if str(s.id) == str(stage_id)), None)
+            if not selected:
+                found = await self.pipeline_repo.get_stage_scoped(stage_id, ctx.tenant_id)
+                if found and (found.scope == "org" or found.user_id == ctx.user_uuid):
+                    selected = found
+                    visible = await self.pipeline_repo.list_visible_stages(ctx.tenant_id, found.pipeline_id, ctx.user_id)
+            if not selected:
+                raise BadRequestError(f"Stage ID '{stage_id}' was not found or is not accessible.")
+        else:
+            raw = (stage_name or "Qualified").strip()
+            selected = next((s for s in visible if s.name.lower().strip() == raw.lower()), None)
+            if not selected:
+                mapped = STAGE_MAPPING.get(raw.lower())
+                if mapped:
+                    selected = next((s for s in visible if s.name.lower().strip() == mapped.lower()), None)
+            if not selected:
+                allowed_names = ", ".join(s.name for s in visible)
+                raise BadRequestError(f"Invalid stage '{stage_name}'. Allowed: {allowed_names}")
+
+        if selected.scope == "org":
+            return selected, selected
+
+        root_name = (selected.parent_base_stage or "Qualified").lower().strip()
+        core_stage = next(
+            (s for s in visible if s.scope == "org" and s.name.lower().strip() == root_name),
+            None,
+        )
+        if not core_stage:
+            core_stage = await self.pipeline_repo.resolve_org_stage_by_name(
+                ctx.tenant_id, selected.parent_base_stage or "Qualified", selected.pipeline_id
+            )
+        if not core_stage:
+            core_stage = selected
+        return selected, core_stage
+
+    async def resolve_display_columns(
+        self, ctx: RequestContext, deals: List[Deal]
+    ) -> Dict[uuid.UUID, Dict[str, Any]]:
+        """Computes per-user display stage metadata (`display_stage_id`, `display_stage_name`, `display_probability`)."""
+        if not deals:
+            return {}
+        default_pipe = await self.pipeline_repo.ensure_default_pipeline(ctx.tenant_id)
+        visible_stages = await self.pipeline_repo.list_visible_stages(ctx.tenant_id, default_pipe.id, ctx.user_id)
+        org_stage_by_id = {s.id: s for s in visible_stages if s.scope == "org"}
+        org_stage_by_name = {s.name.lower().strip(): s for s in visible_stages if s.scope == "org"}
+
+        overrides = await self.pipeline_repo.get_user_deal_overrides_map(
+            ctx.tenant_id, ctx.user_id, [d.id for d in deals]
+        )
+
+        result: Dict[uuid.UUID, Dict[str, Any]] = {}
+        for d in deals:
+            core_stage = org_stage_by_id.get(d.stage_id) if getattr(d, "stage_id", None) else None
+            if not core_stage:
+                norm_name = STAGE_MAPPING.get((d.stage or "Qualified").lower().strip(), d.stage or "Qualified")
+                core_stage = org_stage_by_name.get(norm_name.lower().strip())
+
+            override = overrides.get(d.id)
+            use_override = False
+            if override:
+                base_match = (override.parent_base_stage or "").lower().strip()
+                deal_stage_norm = STAGE_MAPPING.get((d.stage or "").lower().strip(), d.stage or "").lower().strip()
+                if not base_match or base_match == deal_stage_norm:
+                    use_override = True
+
+            if use_override and override:
+                result[d.id] = {
+                    "pipeline_id": str(d.pipeline_id or override.pipeline_id),
+                    "stage_id": str(d.stage_id or (core_stage.id if core_stage else override.id)),
+                    "display_stage_id": str(override.id),
+                    "display_stage_name": override.name,
+                    "display_probability": override.win_probability,
+                }
+            elif core_stage:
+                result[d.id] = {
+                    "pipeline_id": str(d.pipeline_id or core_stage.pipeline_id),
+                    "stage_id": str(d.stage_id or core_stage.id),
+                    "display_stage_id": str(core_stage.id),
+                    "display_stage_name": core_stage.name,
+                    "display_probability": core_stage.win_probability,
+                }
+            else:
+                result[d.id] = {
+                    "pipeline_id": str(d.pipeline_id) if getattr(d, "pipeline_id", None) else None,
+                    "stage_id": str(d.stage_id) if getattr(d, "stage_id", None) else None,
+                    "display_stage_id": str(d.stage_id) if getattr(d, "stage_id", None) else None,
+                    "display_stage_name": d.stage,
+                    "display_probability": STAGE_PROBABILITIES.get((d.stage or "").lower(), 50),
+                }
+        return result
+
     async def create_deal(
         self,
         ctx: RequestContext,
@@ -117,15 +229,19 @@ class DealService:
         stage: str = "Qualified",
         currency: str = "USD",
         opportunity_id: Optional[str | uuid.UUID] = None,
+        pipeline_id: Optional[str | uuid.UUID] = None,
+        stage_id: Optional[str | uuid.UUID] = None,
     ) -> Deal:
         if not name or not name.strip():
             raise BadRequestError("Deal name is required")
         if amount < 0:
             raise BadRequestError("Deal amount cannot be negative")
-        normalized_stage = STAGE_MAPPING.get(stage.lower().strip() if stage else "", stage)
-        if normalized_stage not in VALID_STAGES:
-            raise BadRequestError(f"Stage '{stage}' is invalid. Allowed: {', '.join(VALID_STAGES)}")
-        stage = normalized_stage
+
+        selected_stage, core_stage = await self._resolve_target_stage(
+            ctx=ctx, stage_name=stage, stage_id=stage_id, pipeline_id=pipeline_id
+        )
+        core_stage_name = core_stage.name
+        new_status = "won" if core_stage.is_won else ("lost" if core_stage.is_lost else "open")
 
         from datetime import datetime, timezone
         from backend.app.data.models.deal import Opportunity
@@ -138,8 +254,8 @@ class DealService:
                 owner_id=ctx.user_uuid,
                 name=name.strip(),
                 amount=amount,
-                stage=stage.lower(),
-                probability=STAGE_PROBABILITIES.get(stage.lower(), 50),
+                stage=core_stage_name.lower(),
+                probability=selected_stage.win_probability,
             )
             self.session.add(opp)
             await self.session.flush()
@@ -147,8 +263,8 @@ class DealService:
         else:
             opp = await self.session.get(Opportunity, opp_id)
             if opp:
-                opp.stage = stage.lower()
-                opp.probability = STAGE_PROBABILITIES.get(stage.lower(), opp.probability)
+                opp.stage = core_stage_name.lower()
+                opp.probability = selected_stage.win_probability
                 await self.session.flush()
 
         deal = Deal(
@@ -156,38 +272,58 @@ class DealService:
             account_id=uuid.UUID(str(account_id)),
             opportunity_id=opp_id,
             owner_id=ctx.user_uuid,
+            pipeline_id=core_stage.pipeline_id,
+            stage_id=core_stage.id,
             name=name.strip(),
             amount=amount,
-            stage=stage,
+            stage=core_stage_name,
             currency=currency,
-            status="won" if stage == "Won" else ("lost" if stage == "Lost" else "open"),
-            close_date=datetime.now(timezone.utc).date() if stage == "Won" else None,
+            status=new_status,
+            close_date=datetime.now(timezone.utc).date() if core_stage.is_won else None,
         )
         created = await self.deal_repo.create(deal, ctx.tenant_id)
+
+        if selected_stage.scope == "personal":
+            await self.pipeline_repo.upsert_user_deal_override(
+                ctx.tenant_id, ctx.user_id, created.id, selected_stage.id
+            )
+
         await self.audit_repo.record_event(
             tenant_id=ctx.tenant_id,
             user_id=ctx.user_id,
             action="CREATE",
             resource_type="deal",
             resource_id=created.id,
-            new_values={"name": name, "amount": amount, "stage": stage},
+            new_values={"name": name, "amount": amount, "stage": selected_stage.name},
         )
         return created
 
     async def update_stage(
-        self, ctx: RequestContext, deal_id: str | uuid.UUID, new_stage: str
+        self,
+        ctx: RequestContext,
+        deal_id: str | uuid.UUID,
+        new_stage: Optional[str] = None,
+        stage_id: Optional[str | uuid.UUID] = None,
     ) -> Deal:
-        normalized_stage = STAGE_MAPPING.get(new_stage.lower().strip() if new_stage else "", new_stage)
-        if normalized_stage not in VALID_STAGES:
-            raise BadRequestError(f"Invalid stage '{new_stage}'. Allowed: {', '.join(VALID_STAGES)}")
-        new_stage = normalized_stage
-
         deal = await self.get_deal(ctx, deal_id)
         old_stage = deal.stage
-        new_status = "won" if new_stage == "Won" else ("lost" if new_stage == "Lost" else "open")
 
-        update_fields: Dict[str, Any] = {"stage": new_stage, "status": new_status}
-        if new_stage == "Won":
+        selected_stage, core_stage = await self._resolve_target_stage(
+            ctx=ctx,
+            stage_name=new_stage,
+            stage_id=stage_id,
+            pipeline_id=deal.pipeline_id,
+        )
+        core_name = core_stage.name
+        new_status = "won" if core_stage.is_won else ("lost" if core_stage.is_lost else "open")
+
+        update_fields: Dict[str, Any] = {
+            "pipeline_id": core_stage.pipeline_id,
+            "stage_id": core_stage.id,
+            "stage": core_name,
+            "status": new_status,
+        }
+        if core_stage.is_won:
             from datetime import datetime, timezone
             update_fields["close_date"] = datetime.now(timezone.utc).date()
 
@@ -197,12 +333,21 @@ class DealService:
             update_fields,
         )
 
+        if selected_stage.scope == "personal":
+            await self.pipeline_repo.clear_stale_deal_overrides_for_core_move(updated.id, core_name)
+            await self.pipeline_repo.upsert_user_deal_override(
+                ctx.tenant_id, ctx.user_id, updated.id, selected_stage.id
+            )
+        else:
+            await self.pipeline_repo.delete_user_deal_override(ctx.user_id, updated.id)
+            await self.pipeline_repo.clear_stale_deal_overrides_for_core_move(updated.id, core_name)
+
         if deal.opportunity_id:
             from backend.app.data.models.deal import Opportunity
             opp = await self.session.get(Opportunity, deal.opportunity_id)
             if opp:
-                opp.stage = new_stage.lower()
-                opp.probability = STAGE_PROBABILITIES.get(new_stage.lower(), opp.probability)
+                opp.stage = core_name.lower()
+                opp.probability = selected_stage.win_probability
                 await self.session.flush()
 
         await self.audit_repo.record_event(
@@ -212,7 +357,7 @@ class DealService:
             resource_type="deal",
             resource_id=deal_id,
             old_values={"stage": old_stage},
-            new_values={"stage": new_stage, "status": new_status},
+            new_values={"stage": selected_stage.name, "status": new_status},
         )
         return updated
 

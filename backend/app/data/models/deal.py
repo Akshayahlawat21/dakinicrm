@@ -32,6 +32,8 @@ class Deal(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     stage: Mapped[str] = mapped_column(String(50), default="Qualified", nullable=False, index=True)  # Qualified, Proposal, Negotiation, Won, Lost
+    pipeline_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("pipelines.id", ondelete="SET NULL"), nullable=True, index=True)
+    stage_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("pipeline_stages.id", ondelete="SET NULL"), nullable=True, index=True)
     close_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="open", nullable=False, index=True)  # open, won, lost
 

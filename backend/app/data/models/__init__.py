@@ -6,6 +6,7 @@ from backend.app.data.models.lead_import import LeadImportBatch
 from backend.app.data.models.account import Account
 from backend.app.data.models.contact import Contact
 from backend.app.data.models.deal import Opportunity, Deal, Product, DealProduct
+from backend.app.data.models.pipeline import Pipeline, PipelineStage, UserDealColumn
 from backend.app.data.models.campaign import Campaign, CampaignMember, CampaignResponse
 from backend.app.data.models.activity import Activity, ActivityParticipant, Note, CallTranscript, CallAnalysis
 from backend.app.data.models.target import SalesTarget
@@ -35,6 +36,9 @@ __all__ = [
     "Deal",
     "Product",
     "DealProduct",
+    "Pipeline",
+    "PipelineStage",
+    "UserDealColumn",
     "Campaign",
     "CampaignMember",
     "CampaignResponse",

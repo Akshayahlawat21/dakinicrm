@@ -11,6 +11,161 @@ from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, 
 router = APIRouter(prefix="/v1/deals", tags=["Deals"])
 
 
+async def _serialize_deals(
+    session: AsyncSession, service: DealService, ctx: RequestContext, deals: list
+) -> list[DealResponse]:
+    """Serializes Deal ORM records with attribution metadata, owner name, and per-user display stage."""
+    if not deals:
+        return []
+    from sqlalchemy import select, func
+    from backend.app.data.models.user import User
+    from backend.app.data.models.account import Account
+    from backend.app.data.models.lead import LeadConversion, Lead
+    from backend.app.data.models.campaign import Campaign
+    from backend.app.data.models.deal import DealProduct, Product
+
+    user_ids = {d.owner_id for d in deals if getattr(d, "owner_id", None)}
+    account_ids = {d.account_id for d in deals if getattr(d, "account_id", None)}
+    opportunity_ids = {d.opportunity_id for d in deals if getattr(d, "opportunity_id", None)}
+
+    user_map = {}
+    if user_ids:
+        users_res = await session.execute(select(User.id, User.name).where(User.id.in_(user_ids)))
+        user_map = {row.id: row.name for row in users_res}
+
+    account_map = {}
+    if account_ids:
+        rows = await session.execute(select(Account.id, Account.name).where(Account.id.in_(account_ids)))
+        account_map = {row.id: row.name for row in rows}
+
+    campaign_map = {}
+    campaign_ids_by_opp = {}
+    lead_ids_by_opp = {}
+    if opportunity_ids:
+        conv_result = await session.execute(
+            select(LeadConversion.opportunity_id, Lead.id.label("lead_id"), Lead.campaign_id)
+            .join(Lead, Lead.id == LeadConversion.lead_id)
+            .where(
+                LeadConversion.opportunity_id.in_(opportunity_ids),
+                Lead.organization_id == ctx.tenant_uuid,
+                Lead.deleted_at.is_(None),
+            )
+        )
+        conv_rows = conv_result.all()
+        campaign_ids = {row.campaign_id for row in conv_rows if row.campaign_id}
+        if campaign_ids:
+            camp_rows = await session.execute(
+                select(Campaign.id, Campaign.name).where(
+                    Campaign.id.in_(campaign_ids),
+                    Campaign.organization_id == ctx.tenant_uuid,
+                    Campaign.deleted_at.is_(None),
+                )
+            )
+            campaign_map = {row.id: row.name for row in camp_rows}
+        for row in conv_rows:
+            if row.campaign_id:
+                campaign_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.campaign_id)
+            lead_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.lead_id)
+
+    product_map = {}
+    deal_ids = {d.id for d in deals}
+    if deal_ids:
+        product_rows = await session.execute(
+            select(DealProduct.deal_id, Product.id, Product.name)
+            .join(Product, Product.id == DealProduct.product_id)
+            .where(
+                DealProduct.deal_id.in_(deal_ids),
+                Product.organization_id == ctx.tenant_uuid,
+                Product.deleted_at.is_(None),
+            )
+        )
+        for row in product_rows:
+            product_map.setdefault(row.deal_id, []).append((row.id, row.name))
+
+    # Recover attribution for legacy/manual deals only when a single tenant lead matches the account company name.
+    fallback_lead_by_account = {}
+    account_names = {str(name).strip().lower() for name in account_map.values() if name}
+    if account_names and deals:
+        fallback_rows = await session.execute(
+            select(
+                Lead.id.label("lead_id"),
+                Lead.company.label("lead_company"),
+                Lead.campaign_id.label("campaign_id"),
+                Campaign.name.label("campaign_name"),
+                Lead.product_id.label("product_id"),
+                Product.name.label("product_name"),
+            )
+            .outerjoin(Campaign, Campaign.id == Lead.campaign_id)
+            .outerjoin(Product, Product.id == Lead.product_id)
+            .where(
+                Lead.organization_id == ctx.tenant_uuid,
+                Lead.deleted_at.is_(None),
+                func.lower(func.trim(Lead.company)).in_(account_names),
+            )
+        )
+        grouped = {}
+        for row in fallback_rows:
+            key = str(row.lead_company or "").strip().lower()
+            grouped.setdefault(key, []).append(row)
+        for account_id, account_name in account_map.items():
+            matches = grouped.get(str(account_name or "").strip().lower(), [])
+            if len(matches) == 1:
+                fallback_lead_by_account[account_id] = matches[0]
+
+    display_map = await service.resolve_display_columns(ctx, deals)
+    dtos = []
+    for d in deals:
+        disp = display_map.get(d.id, {})
+        fb = fallback_lead_by_account.get(d.account_id)
+        opp_cids = sorted(campaign_ids_by_opp.get(d.opportunity_id, set()))
+        opp_lids = lead_ids_by_opp.get(d.opportunity_id, set())
+        prod_items = product_map.get(d.id, [])
+        fb_cid = getattr(fb, "campaign_id", None)
+        fb_cname = getattr(fb, "campaign_name", None)
+        fb_pid = getattr(fb, "product_id", None)
+        fb_pname = getattr(fb, "product_name", None)
+        fb_lid = getattr(fb, "lead_id", None)
+
+        resolved_cids = [str(cid) for cid in opp_cids] or ([str(fb_cid)] if fb_cid else [])
+        resolved_cnames = [campaign_map[cid] for cid in opp_cids if cid in campaign_map] or (
+            [fb_cname] if fb_cname else []
+        )
+        resolved_pids = [str(item[0]) for item in prod_items] or ([str(fb_pid)] if fb_pid else [])
+        resolved_pnames = [item[1] for item in prod_items] or ([fb_pname] if fb_pname else [])
+
+        dtos.append(
+            DealResponse(
+                id=str(d.id),
+                organization_id=str(d.organization_id),
+                account_id=str(d.account_id),
+                company=account_map.get(d.account_id),
+                lead_id=str(next(iter(opp_lids), None) or fb_lid or "") or None,
+                campaign_id=str(next(iter(opp_cids), None) or fb_cid or "") or None,
+                campaign_name=", ".join(resolved_cnames) or None,
+                campaign_ids=resolved_cids,
+                campaign_names=resolved_cnames,
+                product_id=str(prod_items[0][0]) if prod_items else (str(fb_pid or "") or None),
+                product_name=", ".join(resolved_pnames) or None,
+                product_ids=resolved_pids,
+                product_names=resolved_pnames,
+                name=d.name,
+                amount=float(d.amount),
+                currency=d.currency,
+                stage=d.stage,
+                pipeline_id=disp.get("pipeline_id"),
+                stage_id=disp.get("stage_id"),
+                display_stage_id=disp.get("display_stage_id"),
+                display_stage_name=disp.get("display_stage_name"),
+                display_probability=disp.get("display_probability"),
+                status=d.status,
+                owner_id=str(d.owner_id) if getattr(d, "owner_id", None) else None,
+                owner=user_map.get(getattr(d, "owner_id", None)),
+                created_at=d.created_at,
+            )
+        )
+    return dtos
+
+
 @router.get("/summary")
 async def get_pipeline_summary(
     ctx: RequestContext = Depends(get_request_context),
@@ -32,108 +187,7 @@ async def list_deals(
 ):
     service = DealService(session)
     deals, total = await service.list_deals(ctx, skip=skip, limit=limit, stage=stage)
-
-    from sqlalchemy import select
-    from backend.app.data.models.user import User
-
-    from backend.app.data.models.account import Account
-    from backend.app.data.models.lead import LeadConversion, Lead
-    from backend.app.data.models.campaign import Campaign
-    from backend.app.data.models.deal import DealProduct, Product
-    user_ids = {d.owner_id for d in deals if getattr(d, 'owner_id', None)}
-    account_ids = {d.account_id for d in deals if d.account_id}
-    opportunity_ids = {d.opportunity_id for d in deals if d.opportunity_id}
-    user_map = {}
-    if user_ids:
-        users_res = await session.execute(select(User.id, User.name).where(User.id.in_(user_ids)))
-        user_map = {row.id: row.name for row in users_res}
-    account_map = {}
-    if account_ids:
-        rows = await session.execute(select(Account.id, Account.name).where(Account.id.in_(account_ids)))
-        account_map = {row.id: row.name for row in rows}
-    campaign_map = {}
-    product_map = {}
-    if opportunity_ids:
-        conv_result = await session.execute(select(LeadConversion.opportunity_id, Lead.id.label("lead_id"), Lead.campaign_id).join(Lead, Lead.id == LeadConversion.lead_id).where(LeadConversion.opportunity_id.in_(opportunity_ids), Lead.organization_id == ctx.tenant_uuid, Lead.deleted_at.is_(None)))
-        conv_rows = conv_result.all()
-        campaign_ids = {row.campaign_id for row in conv_rows if row.campaign_id}
-        if campaign_ids:
-            camp_rows = await session.execute(select(Campaign.id, Campaign.name).where(Campaign.id.in_(campaign_ids), Campaign.organization_id == ctx.tenant_uuid, Campaign.deleted_at.is_(None)))
-            campaign_map = {row.id: row.name for row in camp_rows}
-        campaign_ids_by_opp = {}
-        lead_ids_by_opp = {}
-        for row in conv_rows:
-            if row.campaign_id:
-                campaign_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.campaign_id)
-            lead_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.lead_id)
-    else:
-        campaign_ids_by_opp = {}
-        lead_ids_by_opp = {}
-    deal_ids = {d.id for d in deals}
-    if deal_ids:
-        product_rows = await session.execute(select(DealProduct.deal_id, Product.id, Product.name).join(Product, Product.id == DealProduct.product_id).where(DealProduct.deal_id.in_(deal_ids), Product.organization_id == ctx.tenant_uuid, Product.deleted_at.is_(None)))
-        for row in product_rows:
-            product_map.setdefault(row.deal_id, []).append((row.id, row.name))
-
-    # Legacy/manual deals may not have a LeadConversion or DealProduct row.
-    # Recover attribution only when exactly one tenant lead matches the account
-    # company name; never assign ambiguous company matches.
-    fallback_lead_by_account = {}
-    account_names = {str(name).strip().lower() for name in account_map.values() if name}
-    if account_names and deals:
-        from sqlalchemy import func
-        fallback_rows = await session.execute(
-            select(
-                Lead.id.label("lead_id"), Lead.company.label("lead_company"),
-                Lead.campaign_id.label("campaign_id"), Campaign.name.label("campaign_name"),
-                Lead.product_id.label("product_id"), Product.name.label("product_name")
-            )
-            .outerjoin(Campaign, Campaign.id == Lead.campaign_id)
-            .outerjoin(Product, Product.id == Lead.product_id)
-            .where(
-                Lead.organization_id == ctx.tenant_uuid,
-                Lead.deleted_at.is_(None),
-                func.lower(func.trim(Lead.company)).in_(account_names),
-            )
-        )
-        grouped = {}
-        for row in fallback_rows:
-            key = str(row.lead_company or '').strip().lower()
-            grouped.setdefault(key, []).append(row)
-        for account_id, account_name in account_map.items():
-            matches = grouped.get(str(account_name or '').strip().lower(), [])
-            if len(matches) == 1:
-                fallback_lead_by_account[account_id] = matches[0]
-
-    dtos = [
-        DealResponse(
-            id=str(d.id),
-            organization_id=str(d.organization_id),
-            account_id=str(d.account_id),
-            company=account_map.get(d.account_id),
-            lead_id=str(next(iter(lead_ids_by_opp.get(d.opportunity_id, set())), None) or getattr(fallback_lead_by_account.get(d.account_id), 'lead_id', '') or '') or None,
-            campaign_id=str(next(iter(campaign_ids_by_opp.get(d.opportunity_id, set())), None) or getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id', '') or '') or None,
-            campaign_name=", ".join(
-                [campaign_map[cid] for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set())) if cid in campaign_map]
-                or ([getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', '')] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', None) else [])
-            ) or None,
-            campaign_ids=[str(cid) for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set()))] or ([str(getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id'))] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id', None) else []),
-            campaign_names=[campaign_map[cid] for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set())) if cid in campaign_map] or ([getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name')] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', None) else []),
-            product_id=str(product_map[d.id][0][0]) if d.id in product_map and product_map[d.id] else (str(getattr(fallback_lead_by_account.get(d.account_id), 'product_id', '') or '') or None),
-            product_name=", ".join([item[1] for item in product_map.get(d.id, [])]) or getattr(fallback_lead_by_account.get(d.account_id), 'product_name', None),
-            product_ids=[str(item[0]) for item in product_map.get(d.id, [])] or ([str(getattr(fallback_lead_by_account.get(d.account_id), 'product_id'))] if getattr(fallback_lead_by_account.get(d.account_id), 'product_id', None) else []),
-            product_names=[item[1] for item in product_map.get(d.id, [])] or ([getattr(fallback_lead_by_account.get(d.account_id), 'product_name')] if getattr(fallback_lead_by_account.get(d.account_id), 'product_name', None) else []),
-            name=d.name,
-            amount=float(d.amount),
-            currency=d.currency,
-            stage=d.stage,
-            status=d.status,
-            owner_id=str(d.owner_id) if getattr(d, 'owner_id', None) else None,
-            owner=user_map.get(getattr(d, 'owner_id', None)),
-            created_at=d.created_at,
-        )
-        for d in deals
-    ]
+    dtos = await _serialize_deals(session, service, ctx, deals)
     print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} deals from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
     for deal in dtos[:3]:
         print(f"   * Deal: {deal.name} | Amount: ${deal.amount} | Stage: {deal.stage} | Owner: {deal.owner}", flush=True)
@@ -214,28 +268,16 @@ async def create_deal(
         stage=body.stage or "Qualified",
         currency=body.currency or "USD",
         opportunity_id=body.opportunity_id,
+        pipeline_id=body.pipeline_id,
+        stage_id=body.stage_id,
     )
-    from backend.app.data.models.user import User
-    creator = await session.get(User, ctx.user_uuid) if ctx.user_uuid else None
-    owner_name = creator.name if creator else None
+    dtos = await _serialize_deals(session, service, ctx, [deal])
     await session.commit()
 
     print(f"\n[SUPABASE DB CREATE] >> Successfully created Deal '{deal.name}' in Supabase (ID: {deal.id}, Amount: ${deal.amount}, Stage: {deal.stage})", flush=True)
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
-            owner=owner_name,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 
@@ -248,29 +290,11 @@ async def get_deal(
 ):
     service = DealService(session)
     deal = await service.get_deal(ctx, deal_id)
-
-    from backend.app.data.models.user import User
-    owner_name = None
-    if getattr(deal, 'owner_id', None):
-        u = await session.get(User, deal.owner_id)
-        if u:
-            owner_name = u.name
+    dtos = await _serialize_deals(session, service, ctx, [deal])
 
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
-            owner=owner_name,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 
@@ -284,22 +308,13 @@ async def update_deal_stage(
     session: AsyncSession = Depends(get_db_session),
 ):
     service = DealService(session)
-    deal = await service.update_stage(ctx, deal_id, body.stage)
+    deal = await service.update_stage(ctx, deal_id, new_stage=body.stage, stage_id=body.stage_id)
+    dtos = await _serialize_deals(session, service, ctx, [deal])
     await session.commit()
     print(f"\n[SUPABASE DB UPDATE] >> Updated Deal '{deal.name}' stage to '{deal.stage}' in Supabase", flush=True)
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 

@@ -427,3 +427,38 @@ async def test_lead_conversion_populates_deal_pipeline_and_stage_ids(client: Asy
     assert deal_get["pipeline_id"] is not None
     assert deal_get["stage_id"] is not None
     assert deal_get["display_stage_name"] == "Qualified"
+
+
+@pytest.mark.asyncio
+async def test_stale_stage_id_reconciles_with_deal_stage(client: AsyncClient, db_session, seed_data):
+    """If deals.stage was updated without syncing deals.stage_id, display_stage_* reconciles to deals.stage."""
+    from sqlalchemy import update
+    from backend.app.data.models.deal import Deal
+    import uuid
+
+    tenant_id = str(seed_data["tenant_a"].id)
+    owner_h = _headers(str(seed_data["owner_a"].id), tenant_id, "owner")
+
+    pipe = (await client.get("/v1/pipelines", headers=owner_h)).json()["data"][0]
+    core = {s["name"]: s for s in pipe["stages"]}
+    acc_id = await _create_account(client, owner_h, "Sync Test Corp")
+
+    d_resp = await client.post(
+        "/v1/deals",
+        json={"account_id": acc_id, "name": "Stale Stage Sync Deal", "amount": 50000, "stage": "Qualified"},
+        headers=owner_h,
+    )
+    assert d_resp.status_code == 201, d_resp.text
+    deal_id = d_resp.json()["data"]["id"]
+
+    # Simulate legacy code mutating deals.stage directly without updating deals.stage_id
+    await db_session.execute(
+        update(Deal).where(Deal.id == uuid.UUID(deal_id)).values(stage="Proposal")
+    )
+    await db_session.commit()
+
+    fetched = (await client.get(f"/v1/deals/{deal_id}", headers=owner_h)).json()["data"]
+    assert fetched["stage"] == "Proposal"
+    assert fetched["display_stage_name"] == "Proposal"
+    assert fetched["stage_id"] == core["Proposal"]["id"]
+    assert fetched["display_stage_id"] == core["Proposal"]["id"]

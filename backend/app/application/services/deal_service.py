@@ -181,23 +181,24 @@ class DealService:
 
         result: Dict[uuid.UUID, Dict[str, Any]] = {}
         for d in deals:
+            norm_name = STAGE_MAPPING.get((d.stage or "Qualified").lower().strip(), d.stage or "Qualified")
             core_stage = org_stage_by_id.get(d.stage_id) if getattr(d, "stage_id", None) else None
-            if not core_stage:
-                norm_name = STAGE_MAPPING.get((d.stage or "Qualified").lower().strip(), d.stage or "Qualified")
-                core_stage = org_stage_by_name.get(norm_name.lower().strip())
+            # Guard against external/legacy writers that update deals.stage without syncing deals.stage_id
+            if not core_stage or core_stage.name.lower().strip() != norm_name.lower().strip():
+                core_stage = org_stage_by_name.get(norm_name.lower().strip()) or core_stage
 
             override = overrides.get(d.id)
             use_override = False
             if override:
                 base_match = (override.parent_base_stage or "").lower().strip()
-                deal_stage_norm = STAGE_MAPPING.get((d.stage or "").lower().strip(), d.stage or "").lower().strip()
+                deal_stage_norm = norm_name.lower().strip()
                 if not base_match or base_match == deal_stage_norm:
                     use_override = True
 
             if use_override and override:
                 result[d.id] = {
                     "pipeline_id": str(d.pipeline_id or override.pipeline_id),
-                    "stage_id": str(d.stage_id or (core_stage.id if core_stage else override.id)),
+                    "stage_id": str(core_stage.id if core_stage else (d.stage_id or override.id)),
                     "display_stage_id": str(override.id),
                     "display_stage_name": override.name,
                     "display_probability": override.win_probability,
@@ -205,7 +206,7 @@ class DealService:
             elif core_stage:
                 result[d.id] = {
                     "pipeline_id": str(d.pipeline_id or core_stage.pipeline_id),
-                    "stage_id": str(d.stage_id or core_stage.id),
+                    "stage_id": str(core_stage.id),
                     "display_stage_id": str(core_stage.id),
                     "display_stage_name": core_stage.name,
                     "display_probability": core_stage.win_probability,

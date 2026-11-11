@@ -139,6 +139,7 @@ export function CRMProvider({ children }) {
     }
   ]);
   const [agentThinking, setAgentThinking] = useState(false);
+  const [assistantContext, setAssistantContext] = useState({});
 
   // User Authentication State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -236,16 +237,16 @@ export function CRMProvider({ children }) {
           closed_lost: 'Lost',
         };
         loadedDeals = dealsRes.value.data.data.map((d) => {
-          const rawStage = (d.stage || 'Qualified').toLowerCase().trim();
-          const normStage = STAGE_NORM[rawStage] || d.stage || 'Qualified';
+          const rawStage = String(d.stage || d.status || '').toLowerCase().trim().replace(/-/g, '_');
+          const normStage = STAGE_NORM[rawStage] || d.stage || d.status || 'Unspecified';
           return {
             ...d,
             owner: d.owner || currentUser?.name || 'Sales Representative',
-            company: d.company || d.name,
+            company: d.company || d.account_name || d.accountName || "—",
             account_id: d.account_id || d.accountId,
             contact_id: d.contact_id || d.contactId,
-            value: Number(d.value || d.amount || 45000),
-            amount: Number(d.value || d.amount || 45000),
+            value: Number(d.value ?? d.amount ?? 0),
+            amount: Number(d.amount ?? d.value ?? 0),
             stage: normStage,
           };
         });
@@ -621,6 +622,10 @@ export function CRMProvider({ children }) {
         phone: lead.phone,
         industry: lead.industry,
         source: lead.source || 'Website Demo',
+        campaign_id: lead.campaign_id || lead.campaignId || null,
+        utm_campaign: lead.utm_campaign || null,
+        utm_source: lead.utm_source || null,
+        utm_medium: lead.utm_medium || null,
         score: lead.score,
         assigned_to: lead.assigned_to,
         product_id: lead.product_id || lead.productId || null,
@@ -644,6 +649,7 @@ export function CRMProvider({ children }) {
           source: res.data.data.source || lead.source || 'Website',
           owner: resolvedOwner,
           product_id: resolvedProductId,
+          campaign_id: res.data.data.campaign_id || lead.campaign_id || null,
           interested_product: resolvedInterestedProduct,
           organization_id: res.data.data.organization_id,
         };
@@ -1703,61 +1709,31 @@ export function CRMProvider({ children }) {
   };
 
   const sendAgentMessage = async (text) => {
-    if (!text.trim()) return;
-    const userMsg = {
-      id: `user-${Date.now()}`,
-      sender: "user",
-      text,
-      time: "Just now"
-    };
+    if (!text.trim() || agentThinking) return;
+    const userMsg = { id: `user-${Date.now()}`, sender: "user", text, time: "Just now" };
     setAgentMessages((prev) => [...prev, userMsg]);
     setAgentThinking(true);
-
-    // Call Layer 2 Gateway Copilot Agent endpoint
     try {
-      const res = await gatewayApi.sendAgentMessage(text);
-      if (res.success && res.data?.reply) {
-        setAgentMessages((prev) => [
-          ...prev,
-          {
-            id: `dakini-${Date.now()}`,
-            sender: res.data.sender || "dakini",
-            text: res.data.reply,
-            time: "Just now"
-          }
-        ]);
-        setAgentThinking(false);
-        return;
-      }
+      const res = await gatewayApi.sendAgentMessage(text, {
+        page: currentTab,
+        selected_lead_id: selectedLead?.id || null,
+        ...assistantContext,
+      });
+      const reply = res.success && res.data?.reply
+        ? res.data.reply
+        : (res.error?.message || "Dakini could not retrieve CRM data right now. Please try again.");
+      setAgentMessages((prev) => [...prev, {
+        id: `dakini-${Date.now()}`, sender: "dakini", text: reply,
+        time: "Just now", error: !res.success
+      }]);
     } catch (err) {
-      console.warn('Gateway AI agent call failed, falling back to local copilot:', err);
-    }
-
-    // Local client fallback
-    setTimeout(() => {
-      let replyText = "I've reviewed the parameters. Based on past enterprise win rates and ICP signals, I recommend advancing this to executive review and scheduling a follow-up outreach with tailored pricing.";
-      const lower = text.toLowerCase();
-      if (lower.includes('email') || lower.includes('draft')) {
-        replyText = "I've drafted a follow-up email highlighting the 34% efficiency ROI. Would you like me to send it to the approvals queue or directly push to Gmail?";
-      } else if (lower.includes('why') || lower.includes('score')) {
-        replyText = "Score 128 is driven by: 1) Executive VP engagement (+40pts), 2) Rapid website form submission (+35pts), and 3) Perfect alignment with our enterprise logistics tier (+53pts).";
-      } else if (lower.includes('call') || lower.includes('voice')) {
-        replyText = "Dialing through Dakini AI Voice Agent... Connection established with Marcus Vance's calendar for tomorrow at 2:00 PM.";
-      } else if (lower.includes('pipeline') || lower.includes('forecast')) {
-        replyText = "Current Q4 pipeline stands at $123,000 with a 68% weighted close confidence. Anticipating $86,000 to close before month end.";
-      }
-
-      setAgentMessages((prev) => [
-        ...prev,
-        {
-          id: `dakini-${Date.now()}`,
-          sender: "dakini",
-          text: replyText,
-          time: "Just now"
-        }
-      ]);
+      setAgentMessages((prev) => [...prev, {
+        id: `dakini-error-${Date.now()}`, sender: "dakini",
+        text: err.message || "Dakini is temporarily unavailable.", time: "Just now", error: true
+      }]);
+    } finally {
       setAgentThinking(false);
-    }, 700);
+    }
   };
 
   return (
@@ -1840,6 +1816,8 @@ export function CRMProvider({ children }) {
         automations,
         agentMessages,
         agentThinking,
+        assistantContext,
+        setAssistantContext,
         sendAgentMessage,
         gatewayStatus,
         gatewayApi,

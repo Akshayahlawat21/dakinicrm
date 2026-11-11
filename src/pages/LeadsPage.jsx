@@ -3,6 +3,9 @@ import { useCRM } from '../context/CRMContext';
 import { gatewayApi } from '../services/api';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import AssignOwnerModal from '../components/modals/AssignOwnerModal';
+import { gatewayApi } from '../services/api';
+import { matchesLeadFilters } from '../utils/dealAnalyticsFilters';
+import { fetchAllPaginatedLeads } from '../utils/fetchAllPaginatedLeads';
 import {
   Plus,
   Filter,
@@ -62,6 +65,8 @@ function downloadAuditCsv(audit) {
 export default function LeadsPage() {
   const {
     leads,
+    campaigns,
+    products,
     setLeads,
     totalLeadsCount,
     fetchLeadsPage,
@@ -79,6 +84,60 @@ export default function LeadsPage() {
     isAgentDockOpen,
     fetchSupabaseData,
   } = useCRM();
+
+  const [dashboardFilterContext, setDashboardFilterContext] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('dakini_dashboard_lead_filter');
+      if (!raw) return null;
+      sessionStorage.removeItem('dakini_dashboard_lead_filter');
+      return JSON.parse(raw);
+    } catch { return null; }
+  });
+  const [dashboardLeads, setDashboardLeads] = useState(null);
+  const [dashboardLeadLoading, setDashboardLeadLoading] = useState(false);
+  const [dashboardLeadError, setDashboardLeadError] = useState('');
+  const [leadPage, setLeadPage] = useState(0);
+  const LEADS_PAGE_SIZE = 100;
+
+  useEffect(() => {
+    if (!dashboardFilterContext) return undefined;
+    let cancelled = false;
+    const loadDashboardLeads = async () => {
+      setDashboardLeads([]);
+      setDashboardLeadLoading(true);
+      setDashboardLeadError('');
+      try {
+        // Fetch all current-user-visible DB rows in bounded parallel pages.
+        const allRows = await fetchAllPaginatedLeads((params) => gatewayApi.getLeads(params), { pageSize: 100, concurrency: 4 });
+        const normalized = allRows.map((lead) => ({
+          ...lead,
+          title: lead.title || '',
+          website: lead.website || null,
+          source: lead.source || 'Website',
+          owner: lead.owner || currentUser?.name || 'Sales Representative',
+          company: lead.company || lead.name || '',
+          score: Number(lead.score) || 0
+        }));
+        const selected = normalized.filter((lead) => matchesLeadFilters(lead, {
+          campaignId: dashboardFilterContext.campaignId || 'all',
+          productId: dashboardFilterContext.productId || 'all',
+          dateRange: dashboardFilterContext.dateRange || 'month',
+          campaigns: campaigns || [],
+          products: products || []
+        }));
+        if (!cancelled) {
+          setDashboardLeads(selected);
+          setLeadPage(0);
+        }
+      } catch (error) {
+        if (!cancelled) setDashboardLeadError(error instanceof Error ? error.message : 'Unable to load dashboard leads.');
+      } finally {
+        if (!cancelled) setDashboardLeadLoading(false);
+      }
+    };
+    loadDashboardLeads();
+    return () => { cancelled = true; };
+  }, [dashboardFilterContext, campaigns, products, currentUser?.name]);
 
   const [activeTab, setActiveTab] = useState('All');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'board'
@@ -282,7 +341,8 @@ export default function LeadsPage() {
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
-    return leads.filter((l) => {
+    const sourceLeads = dashboardLeads || leads;
+    return sourceLeads.filter((l) => {
       const matchSearch =
         (l.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (l.company || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -304,11 +364,18 @@ export default function LeadsPage() {
 
       return matchSearch && matchStatus;
     });
-  }, [leads, searchQuery, statusFilter, activeTab, currentUser]);
+  }, [leads, dashboardLeads, searchQuery, statusFilter, activeTab, currentUser]);
+
+  const visibleLeads = useMemo(() => {
+    const start = leadPage * LEADS_PAGE_SIZE;
+    return filteredLeads.slice(start, start + LEADS_PAGE_SIZE);
+  }, [filteredLeads, leadPage]);
+
+  useEffect(() => { setLeadPage(0); }, [searchQuery, statusFilter, activeTab]);
 
   const toggleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedLeadIds(filteredLeads.map((l) => l.id));
+      setSelectedLeadIds(visibleLeads.map((l) => l.id));
     } else {
       setSelectedLeadIds([]);
     }
@@ -333,6 +400,12 @@ export default function LeadsPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      {dashboardFilterContext && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', marginBottom: 14, border: '1px solid #bfdbfe', borderRadius: 10, background: '#eff6ff', color: '#1e40af', fontSize: 13 }}>
+          <span>{dashboardLeadLoading ? 'Loading matching leads from the database…' : dashboardLeadError || `Showing ${dashboardLeads?.length ?? 0} database records matching Dashboard filters`}</span>
+          <button type="button" onClick={() => { setDashboardFilterContext(null); setDashboardLeads(null); setDashboardLeadError(''); setLeadPage(0); }} style={{ border: 0, background: 'transparent', color: '#1d4ed8', fontWeight: 700, cursor: 'pointer' }}>Clear filter</button>
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -639,7 +712,7 @@ export default function LeadsPage() {
                     <th style={{ width: 40, textAlign: 'center' }}>
                       <input
                         type="checkbox"
-                        checked={selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0}
+                        checked={visibleLeads.length > 0 && visibleLeads.every((lead) => selectedLeadIds.includes(lead.id))}
                     onChange={toggleSelectAll}
                     style={{ accentColor: '#2563eb', cursor: 'pointer' }}
                   />
@@ -656,7 +729,7 @@ export default function LeadsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredLeads.map((lead) => {
+              {visibleLeads.map((lead) => {
                 const isSelected = selectedLeadIds.includes(lead.id);
 
                 return (
@@ -860,6 +933,13 @@ export default function LeadsPage() {
               })}
             </tbody>
           </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: 12 }}>
+            <span>Showing {filteredLeads.length ? leadPage * LEADS_PAGE_SIZE + 1 : 0}–{Math.min((leadPage + 1) * LEADS_PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length.toLocaleString()} leads</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={leadPage === 0} onClick={() => setLeadPage((page) => Math.max(0, page - 1))}>Previous</button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={(leadPage + 1) * LEADS_PAGE_SIZE >= filteredLeads.length} onClick={() => setLeadPage((page) => page + 1)}>Next</button>
+            </div>
+          </div>
         </div>
       ) : (
         /* Board Kanban View */

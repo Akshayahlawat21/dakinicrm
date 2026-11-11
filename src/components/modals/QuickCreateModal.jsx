@@ -11,6 +11,7 @@ const INITIAL_FORM_DATA = {
   title: '',
   interestedProduct: '',
   productId: null,
+  campaignId: '',
   industry: 'Technology',
   source: 'LinkedIn Ad',
   dealValue: '35000',
@@ -47,6 +48,7 @@ export default function QuickCreateModal() {
     addDeal,
     deals = [],
     products = [],
+    campaigns = [],
     addProduct,
     fetchProducts,
     addAccount,
@@ -83,6 +85,19 @@ export default function QuickCreateModal() {
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const productDropdownRef = useRef(null);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+
+  // Capture campaign attribution from landing-page UTM parameters.
+  useEffect(() => {
+    if (!isQuickCreateOpen || quickCreateType !== 'lead') return;
+    const params = new URLSearchParams(window.location.search);
+    const utmCampaign = params.get('utm_campaign') || '';
+    if (!utmCampaign) return;
+    const normalized = (value) => String(value || '').toLowerCase().replace(/[-_]+/g, ' ').trim();
+    const matchedCampaign = campaigns.find((campaign) => normalized(campaign.name) === normalized(utmCampaign));
+    if (matchedCampaign) {
+      setFormData((prev) => ({ ...prev, campaignId: matchedCampaign.id }));
+    }
+  }, [isQuickCreateOpen, quickCreateType, campaigns]);
 
   const SOURCE_PRESETS = [
     'LinkedIn Ad',
@@ -476,7 +491,9 @@ export default function QuickCreateModal() {
           phone: cleanPhone,
           industry: formData.industry,
           owner: dynamicOwner,
-          source: formData.source.trim() || 'LinkedIn Ad',
+          source: (new URLSearchParams(window.location.search).get('utm_source') && formData.source.trim() === 'LinkedIn Ad') ? new URLSearchParams(window.location.search).get('utm_source') : (formData.source.trim() || 'LinkedIn Ad'),
+          campaign_id: formData.campaignId || null,
+          utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || null,
           score: Math.floor(Math.random() * 40) + 70,
           product_id: formData.productId || null,
           interested_product: formData.interestedProduct?.trim() || null,
@@ -1010,6 +1027,28 @@ export default function QuickCreateModal() {
                     )}
                   </div>
                 </div>
+
+                {quickCreateType === 'lead' && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                      Campaign <span style={{ color: '#64748b', fontWeight: 400 }}>(Optional)</span>
+                    </label>
+                    <select
+                      name="campaignId"
+                      className="input-field"
+                      value={formData.campaignId || ''}
+                      onChange={handleChange}
+                    >
+                      <option value="">No campaign / Not campaign-generated</option>
+                      {campaigns.filter((campaign) => ['active', 'running'].includes(String(campaign.status || '').toLowerCase())).map((campaign) => (
+                        <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                      ))}
+                    </select>
+                    <small style={{ color: '#64748b', display: 'block', marginTop: 4 }}>
+                      UTM campaign from the landing-page URL is matched automatically when available.
+                    </small>
+                  </div>
+                )}
 
                 {/* Row 4: Job Title / Role & Interested Product (Placed before Website per user specification) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>

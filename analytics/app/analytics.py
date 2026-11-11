@@ -387,65 +387,123 @@ async def revenue_trend(conn: AsyncConnection, org: str, months: int, scoped_use
 
 
 async def pipeline_by_stage(conn: AsyncConnection, org: str, scoped_users: list | None = None) -> dict:
-    columns = await get_columns(conn, "opportunities")
-    required = {"organization_id", "stage", "amount"}
-    if not required.issubset(columns):
-        raise RuntimeError(f"Schema mismatch in opportunities: missing {sorted(required - columns)}")
+    """Return every pipeline stage, including closed Won/Lost deals.
+
+    Opportunities are the primary pipeline records. A linked deal supplies the
+    latest deal stage/amount where present; standalone deals are included once.
+    """
+    opp_cols = await get_columns(conn, "opportunities")
     deal_cols = await get_columns(conn, "deals")
-    status_closed = _won_values() + _lost_values() + ["closed"]
+    if not {"organization_id", "stage", "amount"}.issubset(opp_cols):
+        raise RuntimeError("Schema mismatch in opportunities: organization_id, stage and amount are required")
+    if not {"organization_id", "amount"}.issubset(deal_cols):
+        raise RuntimeError("Schema mismatch in deals: organization_id and amount are required")
 
     formatted_users = _format_scoped_users(scoped_users)
-    opp_scope = _user_scope_filter("owner_id", columns, formatted_users, "t")
-    params = {"org": org, "closed_stages": [v.lower() for v in dict.fromkeys(status_closed)]}
+    opp_scope = _user_scope_filter("owner_id", opp_cols, formatted_users, "o")
+    deal_scope = _deal_scope_filter(deal_cols, opp_cols, formatted_users, "d")
+
+    deal_stage_parts = []
+    if "stage" in deal_cols:
+        deal_stage_parts.append("NULLIF(BTRIM(d.stage), '')")
+    deal_stage_expr = "COALESCE(" + ", ".join(deal_stage_parts + ["NULL"]) + ")"
+    standalone_stage_parts = list(deal_stage_parts)
+    if "status" in deal_cols:
+        standalone_stage_parts.append("NULLIF(BTRIM(d.status), '')")
+    standalone_deal_stage_expr = "COALESCE(" + ", ".join(standalone_stage_parts + ["NULL"]) + ")"
+    if "owner_id" in deal_cols and "owner_id" in opp_cols:
+        deal_owner_expr = "COALESCE(d.owner_id, o.owner_id)"
+    elif "owner_id" in deal_cols:
+        deal_owner_expr = "d.owner_id"
+    elif "owner_id" in opp_cols:
+        deal_owner_expr = "o.owner_id"
+    else:
+        deal_owner_expr = "NULL"
+    deal_amount_expr = "COALESCE(d.amount, o.amount)" if "amount" in deal_cols else "o.amount"
+    deal_join = "LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org " + soft_delete_filter(deal_cols, "d") if "opportunity_id" in deal_cols else "LEFT JOIN public.deals d ON FALSE"
+    status_fallback = "NULLIF(BTRIM(d.status), '')" if "status" in deal_cols else "NULL"
+    closed_status_override = (
+        "CASE WHEN LOWER(REPLACE(REPLACE(BTRIM(d.status), '_', ' '), '-', ' ')) IN ('won', 'closed won', 'lost', 'closed lost', 'cancelled', 'canceled') "
+        "THEN NULLIF(BTRIM(d.status), '') ELSE NULL END"
+        if "status" in deal_cols else "NULL"
+    )
+    opp_stage_expr = f"COALESCE({closed_status_override}, {deal_stage_expr}, NULLIF(BTRIM(o.stage), ''), {status_fallback}, 'Unspecified')"
+    standalone_stage_expr = f"COALESCE({closed_status_override}, {standalone_deal_stage_expr})"
+    standalone_owner_expr = "d.owner_id" if "owner_id" in deal_cols else "NULL"
+
+    params = {"org": org}
     if formatted_users:
         params["scoped_users"] = formatted_users
 
-    result = await conn.execute(text(f"""
-        WITH pipeline_items AS (
-            SELECT o.id, o.organization_id, 
-                   COALESCE(d.owner_id, o.owner_id) AS owner_id, 
-                   COALESCE(d.amount, o.amount) AS amount, 
-                   COALESCE(d.stage, o.stage, 'Unspecified') AS stage,
-                   (COALESCE(d.amount, o.amount) * CASE LOWER(COALESCE(d.stage, o.stage, ''))
-                       WHEN 'negotiation' THEN 85
-                       WHEN 'proposal' THEN 75
-                       WHEN 'qualified' THEN 50
-                       WHEN 'discovery' THEN 40
-                       ELSE COALESCE(o.probability, 50)
-                   END / 100.0) AS weighted_amount
-            FROM public.opportunities o
-            LEFT JOIN public.deals d ON d.opportunity_id = o.id AND d.organization_id = :org {soft_delete_filter(deal_cols, 'd')}
-            WHERE o.organization_id = :org {soft_delete_filter(columns, 'o')}
+    # Canonicalize common stage spellings in SQL so API consumers get stable
+    # buckets, but retain unknown values rather than silently calling them Qualified.
+    def canonical(expr: str) -> str:
+        normalized = f"LOWER(REPLACE(REPLACE(BTRIM({expr}), '_', ' '), '-', ' '))"
+        return f"""CASE
+            WHEN {normalized} IN ('won', 'closed won') THEN 'Won'
+            WHEN {normalized} IN ('lost', 'closed lost', 'cancelled', 'canceled') THEN 'Lost'
+            WHEN {normalized} LIKE '%negotiat%' THEN 'Negotiation'
+            WHEN {normalized} LIKE '%proposal%' OR {normalized} LIKE '%quote%' THEN 'Proposal'
+            WHEN {normalized} IN ('qualified', 'qualification', 'discovery', 'prospecting', 'new', 'open') THEN 'Qualified'
+            ELSE BTRIM({expr})
+        END"""
+
+    opp_stage_canonical = canonical(opp_stage_expr)
+    standalone_stage_canonical = canonical(f"COALESCE({standalone_stage_expr}, 'Unspecified')")
+    opp_delete = soft_delete_filter(opp_cols, "o")
+    deal_delete = soft_delete_filter(deal_cols, "d")
+    probability_expr = "COALESCE(o.probability, 50)" if "probability" in opp_cols else "50"
+    opp_weighted = f"""({deal_amount_expr} * CASE {opp_stage_canonical}
+        WHEN 'Negotiation' THEN 85 WHEN 'Proposal' THEN 75
+        WHEN 'Qualified' THEN 50 ELSE {probability_expr} END / 100.0)"""
+    standalone_weighted = f"""(d.amount * CASE {standalone_stage_canonical}
+        WHEN 'Negotiation' THEN 85 WHEN 'Proposal' THEN 75
+        WHEN 'Qualified' THEN 50 ELSE 50 END / 100.0)"""
+    opp_select = f"""
+        SELECT o.id, o.organization_id,
+               {deal_owner_expr} AS owner_id,
+               {deal_amount_expr} AS amount,
+               {opp_stage_canonical} AS stage,
+               {opp_weighted} AS weighted_amount
+        FROM public.opportunities o
+        {deal_join}
+        WHERE o.organization_id = :org {opp_delete}
+          {opp_scope}
+    """
+    if "opportunity_id" in deal_cols:
+        standalone_select = f"""
             UNION ALL
-            SELECT d.id, d.organization_id, d.owner_id, d.amount, COALESCE(d.stage, 'Unspecified') AS stage,
-                   (d.amount * CASE LOWER(COALESCE(d.stage, ''))
-                       WHEN 'negotiation' THEN 85
-                       WHEN 'proposal' THEN 75
-                       WHEN 'qualified' THEN 50
-                       WHEN 'discovery' THEN 40
-                       ELSE 50
-                   END / 100.0) AS weighted_amount
+            SELECT d.id, d.organization_id, {standalone_owner_expr} AS owner_id,
+                   d.amount AS amount, {standalone_stage_canonical} AS stage,
+                   {standalone_weighted} AS weighted_amount
             FROM public.deals d
             WHERE d.organization_id = :org
               AND d.opportunity_id IS NULL
-              {soft_delete_filter(deal_cols, 'd')}
-              AND (d.status = 'open' OR d.status IS NULL)
-              AND LOWER(COALESCE(d.stage, '')) NOT IN ('won', 'lost', 'closed won', 'closed_won', 'closed lost', 'closed_lost', 'closed')
+              {deal_delete}
+              {deal_scope}
+        """
+    else:
+        standalone_select = ""
+
+    result = await conn.execute(text(f"""
+        WITH pipeline_items AS (
+            {opp_select}
+            {standalone_select}
         )
-        SELECT t.stage AS stage,
-               COUNT(*) AS opportunity_count, COALESCE(SUM(t.amount), 0) AS value,
-               COALESCE(SUM(t.weighted_amount), 0) AS weighted_value
-        FROM pipeline_items t
-        WHERE t.organization_id = :org
-          AND LOWER(t.stage) <> ALL(:closed_stages)
-          {opp_scope}
-        GROUP BY t.stage
-        ORDER BY value DESC
+        SELECT stage, COUNT(*) AS opportunity_count,
+               COALESCE(SUM(amount), 0) AS value,
+               COALESCE(SUM(weighted_amount), 0) AS weighted_value
+        FROM pipeline_items
+        GROUP BY stage
+        ORDER BY value DESC, stage
     """), params)
-    return {"data": [{
-        "stage": row["stage"], "opportunity_count": int(row["opportunity_count"]),
-        "value": float(row["value"] or 0), "weighted_value": float(row.get("weighted_value", 0) or 0)
-    } for row in result.mappings()]}
+    grouped = {str(row["stage"] or "Unspecified"): {
+        "stage": str(row["stage"] or "Unspecified"),
+        "opportunity_count": int(row["opportunity_count"]),
+        "value": float(row["value"] or 0),
+        "weighted_value": float(row.get("weighted_value", 0) or 0),
+    } for row in result.mappings()}
+    return {"data": list(grouped.values())}
 
 
 async def lead_sources(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:

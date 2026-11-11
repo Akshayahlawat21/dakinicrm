@@ -61,6 +61,7 @@ async def list_leads(
             owner=user_map.get(l.assigned_to),
             created_at=l.created_at,
             product_id=str(l.product_id) if getattr(l, "product_id", None) else None,
+            campaign_id=str(l.campaign_id) if getattr(l, "campaign_id", None) else None,
             interested_product=getattr(l, "interested_product", None),
         )
         for l in leads
@@ -140,6 +141,8 @@ async def create_lead(
         website=body.website,
         product_id=body.product_id,
         interested_product=body.interested_product or body.product_name,
+        campaign_id=body.campaign_id,
+        utm_campaign=body.utm_campaign,
         allow_separate_inquiry=body.allow_separate_inquiry or False,
     )
     from backend.app.data.models.user import User
@@ -166,6 +169,7 @@ async def create_lead(
             assigned_to=str(lead.assigned_to) if lead.assigned_to else None,
             owner=owner_name,
             product_id=str(lead.product_id) if getattr(lead, "product_id", None) else None,
+            campaign_id=str(lead.campaign_id) if getattr(lead, "campaign_id", None) else None,
             interested_product=getattr(lead, "interested_product", None),
             created_at=lead.created_at,
         ),

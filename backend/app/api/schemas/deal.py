@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DealCreateRequest(BaseModel):
@@ -45,6 +45,16 @@ class DealResponse(BaseModel):
     id: str
     organization_id: str
     account_id: str
+    company: Optional[str] = None
+    lead_id: Optional[str] = None
+    campaign_id: Optional[str] = None
+    campaign_name: Optional[str] = None
+    campaign_ids: list[str] = []
+    campaign_names: list[str] = []
+    product_id: Optional[str] = None
+    product_name: Optional[str] = None
+    product_ids: list[str] = []
+    product_names: list[str] = []
     name: str
     amount: float
     currency: str

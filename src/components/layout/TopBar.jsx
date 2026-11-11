@@ -82,7 +82,7 @@ export default function TopBar() {
         {/* + Ask Dakini Sparkle Button */}
         <button
           className="btn btn-sparkle"
-          onClick={() => setIsAgentDockOpen(!isAgentDockOpen)}
+          onClick={() => setIsAgentDockOpen(true)}
         >
           <Sparkles size={16} />
           <span>Ask Dakini</span>

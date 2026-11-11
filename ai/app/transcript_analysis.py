@@ -31,7 +31,7 @@ def _as_string_list(value: object) -> list[str]:
 
 
 def parse_transcript_analysis(content: str) -> dict:
-    """Parse and normalize the LLM response to the two-output UI contract."""
+    """Parse and normalize the Gemini response to the two-output UI contract."""
     raw = content.strip()
     if "```" in raw:
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL | re.IGNORECASE)
@@ -48,14 +48,14 @@ def parse_transcript_analysis(content: str) -> dict:
         # Accommodate providers that wrap otherwise-valid JSON in a short preamble.
         start, end = raw.find("{"), raw.rfind("}")
         if start < 0 or end <= start:
-            raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the LLM")
+            raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the Gemini")
         try:
             parsed = json.loads(raw[start : end + 1])
         except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the LLM") from exc
+            raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the Gemini") from exc
 
     if not isinstance(parsed, dict):
-        raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the LLM")
+        raise HTTPException(status_code=502, detail="Layer 5 received an invalid transcript-analysis response from the Gemini")
 
     raw_summary = parsed.get("summary") if isinstance(parsed.get("summary"), dict) else {}
     raw_improvements = parsed.get("improvements") if isinstance(parsed.get("improvements"), dict) else {}
@@ -78,10 +78,10 @@ def parse_transcript_analysis(content: str) -> dict:
 
 
 async def analyze_call_transcript(transcript: str) -> dict:
-    """Ask the configured hosted LLM for exactly two structured outputs."""
+    """Ask the configured hosted Gemini for exactly two structured outputs."""
     settings = get_settings()
-    if not settings.llm_api_key:
-        raise HTTPException(status_code=503, detail="LLM_API_KEY is not configured on the Layer 5 server")
+    if not settings.gemini_api_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured on the Layer 5 server")
     if not transcript or not transcript.strip():
         raise HTTPException(status_code=422, detail="A non-empty call transcript is required")
 
@@ -102,16 +102,16 @@ async def analyze_call_transcript(transcript: str) -> dict:
         '"improvements":{"conversion_blockers":["string"],"product_improvements":["string"],'
         '"sales_recommendations":["string"],"next_steps":["string"]}}'
     )
-    url = settings.llm_base_url.rstrip("/") + "/chat/completions"
+    url = settings.gemini_base_url.rstrip("/") + "/chat/completions"
 
     max_attempts = 3
     last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
-            async with httpx.AsyncClient(timeout=settings.llm_timeout_seconds) as client:
+            async with httpx.AsyncClient(timeout=settings.gemini_timeout_seconds) as client:
                 request_payload = {
-                    "model": settings.llm_model,
+                    "model": settings.gemini_model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {
@@ -120,14 +120,13 @@ async def analyze_call_transcript(transcript: str) -> dict:
                             "<transcript>\n" + transcript.strip() + "\n</transcript>",
                         },
                     ],
-                    "temperature": 0.1,
                     "response_format": {"type": "json_object"},
                 }
 
                 response = await client.post(
                     url,
                     headers={
-                        "Authorization": f"Bearer {settings.llm_api_key}",
+                        "Authorization": f"Bearer {settings.gemini_api_key}",
                         "Content-Type": "application/json",
                     },
                     json=request_payload,
@@ -144,7 +143,7 @@ async def analyze_call_transcript(transcript: str) -> dict:
                         str(part.get("text", "")) for part in content if isinstance(part, dict)
                     )
                 if not isinstance(content, str) or not content.strip():
-                    raise ValueError("LLM response was empty")
+                    raise ValueError("Gemini response was empty")
                 return parse_transcript_analysis(content)
 
         except HTTPException:
@@ -160,16 +159,16 @@ async def analyze_call_transcript(transcript: str) -> dict:
             logger.error(f"[Layer 5 Transcript Analysis] All {max_attempts} attempts failed: {exc}")
             raise HTTPException(
                 status_code=502,
-                detail=f"Unable to connect to LLM provider after {max_attempts} attempts: {exc}",
+                detail=f"Unable to connect to Gemini provider after {max_attempts} attempts: {exc}",
             ) from exc
         except httpx.HTTPStatusError as exc:
-            logger.error(f"[Layer 5 Transcript Analysis] LLM provider returned HTTP {exc.response.status_code}: {exc.response.text}")
-            raise HTTPException(status_code=502, detail=f"LLM provider returned HTTP {exc.response.status_code}") from exc
+            logger.error(f"[Layer 5 Transcript Analysis] Gemini provider returned HTTP {exc.response.status_code}: {exc.response.text}")
+            raise HTTPException(status_code=502, detail=f"Gemini provider returned HTTP {exc.response.status_code}") from exc
         except (KeyError, IndexError, TypeError, ValueError) as exc:
-            logger.error(f"[Layer 5 Transcript Analysis] Failed to parse LLM response: {exc}")
+            logger.error(f"[Layer 5 Transcript Analysis] Failed to parse Gemini response: {exc}")
             raise HTTPException(
                 status_code=502,
-                detail="Unable to get a valid transcript analysis from the configured LLM provider",
+                detail="Unable to get a valid transcript analysis from the configured Gemini provider",
             ) from exc
 
     if last_error:

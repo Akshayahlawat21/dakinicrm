@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
+<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom';
+=======
+import { formatRevenueMonthLabel } from '../../utils/revenueTrend';
+>>>>>>> 6735fd9 (Fix dashboard analytics and leads drilldown)
 
 // ==========================================================================
 // 1. Interactive Sparkline
@@ -82,12 +86,16 @@ export function RevenueTrendChart({ data = [] }) {
   if (data.some((item) => item.revenue == null)) {
     return <div style={{ padding: '1.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>Revenue trend contains multiple currencies. Select a single currency to compare monetary values accurately.</div>;
   }
-  const chartData = data.map((item) => ({
-    month: item.month,
-    label: new Date(`${item.month}T00:00:00`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-    revenue: Number.isFinite(Number(item.revenue)) ? Number(item.revenue) : 0,
-    target: item.target == null ? null : Number(item.target)
-  }));
+  const chartData = data.map((item) => {
+    const rawMonth = item.month ?? item.period ?? item.date ?? item.month_start ?? item.monthStart;
+    const label = formatRevenueMonthLabel(rawMonth);
+    return {
+      month: rawMonth,
+      label,
+      revenue: Number.isFinite(Number(item.revenue)) ? Number(item.revenue) : 0,
+      target: item.target == null ? null : Number(item.target)
+    };
+  });
   if (!chartData.length) {
     return <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No revenue trend data available for this organization.</div>;
   }
@@ -127,6 +135,7 @@ export function RevenueTrendChart({ data = [] }) {
     </div>
   );
 }
+<<<<<<< HEAD
 export function PipelineStageChart({ data = [], onStageClick }) {
   const navigate = useNavigate();
   const [activeStage, setActiveStage] = useState(null);
@@ -233,13 +242,84 @@ export function PipelineStageChart({ data = [], onStageClick }) {
           );
         })}
       </div></>}
+=======
+export function PipelineStageChart({ data = [], deals = [], onStageClick }) {
+  const STAGES = ['Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
+  const COLORS = { Qualified: '#2563eb', Proposal: '#7c3aed', Negotiation: '#f59e0b', Won: '#10b981', Lost: '#ef4444' };
+  const normalize = (value) => {
+    const s = String(value ?? '').toLowerCase().trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+    if (!s) return null;
+    if (/\b(won|closed won)\b/.test(s) || s.includes('closed won')) return 'Won';
+    if (/\b(lost|closed lost)\b/.test(s) || s.includes('closed lost')) return 'Lost';
+    if (s.includes('negotiat')) return 'Negotiation';
+    if (s.includes('proposal') || s.includes('quote')) return 'Proposal';
+    if (['discovery', 'qualification', 'qualified', 'new', 'open', 'prospecting'].includes(s)) return 'Qualified';
+    return null;
+  };
+  const stageOfDeal = (deal) => {
+    // Check every possible stage field. A non-empty but unrecognized `stage`
+    // must not mask a valid pipeline/status field later in the record.
+    const candidates = [
+      deal.stage, deal.stage_name, deal.stageName, deal.pipeline_stage,
+      deal.pipelineStage, deal.opportunity_stage, deal.opportunityStage,
+      deal.deal_stage, deal.dealStage, deal.status,
+      deal.pipeline?.stage, deal.opportunity?.stage, deal.deal?.stage
+    ];
+    for (const candidate of candidates) {
+      const normalized = normalize(candidate);
+      if (normalized) return normalized;
+    }
+    return null;
+  };
+  const apiStageRows = Array.isArray(data) ? data : [];
+  const hasApiStageData = STAGES.some((stage) => apiStageRows.some((row) =>
+    normalize(row.stage ?? row.stage_name ?? row.name ?? row.label) === stage
+  ));
+  const stages = STAGES.map((stage) => {
+    const apiRow = apiStageRows.find((row) =>
+      normalize(row.stage ?? row.stage_name ?? row.name ?? row.label) === stage
+    );
+    const localRows = deals.filter((deal) => stageOfDeal(deal) === stage);
+    // Unfiltered Dashboard view uses the complete analytics aggregation.
+    // Campaign/product-filtered views pass an empty `data` array and are
+    // calculated from the corresponding filtered deal records.
+    const countRaw = hasApiStageData && apiRow
+      ? (apiRow.opportunity_count ?? apiRow.deal_count ?? apiRow.count ?? apiRow.total ?? localRows.length)
+      : localRows.length;
+    const valueRaw = hasApiStageData && apiRow
+      ? (apiRow.value ?? apiRow.amount ?? apiRow.total_value ?? localRows.reduce((sum, d) => sum + Number(d.value ?? d.amount ?? 0), 0))
+      : localRows.reduce((sum, d) => sum + Number(d.value ?? d.amount ?? 0), 0);
+    const count = Math.max(0, Number(countRaw) || 0);
+    const value = Math.max(0, Number(valueRaw) || 0);
+    return { name: stage, count, value, color: COLORS[stage] };
+  });
+  const maxValue = Math.max(1, ...stages.map((stage) => stage.value));
+  const maxBarHeight = 118;
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', gap: 8, alignItems: 'end', minWidth: 0 }}>
+        {stages.map((stg) => {
+          const height = Math.max(stg.value > 0 ? 8 : 3, (stg.value / maxValue) * maxBarHeight);
+          return (
+            <button key={stg.name} type="button" onClick={() => onStageClick?.(stg.name)}
+              title={`View ${stg.name}: ${stg.count} deals`}
+              style={{ minWidth: 0, border: 0, background: 'transparent', cursor: onStageClick ? 'pointer' : 'default', padding: '0 2px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <strong style={{ fontSize: 11, color: '#334155', marginBottom: 5 }}>{stg.count.toLocaleString()}</strong>
+              <div style={{ height: 126, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' }}>
+                <div style={{ width: 'min(100%,42px)', height: `${height}px`, background: stg.color, borderRadius: '7px 7px 2px 2px', opacity: stg.value > 0 ? 1 : .22, transition: 'height .25s ease' }} />
+              </div>
+              <span style={{ fontSize: 10, lineHeight: 1.25, fontWeight: 700, color: '#475569', marginTop: 8, textAlign: 'center', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{stg.name}</span>
+              <span style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>{stg.value ? `$${(stg.value / 1000).toFixed(1)}k` : '$0'}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ margin: '10px 0 0', fontSize: 11, color: '#64748b' }}>Deal count and value by every pipeline stage · Select a stage to open its deals.</p>
+>>>>>>> 6735fd9 (Fix dashboard analytics and leads drilldown)
     </div>
   );
 }
 
-// ==========================================================================
-// 5. Lead Source Donut Chart (Reports Page)
-// ==========================================================================
 export function LeadSourceDonutChart({ data = [], totalLeads }) {
   const palette = ["#2563eb", "#38bdf8", "#1d4ed8", "#93c5fd", "#0f766e", "#7c3aed", "#64748b"];
   const total = totalLeads == null ? data.reduce((sum, item) => sum + (Number(item.lead_count) || 0), 0) : Number(totalLeads) || 0;

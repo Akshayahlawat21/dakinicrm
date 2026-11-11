@@ -334,6 +334,8 @@ class LeadService:
         allow_separate_inquiry: bool = False,
         product_id: Optional[str | uuid.UUID] = None,
         interested_product: Optional[str] = None,
+        campaign_id: Optional[str | uuid.UUID] = None,
+        utm_campaign: Optional[str] = None,
     ) -> Lead:
         if not name or not name.strip():
             raise BadRequestError("Lead name is required")
@@ -497,8 +499,32 @@ class LeadService:
             except (ValueError, TypeError):
                 assign_uuid = None
 
+        # Resolve campaign attribution from an explicit campaign ID or UTM campaign name.
+        from backend.app.data.models.campaign import Campaign, CampaignMember
+        resolved_campaign_id = None
+        if campaign_id:
+            try:
+                candidate_campaign_id = uuid.UUID(str(campaign_id))
+                campaign_stmt = select(Campaign).where(Campaign.id == candidate_campaign_id, Campaign.organization_id == ctx.tenant_uuid, Campaign.deleted_at.is_(None))
+                resolved_campaign = (await self.session.execute(campaign_stmt)).scalar_one_or_none()
+                if resolved_campaign:
+                    resolved_campaign_id = resolved_campaign.id
+            except (ValueError, TypeError):
+                resolved_campaign_id = None
+        if not resolved_campaign_id and utm_campaign:
+            normalized_utm = utm_campaign.strip().replace('-', ' ').replace('_', ' ').lower()
+            campaign_stmt = select(Campaign).where(Campaign.organization_id == ctx.tenant_uuid, Campaign.deleted_at.is_(None), func.lower(Campaign.name) == normalized_utm)
+            resolved_campaign = (await self.session.execute(campaign_stmt)).scalar_one_or_none()
+            if not resolved_campaign:
+                campaign_rows = await self.session.execute(select(Campaign).where(Campaign.organization_id == ctx.tenant_uuid, Campaign.deleted_at.is_(None)))
+                wanted_slug = utm_campaign.strip().lower().replace('_', '-').replace(' ', '-')
+                resolved_campaign = next((c for c in campaign_rows.scalars().all() if c.name.lower().replace(' ', '-').replace('_', '-') == wanted_slug), None)
+            if resolved_campaign:
+                resolved_campaign_id = resolved_campaign.id
+
         lead = Lead(
             organization_id=ctx.tenant_uuid,
+            campaign_id=resolved_campaign_id,
             name=clean_name or name.strip(),
             company=clean_company,
             title=clean_title,
@@ -514,6 +540,9 @@ class LeadService:
             interested_product=resolved_product_name or (interested_product.strip() if interested_product else None),
         )
         created = await self.lead_repo.create(lead, ctx.tenant_id)
+        if resolved_campaign_id:
+            self.session.add(CampaignMember(campaign_id=resolved_campaign_id, lead_id=created.id, status="responded"))
+            await self.session.flush()
 
         # Record signals for tracking
         if is_cross_sell:
@@ -701,6 +730,10 @@ class LeadService:
                 owner_id=deal_owner,
             )
             deal = await self.deal_repo.create(deal, ctx.tenant_id)
+            if lead.product_id:
+                from backend.app.data.models.deal import DealProduct
+                self.session.add(DealProduct(deal_id=deal.id, product_id=lead.product_id, quantity=1, unit_price=deal_amount, discount=0))
+                await self.session.flush()
 
         # 4. Mark lead as Converted
         await self.lead_repo.update_scoped(

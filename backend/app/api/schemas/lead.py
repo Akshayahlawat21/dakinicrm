@@ -20,6 +20,10 @@ class LeadCreateRequest(BaseModel):
     interested_product: Optional[str] = None
     product_name: Optional[str] = None
     source: Optional[str] = "Manual"
+    campaign_id: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
     score: Optional[int] = 50
     assigned_to: Optional[str] = None
     allow_separate_inquiry: Optional[bool] = False
@@ -58,6 +62,7 @@ class LeadResponse(BaseModel):
     product_id: Optional[str] = None
     interested_product: Optional[str] = None
     source: Optional[str] = "Website"
+    campaign_id: Optional[str] = None
     status: str
     score: int
     assigned_to: Optional[str] = None

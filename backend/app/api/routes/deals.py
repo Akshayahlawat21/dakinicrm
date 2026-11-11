@@ -26,7 +26,7 @@ async def get_pipeline_summary(
 async def list_deals(
     stage: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(500, ge=1, le=1000),
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -36,18 +36,93 @@ async def list_deals(
     from sqlalchemy import select
     from backend.app.data.models.user import User
 
+    from backend.app.data.models.account import Account
+    from backend.app.data.models.lead import LeadConversion, Lead
+    from backend.app.data.models.campaign import Campaign
+    from backend.app.data.models.deal import DealProduct, Product
     user_ids = {d.owner_id for d in deals if getattr(d, 'owner_id', None)}
+    account_ids = {d.account_id for d in deals if d.account_id}
+    opportunity_ids = {d.opportunity_id for d in deals if d.opportunity_id}
     user_map = {}
     if user_ids:
-        users_stmt = select(User.id, User.name).where(User.id.in_(user_ids))
-        users_res = await session.execute(users_stmt)
+        users_res = await session.execute(select(User.id, User.name).where(User.id.in_(user_ids)))
         user_map = {row.id: row.name for row in users_res}
+    account_map = {}
+    if account_ids:
+        rows = await session.execute(select(Account.id, Account.name).where(Account.id.in_(account_ids)))
+        account_map = {row.id: row.name for row in rows}
+    campaign_map = {}
+    product_map = {}
+    if opportunity_ids:
+        conv_result = await session.execute(select(LeadConversion.opportunity_id, Lead.id.label("lead_id"), Lead.campaign_id).join(Lead, Lead.id == LeadConversion.lead_id).where(LeadConversion.opportunity_id.in_(opportunity_ids), Lead.organization_id == ctx.tenant_uuid, Lead.deleted_at.is_(None)))
+        conv_rows = conv_result.all()
+        campaign_ids = {row.campaign_id for row in conv_rows if row.campaign_id}
+        if campaign_ids:
+            camp_rows = await session.execute(select(Campaign.id, Campaign.name).where(Campaign.id.in_(campaign_ids), Campaign.organization_id == ctx.tenant_uuid, Campaign.deleted_at.is_(None)))
+            campaign_map = {row.id: row.name for row in camp_rows}
+        campaign_ids_by_opp = {}
+        lead_ids_by_opp = {}
+        for row in conv_rows:
+            if row.campaign_id:
+                campaign_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.campaign_id)
+            lead_ids_by_opp.setdefault(row.opportunity_id, set()).add(row.lead_id)
+    else:
+        campaign_ids_by_opp = {}
+        lead_ids_by_opp = {}
+    deal_ids = {d.id for d in deals}
+    if deal_ids:
+        product_rows = await session.execute(select(DealProduct.deal_id, Product.id, Product.name).join(Product, Product.id == DealProduct.product_id).where(DealProduct.deal_id.in_(deal_ids), Product.organization_id == ctx.tenant_uuid, Product.deleted_at.is_(None)))
+        for row in product_rows:
+            product_map.setdefault(row.deal_id, []).append((row.id, row.name))
+
+    # Legacy/manual deals may not have a LeadConversion or DealProduct row.
+    # Recover attribution only when exactly one tenant lead matches the account
+    # company name; never assign ambiguous company matches.
+    fallback_lead_by_account = {}
+    account_names = {str(name).strip().lower() for name in account_map.values() if name}
+    if account_names and deals:
+        from sqlalchemy import func
+        fallback_rows = await session.execute(
+            select(
+                Lead.id.label("lead_id"), Lead.company.label("lead_company"),
+                Lead.campaign_id.label("campaign_id"), Campaign.name.label("campaign_name"),
+                Lead.product_id.label("product_id"), Product.name.label("product_name")
+            )
+            .outerjoin(Campaign, Campaign.id == Lead.campaign_id)
+            .outerjoin(Product, Product.id == Lead.product_id)
+            .where(
+                Lead.organization_id == ctx.tenant_uuid,
+                Lead.deleted_at.is_(None),
+                func.lower(func.trim(Lead.company)).in_(account_names),
+            )
+        )
+        grouped = {}
+        for row in fallback_rows:
+            key = str(row.lead_company or '').strip().lower()
+            grouped.setdefault(key, []).append(row)
+        for account_id, account_name in account_map.items():
+            matches = grouped.get(str(account_name or '').strip().lower(), [])
+            if len(matches) == 1:
+                fallback_lead_by_account[account_id] = matches[0]
 
     dtos = [
         DealResponse(
             id=str(d.id),
             organization_id=str(d.organization_id),
             account_id=str(d.account_id),
+            company=account_map.get(d.account_id),
+            lead_id=str(next(iter(lead_ids_by_opp.get(d.opportunity_id, set())), None) or getattr(fallback_lead_by_account.get(d.account_id), 'lead_id', '') or '') or None,
+            campaign_id=str(next(iter(campaign_ids_by_opp.get(d.opportunity_id, set())), None) or getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id', '') or '') or None,
+            campaign_name=", ".join(
+                [campaign_map[cid] for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set())) if cid in campaign_map]
+                or ([getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', '')] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', None) else [])
+            ) or None,
+            campaign_ids=[str(cid) for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set()))] or ([str(getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id'))] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_id', None) else []),
+            campaign_names=[campaign_map[cid] for cid in sorted(campaign_ids_by_opp.get(d.opportunity_id, set())) if cid in campaign_map] or ([getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name')] if getattr(fallback_lead_by_account.get(d.account_id), 'campaign_name', None) else []),
+            product_id=str(product_map[d.id][0][0]) if d.id in product_map and product_map[d.id] else (str(getattr(fallback_lead_by_account.get(d.account_id), 'product_id', '') or '') or None),
+            product_name=", ".join([item[1] for item in product_map.get(d.id, [])]) or getattr(fallback_lead_by_account.get(d.account_id), 'product_name', None),
+            product_ids=[str(item[0]) for item in product_map.get(d.id, [])] or ([str(getattr(fallback_lead_by_account.get(d.account_id), 'product_id'))] if getattr(fallback_lead_by_account.get(d.account_id), 'product_id', None) else []),
+            product_names=[item[1] for item in product_map.get(d.id, [])] or ([getattr(fallback_lead_by_account.get(d.account_id), 'product_name')] if getattr(fallback_lead_by_account.get(d.account_id), 'product_name', None) else []),
             name=d.name,
             amount=float(d.amount),
             currency=d.currency,

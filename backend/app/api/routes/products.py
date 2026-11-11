@@ -36,12 +36,11 @@ async def list_products(
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
-    """Lists all active products for the tenant catalog."""
+    """Lists all non-deleted products for the tenant catalog, including inactive products referenced by historical CRM records."""
     stmt = (
         select(Product)
         .where(
             Product.organization_id == ctx.tenant_uuid,
-            Product.is_active == True,
             Product.deleted_at.is_(None),
         )
         .order_by(Product.name.asc())

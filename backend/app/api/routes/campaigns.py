@@ -18,7 +18,7 @@ router = APIRouter(prefix="/v1/campaigns", tags=["Campaigns"])
 async def list_campaigns(
     status: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(100, ge=1, le=1000),
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):

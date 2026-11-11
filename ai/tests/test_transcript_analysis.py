@@ -64,10 +64,10 @@ async def test_analyze_call_transcript_returns_outputs_without_database(monkeypa
             return FakeResponse()
 
     monkeypatch.setattr(transcript_analysis, "get_settings", lambda: SimpleNamespace(
-        llm_api_key="test-key",
-        llm_base_url="https://llm.example/v1",
-        llm_model="test-model",
-        llm_timeout_seconds=8,
+        gemini_api_key="test-gemini-key",
+        gemini_base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+        gemini_model="gemini-3.8-flash",
+        gemini_timeout_seconds=8,
     ))
     monkeypatch.setattr(transcript_analysis.httpx, "AsyncClient", FakeClient)
 
@@ -79,7 +79,9 @@ async def test_analyze_call_transcript_returns_outputs_without_database(monkeypa
     assert output["summary"]["call_summary"] == "Needs SSO."
     assert output["improvements"]["product_improvements"] == ["Add SSO"]
     assert "We like the CRM but need SSO" in captured["request"]["messages"][1]["content"]
-    assert captured["url"] == "https://llm.example/v1/chat/completions"
+    assert captured["url"] == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    assert captured["request"]["model"] == "gemini-3.8-flash"
+    assert "temperature" not in captured["request"]
     assert "database" not in captured
 
 

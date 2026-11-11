@@ -346,8 +346,8 @@ export default function DashboardPage() {
             data={(campaignFilter !== 'all' || productFilter !== 'all') ? [] : analytics.pipeline}
             deals={dashboardFilteredDeals}
             onStageClick={(stage) => {
-              try { sessionStorage.setItem('dakini_pipeline_stage', stage); } catch { /* storage may be unavailable */ }
-              navigateTo('deals');
+              if (!stage) return;
+              navigateTo(`deals?stage=${encodeURIComponent(stage)}`);
             }}
           />
         </div>

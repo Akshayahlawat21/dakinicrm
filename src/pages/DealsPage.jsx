@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import DealsPipelineAnalytics from '../components/common/DealsPipelineAnalytics';
@@ -21,7 +22,28 @@ import {
   X
 } from 'lucide-react';
 
+const CANONICAL_STAGES = ['Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
+
+const normalizeStage = (stg) => {
+  if (!stg) return 'Qualified';
+  const s = String(stg).toLowerCase().trim();
+  if (s === 'discovery' || s === 'qualification' || s === 'qualified') return 'Qualified';
+  if (s === 'proposal') return 'Proposal';
+  if (s === 'negotiation') return 'Negotiation';
+  if (s === 'won' || s.includes('won')) return 'Won';
+  if (s === 'lost' || s.includes('lost')) return 'Lost';
+  return stg;
+};
+
+const resolveColumnBaseStage = (col) => {
+  if (!col) return 'Qualified';
+  if (col.is_won) return 'Won';
+  if (col.is_lost) return 'Lost';
+  return normalizeStage(col.parent_base_stage || col.name);
+};
+
 export default function DealsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     deals,
     campaigns,
@@ -75,27 +97,81 @@ export default function DealsPage() {
 
   const activePipelineObj = pipelines.find((p) => p.is_default) || pipelines[0] || null;
   const activePipelineId = activePipelineObj?.id || null;
-  const activeColumns =
-    pipelineStages && pipelineStages.length > 0
-      ? pipelineStages
-      : [
-          { id: 'Qualified', name: 'Qualified', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 50, color: '#3b82f6' },
-          { id: 'Proposal', name: 'Proposal', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 75, color: '#8b5cf6' },
-          { id: 'Negotiation', name: 'Negotiation', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 85, color: '#f59e0b' },
-          { id: 'Won', name: 'Won', scope: 'org', is_system: true, is_won: true, is_lost: false, win_probability: 100, color: '#10b981' },
-          { id: 'Lost', name: 'Lost', scope: 'org', is_system: true, is_won: false, is_lost: true, win_probability: 0, color: '#ef4444' },
-        ];
+  const activeColumns = useMemo(
+    () =>
+      pipelineStages && pipelineStages.length > 0
+        ? pipelineStages
+        : [
+            { id: 'Qualified', name: 'Qualified', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 50, color: '#3b82f6' },
+            { id: 'Proposal', name: 'Proposal', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 75, color: '#8b5cf6' },
+            { id: 'Negotiation', name: 'Negotiation', scope: 'org', is_system: true, is_won: false, is_lost: false, win_probability: 85, color: '#f59e0b' },
+            { id: 'Won', name: 'Won', scope: 'org', is_system: true, is_won: true, is_lost: false, win_probability: 100, color: '#10b981' },
+            { id: 'Lost', name: 'Lost', scope: 'org', is_system: true, is_won: false, is_lost: true, win_probability: 0, color: '#ef4444' },
+          ],
+    [pipelineStages]
+  );
 
-  const normalizeStage = (stg) => {
-    if (!stg) return 'Qualified';
-    const s = String(stg).toLowerCase().trim();
-    if (s === 'discovery' || s === 'qualification' || s === 'qualified') return 'Qualified';
-    if (s === 'proposal') return 'Proposal';
-    if (s === 'negotiation') return 'Negotiation';
-    if (s === 'won' || s.includes('won')) return 'Won';
-    if (s === 'lost' || s.includes('lost')) return 'Lost';
-    return stg;
-  };
+  const selectedStage = useMemo(() => {
+    const raw = searchParams.get('stage');
+    if (!raw) return null;
+    const normalized = normalizeStage(raw);
+    if (CANONICAL_STAGES.includes(normalized)) return normalized;
+    const matchedCol = activeColumns.find(
+      (col) => col.name.toLowerCase() === raw.trim().toLowerCase()
+    );
+    if (matchedCol) {
+      const base = resolveColumnBaseStage(matchedCol);
+      return CANONICAL_STAGES.includes(base) ? base : null;
+    }
+    return null;
+  }, [searchParams, activeColumns]);
+
+  const handleSelectStage = useCallback(
+    (stage) => {
+      const nextParams = new URLSearchParams(searchParams);
+      if (!stage) {
+        nextParams.delete('stage');
+      } else {
+        const normalized = normalizeStage(stage);
+        if (CANONICAL_STAGES.includes(normalized)) {
+          nextParams.set('stage', normalized);
+        } else {
+          nextParams.delete('stage');
+        }
+      }
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
+
+  useEffect(() => {
+    try {
+      const legacyStage = sessionStorage.getItem('dakini_pipeline_stage');
+      if (legacyStage) {
+        sessionStorage.removeItem('dakini_pipeline_stage');
+        if (!searchParams.get('stage')) {
+          const normalized = normalizeStage(legacyStage);
+          if (CANONICAL_STAGES.includes(normalized)) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set('stage', normalized);
+            setSearchParams(nextParams, { replace: true });
+          }
+        }
+      }
+    } catch {
+      /* storage may be unavailable */
+    }
+  }, [searchParams, setSearchParams]);
+
+  const displayedColumns = useMemo(() => {
+    if (!selectedStage) return activeColumns;
+    const target = selectedStage.toLowerCase();
+    const matching = activeColumns.filter((col) => {
+      const colBase = resolveColumnBaseStage(col).toLowerCase();
+      return col.name.toLowerCase() === target || colBase === target;
+    });
+    return matching.length > 0 ? matching : activeColumns;
+  }, [activeColumns, selectedStage]);
 
   const resolveDealColumnId = (deal) => {
     if (!deal) return activeColumns[0]?.id;
@@ -316,7 +392,15 @@ export default function DealsPage() {
       </div>
 
       {/* Advanced pipeline analytics: shared filters + multi-chart stage drill-down */}
-      <DealsPipelineAnalytics deals={deals} campaigns={campaigns} products={products} leads={leads} onFilteredDealsChange={handleFilteredDealsChange} />
+      <DealsPipelineAnalytics
+        deals={deals}
+        campaigns={campaigns}
+        products={products}
+        leads={leads}
+        onFilteredDealsChange={handleFilteredDealsChange}
+        selectedStage={selectedStage}
+        onSelectStage={handleSelectStage}
+      />
 
       {/* User Friendly Permission Alert */}
       {permissionError && (
@@ -439,11 +523,44 @@ export default function DealsPage() {
         <LoadingSymbol message="" />
       ) : (
         <>
+          {selectedStage && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                marginBottom: '1rem',
+                padding: '0.65rem 1rem',
+                borderRadius: 10,
+                background: 'var(--primary-light)',
+                border: '1px solid var(--primary-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                <Filter size={15} color="var(--primary)" />
+                <span>
+                  Filtered to stage: <strong>{selectedStage}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => handleSelectStage(null)}
+              >
+                <ChevronLeft size={14} /> Show all stages
+              </button>
+            </div>
+          )}
+
           {/* Kanban Board */}
           <div className="deals-kanban-board">
-        {activeColumns.map((col) => {
+        {displayedColumns.map((col) => {
           const stageDeals = visibleDeals.filter((d) => resolveDealColumnId(d) === col.id);
           const stageValue = stageDeals.reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
+          const colBaseStage = resolveColumnBaseStage(col);
+          const isCanonicalCol = CANONICAL_STAGES.includes(colBaseStage);
           const canAddSubColumn = Boolean(activePipelineId) && !col.is_won && !col.is_lost;
           const canManageColumn = Boolean(activePipelineId) && !col.is_system && (col.scope === 'personal' || isOwner);
           const isDragTarget = dragOverColId === col.id;
@@ -471,10 +588,36 @@ export default function DealsPage() {
             >
               <div className="kanban-column-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', minWidth: 0 }}>
-                  <span className="kanban-column-title">
-                    {col.name}
-                    <span className="badge badge-gray">{stageDeals.length}</span>
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isCanonicalCol) return;
+                      handleSelectStage(selectedStage === colBaseStage ? null : colBaseStage);
+                    }}
+                    title={
+                      !isCanonicalCol
+                        ? col.name
+                        : selectedStage === colBaseStage
+                          ? 'Click to show all stages'
+                          : `Show only ${colBaseStage} stage`
+                    }
+                    style={{
+                      background: 'transparent',
+                      border: 0,
+                      padding: 0,
+                      cursor: isCanonicalCol ? 'pointer' : 'default',
+                      color: 'inherit',
+                      font: 'inherit',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span className="kanban-column-title">
+                      {col.name}
+                      <span className="badge badge-gray">{stageDeals.length}</span>
+                    </span>
+                  </button>
                   {col.scope === 'personal' && (
                     <span className="kanban-personal-badge" title="Visible only on your personal Kanban board">
                       Personal

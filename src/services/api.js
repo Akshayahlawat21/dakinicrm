@@ -277,8 +277,40 @@ export const gatewayApi = {
   },
 
   /**
-   * E3: Deals resource
+   * E3: Deals & Dynamic Pipelines resource
    */
+  async getPipelines() {
+    return gatewayFetch('/pipelines', { method: 'GET' });
+  },
+
+  async createPipelineStage(pipelineId, stageData) {
+    return gatewayFetch(`/pipelines/${pipelineId}/stages`, {
+      method: 'POST',
+      body: JSON.stringify(stageData),
+    });
+  },
+
+  async updatePipelineStage(pipelineId, stageId, stageData) {
+    return gatewayFetch(`/pipelines/${pipelineId}/stages/${stageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(stageData),
+    });
+  },
+
+  async reorderPipelineStages(pipelineId, stageIds) {
+    return gatewayFetch(`/pipelines/${pipelineId}/stages/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ stage_ids: stageIds }),
+    });
+  },
+
+  async deletePipelineStage(pipelineId, stageId, reassignTo = null) {
+    const query = reassignTo ? `?reassign_to=${encodeURIComponent(reassignTo)}` : '';
+    return gatewayFetch(`/pipelines/${pipelineId}/stages/${stageId}${query}`, {
+      method: 'DELETE',
+    });
+  },
+
   async getDeals() {
     return gatewayFetch('/deals', { method: 'GET' });
   },
@@ -290,10 +322,11 @@ export const gatewayApi = {
     });
   },
 
-  async updateDealStage(dealId, stage) {
+  async updateDealStage(dealId, stage, stageId = null) {
+    const payload = stageId ? { stage_id: stageId, ...(stage ? { stage } : {}) } : { stage };
     return gatewayFetch(`/deals/${dealId}/stage`, {
       method: 'PATCH',
-      body: JSON.stringify({ stage }),
+      body: JSON.stringify(payload),
     });
   },
 

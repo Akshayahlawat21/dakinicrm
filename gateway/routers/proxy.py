@@ -21,6 +21,7 @@ router = APIRouter(prefix="/v1", tags=["Layer 3 API Proxy"])
 REGISTERED_RESOURCES: Set[str] = {
     "leads",
     "deals",
+    "pipelines",
     "accounts",
     "contacts",
     "campaigns",

@@ -92,6 +92,8 @@ export function CRMProvider({ children }) {
   const [accounts, setAccounts] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [deals, setDeals] = useState([]);
+  const [pipelines, setPipelines] = useState([]);
+  const [pipelineStages, setPipelineStages] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [products, setProducts] = useState([]);
@@ -145,11 +147,44 @@ export function CRMProvider({ children }) {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(() => !!getStoredToken());
 
+  const mapApiDeal = (d) => {
+    const STAGE_NORM = {
+      discovery: 'Qualified',
+      qualification: 'Qualified',
+      qualified: 'Qualified',
+      proposal: 'Proposal',
+      negotiation: 'Negotiation',
+      won: 'Won',
+      'closed won': 'Won',
+      closed_won: 'Won',
+      lost: 'Lost',
+      'closed lost': 'Lost',
+      closed_lost: 'Lost',
+    };
+    const rawStage = (d.stage || 'Qualified').toLowerCase().trim();
+    const normStage = STAGE_NORM[rawStage] || d.stage || 'Qualified';
+    return {
+      ...d,
+      owner: d.owner || currentUser?.name || 'Sales Representative',
+      company: d.company || d.name,
+      account_id: d.account_id || d.accountId,
+      contact_id: d.contact_id || d.contactId,
+      value: Number(d.value || d.amount || 45000),
+      amount: Number(d.value || d.amount || 45000),
+      stage: normStage,
+      pipeline_id: d.pipeline_id || null,
+      stage_id: d.stage_id || null,
+      display_stage_id: d.display_stage_id || d.stage_id || null,
+      display_stage_name: d.display_stage_name || normStage,
+      display_probability: d.display_probability ?? d.probability ?? 50,
+    };
+  };
+
   const fetchSupabaseData = async () => {
     setIsLoadingData(true);
     console.log('%c[SUPABASE FETCH] 🚀 Requesting live CRM data from Supabase PostgreSQL via Gateway API...', 'color: #0284c7; font-weight: bold; font-size: 13px;');
     try {
-      const [leadsRes, dealsRes, accountsRes, contactsRes, campaignsRes, tasksRes, productsRes, callsRes] = await Promise.allSettled([
+      const [leadsRes, dealsRes, accountsRes, contactsRes, campaignsRes, tasksRes, productsRes, callsRes, pipelinesRes] = await Promise.allSettled([
         gatewayApi.getLeads(),
         gatewayApi.getDeals(),
         gatewayApi.getAccounts(),
@@ -158,6 +193,7 @@ export function CRMProvider({ children }) {
         gatewayApi.getTasks(),
         gatewayApi.getProducts(),
         gatewayApi.getCallAnalyses(),
+        gatewayApi.getPipelines(),
       ]);
 
       let loadedLeads = [];
@@ -192,34 +228,15 @@ export function CRMProvider({ children }) {
         }
       }
 
+      if (pipelinesRes.status === 'fulfilled' && pipelinesRes.value?.success && Array.isArray(pipelinesRes.value.data?.data)) {
+        const fetchedPipelines = pipelinesRes.value.data.data;
+        setPipelines(fetchedPipelines);
+        const activePipe = fetchedPipelines.find((p) => p.is_default) || fetchedPipelines[0];
+        setPipelineStages(activePipe?.stages || []);
+      }
+
       if (dealsRes.status === 'fulfilled' && dealsRes.value?.success && Array.isArray(dealsRes.value.data?.data)) {
-        const STAGE_NORM = {
-          discovery: 'Qualified',
-          qualification: 'Qualified',
-          qualified: 'Qualified',
-          proposal: 'Proposal',
-          negotiation: 'Negotiation',
-          won: 'Won',
-          'closed won': 'Won',
-          closed_won: 'Won',
-          lost: 'Lost',
-          'closed lost': 'Lost',
-          closed_lost: 'Lost',
-        };
-        loadedDeals = dealsRes.value.data.data.map((d) => {
-          const rawStage = (d.stage || 'Qualified').toLowerCase().trim();
-          const normStage = STAGE_NORM[rawStage] || d.stage || 'Qualified';
-          return {
-            ...d,
-            owner: d.owner || currentUser?.name || 'Sales Representative',
-            company: d.company || d.name,
-            account_id: d.account_id || d.accountId,
-            contact_id: d.contact_id || d.contactId,
-            value: Number(d.value || d.amount || 45000),
-            amount: Number(d.value || d.amount || 45000),
-            stage: normStage,
-          };
-        });
+        loadedDeals = dealsRes.value.data.data.map(mapApiDeal);
         setDeals(loadedDeals);
       }
 
@@ -754,20 +771,39 @@ export function CRMProvider({ children }) {
 
     // Dispatch to Supabase via Layer 2 Gateway
     try {
-      const res = await gatewayApi.createDeal({
+      const payload = {
         name: deal.name,
         company: deal.company,
         amount: Number(deal.value || deal.amount || 45000),
         stage: deal.stage || 'Qualified',
-      });
+        ...(deal.pipeline_id ? { pipeline_id: deal.pipeline_id } : {}),
+        ...(deal.stage_id ? { stage_id: deal.stage_id } : {}),
+      };
+      const res = await gatewayApi.createDeal(payload);
       if (res.success && res.data?.data) {
-        const realId = String(res.data.data.id);
-        const resolvedOwner = res.data.data.owner || deal.owner;
+        const srv = res.data.data;
+        const realId = String(srv.id);
+        const resolvedOwner = srv.owner || deal.owner;
         console.log(`%c[SUPABASE CREATE] ✅ Deal persisted with UUID: ${realId}`, 'color: #10b981; font-weight: bold;');
         setDeals((prev) =>
-          prev.map((d) => (d.id === tempId ? { ...d, id: realId, owner: resolvedOwner, organization_id: res.data.data.organization_id } : d))
+          prev.map((d) =>
+            d.id === tempId
+              ? {
+                  ...d,
+                  id: realId,
+                  owner: resolvedOwner,
+                  organization_id: srv.organization_id,
+                  pipeline_id: srv.pipeline_id || d.pipeline_id || null,
+                  stage_id: srv.stage_id || d.stage_id || null,
+                  display_stage_id: srv.display_stage_id || srv.stage_id || d.stage_id || null,
+                  display_stage_name: srv.display_stage_name || srv.stage || d.stage,
+                  display_probability: srv.display_probability ?? d.probability,
+                  stage: srv.stage || d.stage,
+                }
+              : d
+          )
         );
-        return { success: true, data: { ...deal, id: realId, owner: resolvedOwner } };
+        return { success: true, data: { ...deal, ...srv, id: realId, owner: resolvedOwner } };
       } else {
         setDeals((prev) => prev.filter((d) => d.id !== tempId));
         console.warn('Backend rejected deal creation:', res.error);
@@ -780,15 +816,135 @@ export function CRMProvider({ children }) {
     }
   };
 
-  const updateDealStage = async (dealId, nextStage) => {
+  const updateDealStage = async (dealId, nextStage, stageId = null) => {
+    const targetCol = stageId
+      ? pipelineStages.find((s) => s.id === stageId)
+      : pipelineStages.find((s) => s.name?.toLowerCase() === String(nextStage || '').toLowerCase());
+    const resolvedCoreStage = targetCol
+      ? targetCol.scope === 'personal'
+        ? targetCol.parent_base_stage || 'Qualified'
+        : targetCol.name
+      : nextStage || 'Qualified';
+    const resolvedDisplayName = targetCol?.name || nextStage || resolvedCoreStage;
+    const resolvedDisplayId = targetCol?.id || stageId || null;
+
     setDeals((prev) =>
-      prev.map((d) => (d.id === dealId ? { ...d, stage: nextStage, daysInStage: 0 } : d))
+      prev.map((d) =>
+        d.id === dealId
+          ? {
+              ...d,
+              stage: resolvedCoreStage,
+              stage_id: targetCol?.scope === 'org' ? targetCol.id : d.stage_id,
+              display_stage_id: resolvedDisplayId || d.display_stage_id,
+              display_stage_name: resolvedDisplayName,
+              display_probability: targetCol?.win_probability ?? d.display_probability,
+              daysInStage: 0,
+            }
+          : d
+      )
     );
     try {
-      await gatewayApi.updateDealStage(dealId, nextStage);
-      console.log(`%c[SUPABASE UPDATE] 📈 Deal ${dealId} stage updated to ${nextStage}`, 'color: #3b82f6; font-weight: bold;');
+      const res = await gatewayApi.updateDealStage(dealId, resolvedCoreStage, resolvedDisplayId);
+      if (res?.success && res.data?.data) {
+        const srv = res.data.data;
+        setDeals((prev) =>
+          prev.map((d) =>
+            d.id === dealId
+              ? {
+                  ...d,
+                  stage: srv.stage || d.stage,
+                  stage_id: srv.stage_id || d.stage_id,
+                  pipeline_id: srv.pipeline_id || d.pipeline_id,
+                  display_stage_id: srv.display_stage_id || srv.stage_id || d.display_stage_id,
+                  display_stage_name: srv.display_stage_name || srv.stage || d.display_stage_name,
+                  display_probability: srv.display_probability ?? d.display_probability,
+                  status: srv.status || d.status,
+                }
+              : d
+          )
+        );
+      }
+      console.log(`%c[SUPABASE UPDATE] 📈 Deal ${dealId} stage updated to ${resolvedDisplayName}`, 'color: #3b82f6; font-weight: bold;');
     } catch (err) {
       console.warn('Gateway updateDealStage sync skipped:', err);
+    }
+  };
+
+  const refreshPipelines = async () => {
+    try {
+      const res = await gatewayApi.getPipelines();
+      if (res?.success && Array.isArray(res.data?.data)) {
+        const fetched = res.data.data;
+        setPipelines(fetched);
+        const activePipe = fetched.find((p) => p.is_default) || fetched[0];
+        setPipelineStages(activePipe?.stages || []);
+        return activePipe?.stages || [];
+      }
+    } catch (err) {
+      console.warn('Failed to refresh pipelines:', err);
+    }
+    return pipelineStages;
+  };
+
+  const createCustomStage = async (pipelineId, stageData) => {
+    try {
+      const res = await gatewayApi.createPipelineStage(pipelineId, stageData);
+      if (res?.success) {
+        await refreshPipelines();
+        return { success: true, data: res.data?.data };
+      }
+      return { success: false, error: res?.error };
+    } catch (err) {
+      return { success: false, error: { message: err.message } };
+    }
+  };
+
+  const updateCustomStage = async (pipelineId, stageId, stageData) => {
+    try {
+      const res = await gatewayApi.updatePipelineStage(pipelineId, stageId, stageData);
+      if (res?.success) {
+        await refreshPipelines();
+        return { success: true, data: res.data?.data };
+      }
+      return { success: false, error: res?.error };
+    } catch (err) {
+      return { success: false, error: { message: err.message } };
+    }
+  };
+
+  const reorderCustomStages = async (pipelineId, stageIds) => {
+    const byId = Object.fromEntries(pipelineStages.map((s) => [s.id, s]));
+    const nextStages = stageIds.map((id) => byId[id]).filter(Boolean);
+    if (nextStages.length === pipelineStages.length) {
+      setPipelineStages(nextStages);
+    }
+    try {
+      const res = await gatewayApi.reorderPipelineStages(pipelineId, stageIds);
+      if (res?.success && Array.isArray(res.data?.data)) {
+        setPipelineStages(res.data.data);
+        return { success: true, data: res.data.data };
+      }
+      await refreshPipelines();
+      return { success: false, error: res?.error };
+    } catch (err) {
+      await refreshPipelines();
+      return { success: false, error: { message: err.message } };
+    }
+  };
+
+  const deleteCustomStage = async (pipelineId, stageId, reassignTo = null) => {
+    try {
+      const res = await gatewayApi.deletePipelineStage(pipelineId, stageId, reassignTo);
+      if (res?.success) {
+        const [, dealsRes] = await Promise.all([refreshPipelines(), gatewayApi.getDeals()]);
+        if (dealsRes?.success && Array.isArray(dealsRes.data?.data)) {
+          setDeals(dealsRes.data.data.map(mapApiDeal));
+        }
+        return { success: true, data: res.data?.data };
+      }
+      return { success: false, error: res?.error };
+    } catch (err) {
+      return { success: false, error: { message: err.message } };
     }
   };
 
@@ -1780,6 +1936,13 @@ export function CRMProvider({ children }) {
         addContact,
         deleteContact,
         deals,
+        pipelines,
+        pipelineStages,
+        refreshPipelines,
+        createCustomStage,
+        updateCustomStage,
+        reorderCustomStages,
+        deleteCustomStage,
         addDeal,
         updateDealStage,
         deleteDeal,

@@ -14,6 +14,8 @@ class DealCreateRequest(BaseModel):
     amount: Optional[float] = None
     value: Optional[float] = None
     stage: Optional[str] = "Qualified"
+    pipeline_id: Optional[str] = None
+    stage_id: Optional[str] = None
     currency: Optional[str] = "USD"
     opportunity_id: Optional[str] = None
     opportunity_reference: Optional[str] = None
@@ -36,7 +38,8 @@ class DealCreateRequest(BaseModel):
 
 
 class DealStageUpdateRequest(BaseModel):
-    stage: str
+    stage: Optional[str] = None
+    stage_id: Optional[str] = None
 
 
 class DealResponse(BaseModel):
@@ -49,6 +52,11 @@ class DealResponse(BaseModel):
     amount: float
     currency: str
     stage: str
+    pipeline_id: Optional[str] = None
+    stage_id: Optional[str] = None
+    display_stage_id: Optional[str] = None
+    display_stage_name: Optional[str] = None
+    display_probability: Optional[int] = None
     status: str
     owner_id: Optional[str] = None
     owner: Optional[str] = None

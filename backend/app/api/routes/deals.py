@@ -11,6 +11,49 @@ from backend.app.api.schemas.common import PaginatedResponse, StandardResponse, 
 router = APIRouter(prefix="/v1/deals", tags=["Deals"])
 
 
+async def _serialize_deals(
+    session: AsyncSession, service: DealService, ctx: RequestContext, deals: list
+) -> list[DealResponse]:
+    """Serializes Deal ORM records with resolved owner name and per-user display stage metadata."""
+    if not deals:
+        return []
+    from sqlalchemy import select
+    from backend.app.data.models.user import User
+
+    user_ids = {d.owner_id for d in deals if getattr(d, "owner_id", None)}
+    user_map = {}
+    if user_ids:
+        users_stmt = select(User.id, User.name).where(User.id.in_(user_ids))
+        users_res = await session.execute(users_stmt)
+        user_map = {row.id: row.name for row in users_res}
+
+    display_map = await service.resolve_display_columns(ctx, deals)
+    dtos = []
+    for d in deals:
+        disp = display_map.get(d.id, {})
+        dtos.append(
+            DealResponse(
+                id=str(d.id),
+                organization_id=str(d.organization_id),
+                account_id=str(d.account_id),
+                name=d.name,
+                amount=float(d.amount),
+                currency=d.currency,
+                stage=d.stage,
+                pipeline_id=disp.get("pipeline_id"),
+                stage_id=disp.get("stage_id"),
+                display_stage_id=disp.get("display_stage_id"),
+                display_stage_name=disp.get("display_stage_name"),
+                display_probability=disp.get("display_probability"),
+                status=d.status,
+                owner_id=str(d.owner_id) if getattr(d, "owner_id", None) else None,
+                owner=user_map.get(getattr(d, "owner_id", None)),
+                created_at=d.created_at,
+            )
+        )
+    return dtos
+
+
 @router.get("/summary")
 async def get_pipeline_summary(
     ctx: RequestContext = Depends(get_request_context),
@@ -32,33 +75,7 @@ async def list_deals(
 ):
     service = DealService(session)
     deals, total = await service.list_deals(ctx, skip=skip, limit=limit, stage=stage)
-
-    from sqlalchemy import select
-    from backend.app.data.models.user import User
-
-    user_ids = {d.owner_id for d in deals if getattr(d, 'owner_id', None)}
-    user_map = {}
-    if user_ids:
-        users_stmt = select(User.id, User.name).where(User.id.in_(user_ids))
-        users_res = await session.execute(users_stmt)
-        user_map = {row.id: row.name for row in users_res}
-
-    dtos = [
-        DealResponse(
-            id=str(d.id),
-            organization_id=str(d.organization_id),
-            account_id=str(d.account_id),
-            name=d.name,
-            amount=float(d.amount),
-            currency=d.currency,
-            stage=d.stage,
-            status=d.status,
-            owner_id=str(d.owner_id) if getattr(d, 'owner_id', None) else None,
-            owner=user_map.get(getattr(d, 'owner_id', None)),
-            created_at=d.created_at,
-        )
-        for d in deals
-    ]
+    dtos = await _serialize_deals(session, service, ctx, deals)
     print(f"\n[SUPABASE DB FETCH] >> Fetched {len(dtos)} deals from Supabase PostgreSQL (Tenant: {ctx.tenant_id}, Total: {total})", flush=True)
     for deal in dtos[:3]:
         print(f"   * Deal: {deal.name} | Amount: ${deal.amount} | Stage: {deal.stage} | Owner: {deal.owner}", flush=True)
@@ -139,28 +156,16 @@ async def create_deal(
         stage=body.stage or "Qualified",
         currency=body.currency or "USD",
         opportunity_id=body.opportunity_id,
+        pipeline_id=body.pipeline_id,
+        stage_id=body.stage_id,
     )
-    from backend.app.data.models.user import User
-    creator = await session.get(User, ctx.user_uuid) if ctx.user_uuid else None
-    owner_name = creator.name if creator else None
+    dtos = await _serialize_deals(session, service, ctx, [deal])
     await session.commit()
 
     print(f"\n[SUPABASE DB CREATE] >> Successfully created Deal '{deal.name}' in Supabase (ID: {deal.id}, Amount: ${deal.amount}, Stage: {deal.stage})", flush=True)
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
-            owner=owner_name,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 
@@ -173,29 +178,11 @@ async def get_deal(
 ):
     service = DealService(session)
     deal = await service.get_deal(ctx, deal_id)
-
-    from backend.app.data.models.user import User
-    owner_name = None
-    if getattr(deal, 'owner_id', None):
-        u = await session.get(User, deal.owner_id)
-        if u:
-            owner_name = u.name
+    dtos = await _serialize_deals(session, service, ctx, [deal])
 
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            owner_id=str(deal.owner_id) if getattr(deal, 'owner_id', None) else None,
-            owner=owner_name,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 
@@ -209,22 +196,13 @@ async def update_deal_stage(
     session: AsyncSession = Depends(get_db_session),
 ):
     service = DealService(session)
-    deal = await service.update_stage(ctx, deal_id, body.stage)
+    deal = await service.update_stage(ctx, deal_id, new_stage=body.stage, stage_id=body.stage_id)
+    dtos = await _serialize_deals(session, service, ctx, [deal])
     await session.commit()
     print(f"\n[SUPABASE DB UPDATE] >> Updated Deal '{deal.name}' stage to '{deal.stage}' in Supabase", flush=True)
     return StandardResponse(
         status="success",
-        data=DealResponse(
-            id=str(deal.id),
-            organization_id=str(deal.organization_id),
-            account_id=str(deal.account_id),
-            name=deal.name,
-            amount=float(deal.amount),
-            currency=deal.currency,
-            stage=deal.stage,
-            status=deal.status,
-            created_at=deal.created_at,
-        ),
+        data=dtos[0],
         correlation_id=ctx.correlation_id,
     )
 

@@ -46,6 +46,8 @@ export default function QuickCreateModal() {
     addLead,
     addDeal,
     deals = [],
+    pipelines = [],
+    pipelineStages = [],
     products = [],
     addProduct,
     fetchProducts,
@@ -368,11 +370,24 @@ export default function QuickCreateModal() {
     const baseDealName = formData.name.trim() || `${formData.company.trim() || 'Enterprise'} Opportunity`;
     const finalDealName = baseDealName.startsWith('[') ? baseDealName : `${typeTag}${baseDealName}`;
 
+    const activePipeline = pipelines.find((p) => p.is_default) || pipelines[0] || null;
+    const matchedStage = pipelineStages.find(
+      (s) => s.name?.toLowerCase() === String(formData.dealStage || 'Qualified').toLowerCase()
+    );
+    const canonicalStage = matchedStage
+      ? matchedStage.scope === 'personal'
+        ? matchedStage.parent_base_stage || 'Qualified'
+        : matchedStage.name
+      : formData.dealStage;
+
     const res = await addDeal({
       name: finalDealName,
       company: formData.company.trim() || 'Enterprise Corp',
       value: Number(formData.dealValue) || 30000,
-      stage: formData.dealStage,
+      stage: canonicalStage,
+      ...(activePipeline?.id ? { pipeline_id: activePipeline.id } : {}),
+      ...(matchedStage?.id ? { stage_id: matchedStage.id, display_stage_id: matchedStage.id, display_stage_name: matchedStage.name } : {}),
+      probability: matchedStage?.win_probability ?? 50,
       closeDate: '2026-11-30',
       owner: dynamicOwner,
       priority: 'High',
@@ -1336,9 +1351,18 @@ export default function QuickCreateModal() {
                       Initial Pipeline Stage
                     </label>
                     <select name="dealStage" className="input-field" value={formData.dealStage} onChange={handleChange}>
-                      <option value="Qualified">Qualified</option>
-                      <option value="Proposal">Proposal</option>
-                      <option value="Negotiation">Negotiation</option>
+                      {(pipelineStages && pipelineStages.length > 0
+                        ? pipelineStages.filter((s) => !s.is_won && !s.is_lost)
+                        : [
+                            { id: 'Qualified', name: 'Qualified', scope: 'org' },
+                            { id: 'Proposal', name: 'Proposal', scope: 'org' },
+                            { id: 'Negotiation', name: 'Negotiation', scope: 'org' },
+                          ]
+                      ).map((stg) => (
+                        <option key={stg.id || stg.name} value={stg.name}>
+                          {stg.scope === 'personal' ? `${stg.name} (Personal)` : stg.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>

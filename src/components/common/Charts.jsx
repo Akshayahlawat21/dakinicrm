@@ -192,17 +192,17 @@ export function PipelineStageChart({ data = [], deals = [], onStageClick }) {
             <button key={stg.name} type="button" onClick={() => onStageClick?.(stg.name)}
               title={`View ${stg.name}: ${stg.count} deals`}
               style={{ minWidth: 0, border: 0, background: 'transparent', cursor: onStageClick ? 'pointer' : 'default', padding: '0 2px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <strong style={{ fontSize: 11, color: '#334155', marginBottom: 5 }}>{stg.count.toLocaleString()}</strong>
-              <div style={{ height: 126, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', borderBottom: '1px solid #e2e8f0' }}>
+              <strong style={{ fontSize: 11, color: 'var(--text-body)', marginBottom: 5 }}>{stg.count.toLocaleString()}</strong>
+              <div style={{ height: 126, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', borderBottom: '1px solid var(--border-default)' }}>
                 <div style={{ width: 'min(100%,42px)', height: `${height}px`, background: stg.color, borderRadius: '7px 7px 2px 2px', opacity: stg.value > 0 ? 1 : .22, transition: 'height .25s ease' }} />
               </div>
-              <span style={{ fontSize: 10, lineHeight: 1.25, fontWeight: 700, color: '#475569', marginTop: 8, textAlign: 'center', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{stg.name}</span>
-              <span style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>{stg.value ? `$${(stg.value / 1000).toFixed(1)}k` : '$0'}</span>
+              <span style={{ fontSize: 10, lineHeight: 1.25, fontWeight: 700, color: 'var(--text-body)', marginTop: 8, textAlign: 'center', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{stg.name}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{stg.value ? `$${(stg.value / 1000).toFixed(1)}k` : '$0'}</span>
             </button>
           );
         })}
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: 11, color: '#64748b' }}>Deal count and value by every pipeline stage · Select a stage to open its deals.</p>
+      <p style={{ margin: '10px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Deal count and value by every pipeline stage · Select a stage to open its deals.</p>
     </div>
   );
 }

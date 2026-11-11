@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import DealsPipelineAnalytics from '../components/common/DealsPipelineAnalytics';
@@ -280,7 +280,7 @@ export default function DealsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Deals & Active Pipeline
             </h1>
             <span className="badge badge-blue" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
@@ -290,16 +290,16 @@ export default function DealsPage() {
               Total: ${totalPipeline.toLocaleString()}
             </span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Salesforce-inspired Kanban pipeline with stage velocity & probability tracking
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8125rem' }}>
-            <TrendingUp size={16} color="#2563eb" />
-            <span style={{ fontWeight: 600, color: '#1e40af' }}>Won this month:</span>
-            <strong style={{ color: '#2563eb' }}>${wonTotal.toLocaleString()}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary-light)', border: '1px solid var(--primary-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.8125rem' }}>
+            <TrendingUp size={16} color="var(--primary)" />
+            <span style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>Won this month:</span>
+            <strong style={{ color: 'var(--primary)' }}>${wonTotal.toLocaleString()}</strong>
           </div>
 
           <button
@@ -325,9 +325,9 @@ export default function DealsPage() {
             marginBottom: '1.25rem',
             padding: '0.85rem 1.15rem',
             borderRadius: 10,
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#991b1b',
+            background: 'var(--danger-bg)',
+            border: '1px solid var(--danger-border)',
+            color: 'var(--danger-text-dark)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -336,7 +336,7 @@ export default function DealsPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <AlertTriangle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+            <AlertTriangle size={18} color="var(--danger)" style={{ flexShrink: 0 }} />
             <div>
               <strong style={{ fontSize: '0.875rem' }}>Permission Denied:</strong>{' '}
               <span style={{ fontSize: '0.85rem' }}>{permissionError}</span>
@@ -347,7 +347,7 @@ export default function DealsPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#991b1b',
+              color: 'var(--danger-text-dark)',
               fontWeight: 700,
               cursor: 'pointer',
               fontSize: '1.2rem',
@@ -363,11 +363,11 @@ export default function DealsPage() {
 
       {/* Selected Deal Stage Path Chevron (Salesforce Path Component) */}
       {selectedDeal && (
-        <div className="crm-card" style={{ marginBottom: '1.5rem', background: '#ffffff' }}>
+        <div className="crm-card" style={{ marginBottom: '1.5rem', background: 'var(--bg-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Selected Opportunity</span>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Selected Opportunity</span>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 {selectedDeal.name} (${selectedDeal.value.toLocaleString()})
               </h2>
             </div>
@@ -375,8 +375,8 @@ export default function DealsPage() {
               <button
                 className="btn btn-outline btn-sm"
                 style={{
-                  color: canDeleteDeals ? '#ef4444' : '#94a3b8',
-                  borderColor: canDeleteDeals ? '#fca5a5' : '#cbd5e1',
+                  color: canDeleteDeals ? 'var(--danger)' : 'var(--text-subtle)',
+                  borderColor: canDeleteDeals ? 'var(--danger-border)' : 'var(--border-default)',
                   cursor: canDeleteDeals ? 'pointer' : 'not-allowed',
                   opacity: canDeleteDeals ? 1 : 0.65,
                 }}
@@ -425,7 +425,7 @@ export default function DealsPage() {
                   className={`path-step ${isCurrent ? 'current' : isPast ? 'completed' : ''}`}
                   onClick={() => handleSelectDealStage(selectedDeal, col)}
                 >
-                  {isPast && <CheckCircle size={13} color="#2563eb" />}
+                  {isPast && <CheckCircle size={13} color="var(--primary)" />}
                   <span>{col.name}</span>
                 </div>
               );
@@ -526,7 +526,7 @@ export default function DealsPage() {
 
               <div className="kanban-cards-stack">
                 {stageDeals.length === 0 ? (
-                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem' }}>
+                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-subtle)', fontSize: '0.8125rem' }}>
                     No deals in this stage
                   </div>
                 ) : (
@@ -545,13 +545,13 @@ export default function DealsPage() {
                         }}
                         className={`deal-card ${isStuck ? 'stuck-amber' : ''}`}
                         style={{
-                          border: isCardSelected ? '2px solid #2563eb' : undefined,
-                          boxShadow: isCardSelected ? '0 4px 14px rgba(37,99,235,0.2)' : undefined
+                          border: isCardSelected ? '2px solid var(--primary)' : undefined,
+                          boxShadow: isCardSelected ? '0 4px 14px var(--primary-glow)' : undefined
                         }}
                         onClick={() => setSelectedDeal(deal)}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
                             {deal.company}
                           </span>
                           {isStuck && (
@@ -562,15 +562,15 @@ export default function DealsPage() {
                           )}
                         </div>
 
-                        <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3, marginBottom: '0.5rem' }}>
+                        <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.3, marginBottom: '0.5rem' }}>
                           {deal.name}
                         </h4>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
                             ${deal.value.toLocaleString()}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                             {(deal.display_probability ?? deal.probability) != null
                               ? `${deal.display_probability ?? deal.probability}% prob.`
                               : normalizeStage(deal.stage) === 'Won'
@@ -586,14 +586,14 @@ export default function DealsPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          borderTop: '1px solid #f1f5f9',
+                          borderTop: '1px solid var(--border-default)',
                           paddingTop: '0.5rem',
                           fontSize: '0.75rem',
-                          color: '#64748b'
+                          color: 'var(--text-muted)'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#eff6ff', color: '#2563eb', fontSize: '0.625rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {deal.owner.split(' ').map(n => n[0]).join('')}
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.625rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {(deal.owner || 'SR').split(' ').map(n => n[0]).join('')}
                             </div>
                             <span>{deal.owner}</span>
                           </div>
@@ -612,7 +612,7 @@ export default function DealsPage() {
                             }}
                             title="Advance to next stage"
                           >
-                            <ArrowRight size={13} color="#2563eb" />
+                            <ArrowRight size={13} color="var(--primary)" />
                           </button>
                         </div>
                       </div>
@@ -645,11 +645,11 @@ export default function DealsPage() {
         >
           <div
             className="crm-card"
-            style={{ width: '100%', maxWidth: 440, padding: '1.35rem', background: '#ffffff' }}
+            style={{ width: '100%', maxWidth: 440, padding: '1.35rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 {stageModalMode === 'add'
                   ? `Add Column after "${stageModalParent?.name || 'Qualified'}"`
                   : `Edit Column "${editingStage?.name || ''}"`}
@@ -668,9 +668,9 @@ export default function DealsPage() {
               <div
                 style={{
                   fontSize: '0.78rem',
-                  color: '#0369a1',
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
+                  color: 'var(--info-text)',
+                  background: 'var(--info-bg)',
+                  border: '1px solid var(--info-border)',
                   borderRadius: 8,
                   padding: '0.55rem 0.75rem',
                   marginBottom: '0.9rem',
@@ -684,7 +684,7 @@ export default function DealsPage() {
 
             <form onSubmit={handleSaveStageModal} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                   Column Name *
                 </label>
                 <input
@@ -700,7 +700,7 @@ export default function DealsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Accent Color
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', paddingTop: 4 }}>
@@ -714,8 +714,8 @@ export default function DealsPage() {
                           height: 24,
                           borderRadius: '50%',
                           backgroundColor: hex,
-                          border: stageColorInput === hex ? '2.5px solid #0f172a' : '2px solid #ffffff',
-                          boxShadow: '0 0 0 1px #cbd5e1',
+                          border: stageColorInput === hex ? '2.5px solid var(--text-main)' : '2px solid var(--bg-card)',
+                          boxShadow: '0 0 0 1px var(--border-default)',
                           cursor: 'pointer',
                         }}
                       />
@@ -724,7 +724,7 @@ export default function DealsPage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Win Probability (%)
                   </label>
                   <input
@@ -740,7 +740,7 @@ export default function DealsPage() {
 
               {stageModalMode === 'add' && isOwner && (
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Column Visibility Scope
                   </label>
                   <select
@@ -756,7 +756,7 @@ export default function DealsPage() {
 
               {stageModalMode === 'edit' && editingStage && (
                 <div>
-                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                     Column Position on Board
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -779,7 +779,7 @@ export default function DealsPage() {
               )}
 
               {stageError && (
-                <div style={{ fontSize: '0.8125rem', color: '#dc2626', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--danger-text)', fontWeight: 500 }}>
                   {stageError}
                 </div>
               )}
@@ -815,11 +815,11 @@ export default function DealsPage() {
         >
           <div
             className="crm-card"
-            style={{ width: '100%', maxWidth: 440, padding: '1.35rem', background: '#ffffff' }}
+            style={{ width: '100%', maxWidth: 440, padding: '1.35rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 Delete Column "{deleteStageTarget.name}"
               </h3>
               <button
@@ -832,12 +832,12 @@ export default function DealsPage() {
               </button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '0.9rem', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.9rem', lineHeight: 1.5 }}>
               All deals currently inside <strong>{deleteStageTarget.name}</strong> will be safely reassigned before deletion. Zero deals will be deleted or lost.
             </p>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
                 Move Deals To Stage
               </label>
               <select
@@ -860,7 +860,7 @@ export default function DealsPage() {
             </div>
 
             {stageError && (
-              <div style={{ fontSize: '0.8125rem', color: '#dc2626', fontWeight: 500, marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--danger-text)', fontWeight: 500, marginBottom: '0.75rem' }}>
                 {stageError}
               </div>
             )}

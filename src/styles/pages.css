@@ -333,9 +333,9 @@
 }
 
 .kanban-column.drag-over {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  box-shadow: 0 0 0 2px var(--primary-glow);
 }
 
 .kanban-col-actions {
@@ -353,29 +353,29 @@
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .kanban-icon-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #cbd5e1;
+  background: var(--surface-hover);
+  color: var(--text-main);
+  border-color: var(--border-default);
 }
 
 .kanban-icon-btn.danger:hover {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
 }
 
 .kanban-personal-badge {
   font-size: 0.65rem;
   font-weight: 600;
-  color: #0284c7;
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
+  color: var(--info-text);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
   padding: 0.1rem 0.4rem;
   border-radius: 9999px;
 }

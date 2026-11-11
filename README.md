@@ -16,34 +16,63 @@ Dakini CRM provides automated pipeline management, multi-tenant row-level securi
 The application runs as 5 coordinated services:
 
 ```text
+
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
+
 │                                 LAYER 1: FRONTEND SPA                                  │
+
 │                             React 18 + Vite Dev Server                                 │
+
 │                                http://localhost:3000                                   │
+
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
+
                                             │ Vite Reverse Proxy
+
                                             │ (/v1/* & /analytics/*)
+
                                             ▼
+
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
+
 │                              LAYER 2: EDGE / API GATEWAY                               │
+
 │                         FastAPI — http://localhost:8080                                │
+
 │       (JWT Auth, Origin Validation, Sliding-Window Rate Limiting, Correlation ID)      │
+
 └───────────────┬───────────────────────────┬────────────────────────────┬───────────────┘
+
                 │ Proxy /v1/*               │ Internal API Call          │ Proxy /v1/analytics/*
+
                 ▼                           ▼                            ▼
+
 ┌───────────────────────────────┐ ┌───────────────────────────┐ ┌─────────────────────────┐
+
 │   LAYER 3: APPLICATION API    │ │  LAYER 5: AI SERVICE      │ │LAYER 9: ANALYTICS ENGINE│
+
 │ FastAPI — http://localhost:8000│ │FastAPI — localhost:8005  │ │FastAPI — localhost:8090 │
+
 │ (RBAC, Tenancy, Leads, Deals) │ │(LLM Copilot, Transcripts) │ │(KPI Aggregations, Funnel│
+
 └───────────────┬───────────────┘ └─────────────┬─────────────┘ └────────────┬────────────┘
+
                 │ SQLAlchemy+Psycopg (Port: 5432)│ Asyncpg (Port: 5432)       │ Asyncpg (Port: 6543)
+
                 └───────────────────────────────┼────────────────────────────┘
+
                                                 ▼
+
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
+
 │                           DATABASE & DATA LAYER (LAYER 6)                              │
+
 │                 Supabase PostgreSQL 15 (AWS Tokyo `aws-0-ap-northeast-1`)               │
-│                     Relational Schema + Multi-Tenant Row-Level Security                │
+
+│                  33 Normalized Relational Tables + Row-Level Security                  │
+
 └────────────────────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### Service Registry & Health Endpoints

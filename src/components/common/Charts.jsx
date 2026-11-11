@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
-import { useNavigate } from 'react-router-dom';
-=======
 import { formatRevenueMonthLabel } from '../../utils/revenueTrend';
->>>>>>> 6735fd9 (Fix dashboard analytics and leads drilldown)
 
 // ==========================================================================
 // 1. Interactive Sparkline
@@ -135,114 +131,6 @@ export function RevenueTrendChart({ data = [] }) {
     </div>
   );
 }
-<<<<<<< HEAD
-export function PipelineStageChart({ data = [], onStageClick }) {
-  const navigate = useNavigate();
-  const [activeStage, setActiveStage] = useState(null);
-  const palette = ["#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8", "#cbd5e1"];
-  const stages = data.map((item, index) => ({
-    name: String(item.stage || 'Unspecified'),
-    value: Number(item.value) || 0,
-    count: Number(item.opportunity_count) || 0,
-    color: palette[index % palette.length]
-  }));
-
-  const maxValue = Math.max(1, ...stages.map((stage) => stage.value)) * 1.12;
-  const maxBarHeight = 130;
-
-  const handleStageSelect = (stageName) => {
-    if (typeof onStageClick === 'function') {
-      onStageClick(stageName);
-    } else {
-      navigate(`/deals?stage=${encodeURIComponent(stageName)}`, { state: { stage: stageName } });
-    }
-  };
-
-  return (
-    <div style={{ width: '100%' }}>
-      {stages.length === 0 ? <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>No open pipeline data available.</div> : <><div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        height: 180,
-        gap: '0.75rem',
-        padding: '0 0.5rem 0.5rem 0.5rem',
-        borderBottom: '1px solid var(--border-default)'
-      }}>
-        {stages.map((stg, i) => {
-          const height = (stg.value / maxValue) * maxBarHeight;
-          const isHovered = activeStage === i;
-          return (
-            <div
-              key={stg.name}
-              onMouseEnter={() => setActiveStage(i)}
-              onMouseLeave={() => setActiveStage(null)}
-              onClick={() => handleStageSelect(stg.name)}
-              title={`Click to open ${stg.name} section (${stg.count} opportunities • $${stg.value.toLocaleString()})`}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                height: '100%',
-                cursor: 'pointer'
-              }}
-            >
-              <span style={{
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: isHovered ? 'var(--primary)' : 'var(--text-muted)',
-                marginBottom: 6,
-                opacity: isHovered ? 1 : 0.85,
-                transition: 'all 0.15s ease'
-              }}>
-                ${(stg.value / 1000).toFixed(0)}k
-              </span>
-              <div
-                style={{
-                  width: '100%',
-                  maxWidth: 38,
-                  height: `${height}px`,
-                  background: isHovered ? 'linear-gradient(180deg, #38bdf8 0%, #2563eb 100%)' : stg.color,
-                  borderRadius: '6px 6px 2px 2px',
-                  boxShadow: isHovered ? '0 4px 14px rgba(37, 99, 235, 0.4)' : 'none',
-                  transform: isHovered ? 'scaleY(1.05)' : 'scaleY(1)',
-                  transformOrigin: 'bottom',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Stage Labels */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.5rem', padding: '0 0.5rem' }}>
-        {stages.map((stg, i) => {
-          const isHovered = activeStage === i;
-          return (
-            <div
-              key={stg.name}
-              style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}
-              onClick={() => handleStageSelect(stg.name)}
-              title={`Click to open ${stg.name} section`}
-            >
-              <span style={{
-                fontSize: '0.6875rem',
-                fontWeight: isHovered ? 700 : 600,
-                color: isHovered ? 'var(--primary)' : 'var(--text-body)',
-                whiteSpace: 'nowrap',
-                textDecoration: isHovered ? 'underline' : 'none',
-                transition: 'all 0.15s ease'
-              }}>
-                {stg.name}
-              </span>
-            </div>
-          );
-        })}
-      </div></>}
-=======
 export function PipelineStageChart({ data = [], deals = [], onStageClick }) {
   const STAGES = ['Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
   const COLORS = { Qualified: '#2563eb', Proposal: '#7c3aed', Negotiation: '#f59e0b', Won: '#10b981', Lost: '#ef4444' };
@@ -315,7 +203,6 @@ export function PipelineStageChart({ data = [], deals = [], onStageClick }) {
         })}
       </div>
       <p style={{ margin: '10px 0 0', fontSize: 11, color: '#64748b' }}>Deal count and value by every pipeline stage · Select a stage to open its deals.</p>
->>>>>>> 6735fd9 (Fix dashboard analytics and leads drilldown)
     </div>
   );
 }

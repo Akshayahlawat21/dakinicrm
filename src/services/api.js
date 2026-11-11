@@ -202,7 +202,6 @@ export const gatewayApi = {
   /**
    * E3: Leads resource
    */
-<<<<<<< HEAD
   async getLeads(params = {}) {
     const cleanParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
@@ -210,12 +209,6 @@ export const gatewayApi = {
     const query = new URLSearchParams(cleanParams).toString();
     const endpoint = query ? `/leads?${query}` : '/leads';
     return gatewayFetch(endpoint, { method: 'GET' });
-=======
-  async getLeads({ skip = 0, limit = 50, status } = {}) {
-    const query = new URLSearchParams({ skip: String(Math.max(0, Number(skip) || 0)), limit: String(Math.min(100, Math.max(1, Number(limit) || 50))) });
-    if (status && status !== 'All') query.set('status', status);
-    return gatewayFetch(`/leads?${query.toString()}`, { method: 'GET' });
->>>>>>> 6735fd9 (Fix dashboard analytics and leads drilldown)
   },
 
   async createLead(leadData) {

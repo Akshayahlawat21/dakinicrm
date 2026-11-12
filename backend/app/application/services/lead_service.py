@@ -16,6 +16,7 @@ from backend.app.data.repositories.deal_repository import DealRepository
 from backend.app.data.repositories.team_repository import TeamRepository
 from backend.app.data.repositories.user_repository import UserRepository
 from backend.app.data.repositories.audit_repository import AuditLogRepository
+from backend.app.data.repositories.pipeline_repository import PipelineRepository
 from backend.app.data.exceptions import RecordNotFoundError
 
 
@@ -35,6 +36,7 @@ class LeadService:
         self.team_repo = TeamRepository(session)
         self.user_repo = UserRepository(session)
         self.audit_repo = AuditLogRepository(session)
+        self.pipeline_repo = PipelineRepository(session)
 
     async def get_lead(self, ctx: RequestContext, lead_id: str | uuid.UUID) -> Lead:
         try:
@@ -719,10 +721,17 @@ class LeadService:
             self.session.add(opp)
             await self.session.flush()
 
+            default_pipeline = await self.pipeline_repo.ensure_default_pipeline(ctx.tenant_id)
+            qualified_stage = await self.pipeline_repo.resolve_org_stage_by_name(
+                ctx.tenant_id, "Qualified", default_pipeline.id
+            )
+
             deal = Deal(
                 organization_id=ctx.tenant_uuid,
                 account_id=account.id,
                 opportunity_id=opp.id,
+                pipeline_id=default_pipeline.id,
+                stage_id=qualified_stage.id if qualified_stage else None,
                 name=deal_title,
                 amount=deal_amount,
                 stage="Qualified",

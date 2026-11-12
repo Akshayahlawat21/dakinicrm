@@ -1045,8 +1045,8 @@ export default function QuickCreateModal() {
 
                 {quickCreateType === 'lead' && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: 4 }}>
-                      Campaign <span style={{ color: '#64748b', fontWeight: 400 }}>(Optional)</span>
+                    <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)', display: 'block', marginBottom: 4 }}>
+                      Campaign <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
                     </label>
                     <select
                       name="campaignId"
@@ -1059,7 +1059,7 @@ export default function QuickCreateModal() {
                         <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
                       ))}
                     </select>
-                    <small style={{ color: '#64748b', display: 'block', marginTop: 4 }}>
+                    <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
                       UTM campaign from the landing-page URL is matched automatically when available.
                     </small>
                   </div>

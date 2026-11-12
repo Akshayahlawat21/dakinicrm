@@ -400,9 +400,9 @@ export default function LeadsPage() {
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       {dashboardFilterContext && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', marginBottom: 14, border: '1px solid #bfdbfe', borderRadius: 10, background: '#eff6ff', color: '#1e40af', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', marginBottom: 14, border: '1px solid var(--border-active)', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary-dark)', fontSize: 13 }}>
           <span>{dashboardLeadLoading ? 'Loading matching leads from the database…' : dashboardLeadError || `Showing ${dashboardLeads?.length ?? 0} database records matching Dashboard filters`}</span>
-          <button type="button" onClick={() => { setDashboardFilterContext(null); setDashboardLeads(null); setDashboardLeadError(''); setLeadPage(0); }} style={{ border: 0, background: 'transparent', color: '#1d4ed8', fontWeight: 700, cursor: 'pointer' }}>Clear filter</button>
+          <button type="button" onClick={() => { setDashboardFilterContext(null); setDashboardLeads(null); setDashboardLeadError(''); setLeadPage(0); }} style={{ border: 0, background: 'transparent', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}>Clear filter</button>
         </div>
       )}
       {/* Header */}
@@ -932,7 +932,7 @@ export default function LeadsPage() {
               })}
             </tbody>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: 12 }}>
             <span>Showing {filteredLeads.length ? leadPage * LEADS_PAGE_SIZE + 1 : 0}–{Math.min((leadPage + 1) * LEADS_PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length.toLocaleString()} leads</span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-secondary btn-sm" disabled={leadPage === 0} onClick={() => setLeadPage((page) => Math.max(0, page - 1))}>Previous</button>

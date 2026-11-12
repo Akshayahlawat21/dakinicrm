@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import LoadingSymbol from '../components/common/LoadingSymbol';
@@ -94,6 +94,26 @@ export default function DealsPage() {
 
   const [draggedDealId, setDraggedDealId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
+  const kanbanBoardRef = useRef(null);
+  const [kanbanScroll, setKanbanScroll] = useState({ scrollLeft: 0, maxScroll: 0 });
+
+  const syncKanbanScroll = useCallback(() => {
+    const el = kanbanBoardRef.current;
+    if (!el) return;
+    const maxScroll = Math.max(0, Math.round(el.scrollWidth - el.clientWidth));
+    const scrollLeft = Math.max(0, Math.min(maxScroll, Math.round(el.scrollLeft)));
+    setKanbanScroll((prev) =>
+      prev.scrollLeft === scrollLeft && prev.maxScroll === maxScroll
+        ? prev
+        : { scrollLeft, maxScroll }
+    );
+  }, []);
+
+  const scrollKanbanBy = useCallback((delta) => {
+    const el = kanbanBoardRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  }, []);
 
   const activePipelineObj = pipelines.find((p) => p.is_default) || pipelines[0] || null;
   const activePipelineId = activePipelineObj?.id || null;
@@ -131,12 +151,14 @@ export default function DealsPage() {
       const nextParams = new URLSearchParams(searchParams);
       if (!stage) {
         nextParams.delete('stage');
+        nextParams.delete('from');
       } else {
         const normalized = normalizeStage(stage);
         if (CANONICAL_STAGES.includes(normalized)) {
           nextParams.set('stage', normalized);
         } else {
           nextParams.delete('stage');
+          nextParams.delete('from');
         }
       }
       setSearchParams(nextParams, { replace: true });
@@ -172,6 +194,25 @@ export default function DealsPage() {
     });
     return matching.length > 0 ? matching : activeColumns;
   }, [activeColumns, selectedStage]);
+
+  useEffect(() => {
+    const el = kanbanBoardRef.current;
+    syncKanbanScroll();
+    const frameId = window.requestAnimationFrame(syncKanbanScroll);
+    window.addEventListener('resize', syncKanbanScroll);
+
+    let observer;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(syncKanbanScroll);
+      observer.observe(el);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', syncKanbanScroll);
+      observer?.disconnect();
+    };
+  }, [displayedColumns.length, isLoadingData, syncKanbanScroll]);
 
   const resolveDealColumnId = (deal) => {
     if (!deal) return activeColumns[0]?.id;
@@ -400,6 +441,7 @@ export default function DealsPage() {
         onFilteredDealsChange={handleFilteredDealsChange}
         selectedStage={selectedStage}
         onSelectStage={handleSelectStage}
+        hideOverview={Boolean(selectedStage && searchParams.get('from') === 'dashboard')}
       />
 
       {/* User Friendly Permission Alert */}
@@ -554,8 +596,61 @@ export default function DealsPage() {
             </div>
           )}
 
+          {/* Horizontal Kanban Navigation Buttons */}
+          {kanbanScroll.maxScroll > 4 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '0.5rem',
+                marginBottom: '0.75rem',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                aria-label="Scroll Kanban left"
+                title="Scroll pipeline columns left"
+                disabled={kanbanScroll.scrollLeft <= 2}
+                onClick={() => scrollKanbanBy(-320)}
+                style={{
+                  padding: '0.4rem 0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  opacity: kanbanScroll.scrollLeft <= 2 ? 0.45 : 1,
+                  cursor: kanbanScroll.scrollLeft <= 2 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                aria-label="Scroll Kanban right"
+                title="Scroll pipeline columns right"
+                disabled={kanbanScroll.scrollLeft >= kanbanScroll.maxScroll - 2}
+                onClick={() => scrollKanbanBy(320)}
+                style={{
+                  padding: '0.4rem 0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  opacity: kanbanScroll.scrollLeft >= kanbanScroll.maxScroll - 2 ? 0.45 : 1,
+                  cursor: kanbanScroll.scrollLeft >= kanbanScroll.maxScroll - 2 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Kanban Board */}
-          <div className="deals-kanban-board">
+          <div
+            ref={kanbanBoardRef}
+            onScroll={syncKanbanScroll}
+            className="deals-kanban-board"
+          >
         {displayedColumns.map((col) => {
           const stageDeals = visibleDeals.filter((d) => resolveDealColumnId(d) === col.id);
           const stageValue = stageDeals.reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);

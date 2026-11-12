@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { analyticsApi } from '../services/analyticsApi';
 import { matchesDealFilters, matchesLeadFilters } from '../utils/dealAnalyticsFilters';
 import { useCRM } from '../context/CRMContext';

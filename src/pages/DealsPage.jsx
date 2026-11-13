@@ -344,8 +344,13 @@ export default function DealsPage() {
     setStageModalParent(parentCol);
     setEditingStage(null);
     setStageNameInput('');
-    setStageColorInput('#06b6d4');
-    setStageProbInput(parentCol?.win_probability ?? 50);
+    const defaultColor = parentCol?.is_won
+      ? '#10b981'
+      : parentCol?.is_lost
+        ? '#ef4444'
+        : '#06b6d4';
+    setStageColorInput(defaultColor);
+    setStageProbInput(parentCol?.is_won ? 100 : parentCol?.is_lost ? 0 : (parentCol?.win_probability ?? 50));
     setStageScopeInput('personal');
     setStageError('');
   };
@@ -374,12 +379,17 @@ export default function DealsPage() {
     setStageError('');
 
     if (stageModalMode === 'add') {
+      const resolvedProb = stageModalParent?.is_won
+        ? 100
+        : stageModalParent?.is_lost
+          ? 0
+          : (stageProbInput === '' ? 50 : Number(stageProbInput));
       const res = await createCustomStage(activePipelineId, {
         name: trimmed,
         parent_stage_id: stageModalParent?.id || null,
         parent_base_stage: stageModalParent?.parent_base_stage || stageModalParent?.name || 'Qualified',
         color: stageColorInput,
-        win_probability: Number(stageProbInput) || 50,
+        win_probability: resolvedProb,
         scope: isOwner ? stageScopeInput : 'personal',
       });
       setIsSavingStage(false);
@@ -498,7 +508,7 @@ export default function DealsPage() {
     })
     .reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
 
-  const renderDealCard = (deal, col, subStages = []) => {
+  const renderDealCard = (deal, col, subStages = [], isSubStageCard = false) => {
     const isStuck = deal.daysInStage >= 5 && !col.is_won && !col.is_lost;
     const isCardSelected = selectedDeal?.id === deal.id;
     const dealSubStage = subStages.find(
@@ -515,27 +525,27 @@ export default function DealsPage() {
           setDragOverColId(null);
           setDragOverSubStageId(null);
         }}
-        className={`deal-card ${isStuck ? 'stuck-amber' : ''}`}
+        className={`deal-card ${isSubStageCard ? 'substage-card' : ''} ${isStuck ? 'stuck-amber' : ''}`}
         style={{
           border: isCardSelected ? '2px solid var(--primary)' : undefined,
           boxShadow: isCardSelected ? '0 4px 14px var(--primary-glow)' : undefined,
         }}
         onClick={() => setSelectedDeal(deal)}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isSubStageCard ? '0.3rem' : '0.45rem' }}>
+          <span style={{ fontSize: isSubStageCard ? '0.7rem' : '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
             {deal.company}
           </span>
           {isStuck && (
-            <span className="badge badge-amber" title="Deal stuck for >5 days">
-              <AlertTriangle size={11} />
+            <span className="badge badge-amber" style={isSubStageCard ? { fontSize: '0.625rem', padding: '0.1rem 0.35rem' } : undefined} title="Deal stuck for >5 days">
+              <AlertTriangle size={isSubStageCard ? 10 : 11} />
               {deal.daysInStage}d stuck
             </span>
           )}
         </div>
 
-        {/* In-Card Sub-stage Selector Badge & Menu */}
-        {subStages.length > 0 && (
+        {/* In-Card Sub-stage Selector Badge & Menu (only when not already in dedicated sub-stage box) */}
+        {subStages.length > 0 && !isSubStageCard && (
           <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.45rem' }}>
             <button
               type="button"
@@ -681,15 +691,21 @@ export default function DealsPage() {
           </div>
         )}
 
-        <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.3, marginBottom: '0.5rem' }}>
+        <h4 style={{
+          fontSize: isSubStageCard ? '0.8125rem' : '0.875rem',
+          fontWeight: 800,
+          color: 'var(--text-main)',
+          lineHeight: 1.25,
+          marginBottom: isSubStageCard ? '0.35rem' : '0.5rem',
+        }}>
           {deal.name}
         </h4>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isSubStageCard ? '0.45rem' : '0.75rem' }}>
+          <span style={{ fontSize: isSubStageCard ? '0.925rem' : '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
             ${deal.value.toLocaleString()}
           </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: isSubStageCard ? '0.7rem' : '0.75rem', color: 'var(--text-muted)' }}>
             {(deal.display_probability ?? deal.probability) != null
               ? `${deal.display_probability ?? deal.probability}% prob.`
               : normalizeStage(deal.stage) === 'Won'
@@ -706,12 +722,23 @@ export default function DealsPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           borderTop: '1px solid var(--border-default)',
-          paddingTop: '0.5rem',
-          fontSize: '0.75rem',
+          paddingTop: isSubStageCard ? '0.35rem' : '0.5rem',
+          fontSize: isSubStageCard ? '0.7rem' : '0.75rem',
           color: 'var(--text-muted)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.625rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              width: isSubStageCard ? 18 : 20,
+              height: isSubStageCard ? 18 : 20,
+              borderRadius: '50%',
+              background: 'var(--primary-light)',
+              color: 'var(--primary)',
+              fontSize: isSubStageCard ? '0.55rem' : '0.625rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
               {(deal.owner || 'SR').split(' ').map(n => n[0]).join('')}
             </div>
             <span>{deal.owner}</span>
@@ -719,7 +746,7 @@ export default function DealsPage() {
 
           <button
             className="btn btn-ghost btn-sm"
-            style={{ padding: '0.15rem 0.35rem' }}
+            style={{ padding: isSubStageCard ? '0.1rem 0.25rem' : '0.15rem 0.35rem' }}
             onClick={(e) => {
               e.stopPropagation();
               const curColId = resolveDealColumnId(deal);
@@ -1030,7 +1057,7 @@ export default function DealsPage() {
           const colValue = allParentDeals.reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
           const colBaseStage = resolveColumnBaseStage(col);
           const isCanonicalCol = CANONICAL_STAGES.includes(colBaseStage);
-          const canAddSubColumn = Boolean(activePipelineId) && !col.is_won && !col.is_lost;
+          const canAddSubColumn = Boolean(activePipelineId);
           const canManageColumn = Boolean(activePipelineId) && !col.is_system && (col.scope === 'personal' || isOwner);
           const isDragTarget = dragOverColId === col.id;
 
@@ -1283,7 +1310,7 @@ export default function DealsPage() {
                                   Drop deals here
                                 </div>
                               ) : (
-                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages))
+                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages, true))
                               )}
                             </div>
                           )}
@@ -1336,7 +1363,7 @@ export default function DealsPage() {
                         </div>
                         {!isUnassignedCollapsed && (
                           <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages))}
+                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages, true))}
                           </div>
                         )}
                       </div>
@@ -1484,7 +1511,7 @@ export default function DealsPage() {
                     Accent Color
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', paddingTop: 4 }}>
-                    {['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'].map((hex) => (
+                    {['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'].map((hex) => (
                       <button
                         key={hex}
                         type="button"

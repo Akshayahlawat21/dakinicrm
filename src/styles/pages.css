@@ -435,6 +435,19 @@
 .deal-card.stuck-amber {
   border-left: 3.5px solid var(--warning);
 }
+.deal-card.substage-card {
+  padding: 0.72rem 0.8rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+[data-theme="dark"] .deal-card.substage-card {
+  background: var(--surface-soft);
+  border-color: rgba(51, 65, 85, 0.75);
+}
+.deal-card.substage-card:hover {
+  transform: translateY(-1px);
+}
 
 .kanban-substage-box {
   background: var(--bg-card);

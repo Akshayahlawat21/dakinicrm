@@ -111,20 +111,24 @@ async def test_per_user_custom_columns_isolation_and_guards(client: AsyncClient,
     assert [s["name"] for s in mgr_stages] == ["Qualified", "Proposal", "Negotiation", "Won", "Lost"]
     assert [s["name"] for s in owner_stages] == ["Qualified", "Proposal", "Negotiation", "Won", "Lost"]
 
-    # 5. Guardrail: Cannot add column inside Won or Lost
+    # 5. Won and Lost sub-columns are supported: inherit is_won/is_lost and probabilities
     won_attempt = await client.post(
         f"/v1/pipelines/{pipe_id}/stages",
         json={"name": "Post Won", "parent_stage_id": stage_by_name["Won"]["id"]},
         headers=sales1_h,
     )
-    assert won_attempt.status_code == 400
+    assert won_attempt.status_code == 201
+    assert won_attempt.json()["data"]["is_won"] is True
+    assert won_attempt.json()["data"]["win_probability"] == 100
 
     lost_attempt = await client.post(
         f"/v1/pipelines/{pipe_id}/stages",
         json={"name": "Post Lost", "parent_stage_id": stage_by_name["Lost"]["id"]},
         headers=sales1_h,
     )
-    assert lost_attempt.status_code == 400
+    assert lost_attempt.status_code == 201
+    assert lost_attempt.json()["data"]["is_lost"] is True
+    assert lost_attempt.json()["data"]["win_probability"] == 0
 
     # 6. Guardrail: Duplicate name on same user's board rejected
     dup_attempt = await client.post(

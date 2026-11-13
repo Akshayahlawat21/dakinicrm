@@ -114,11 +114,21 @@ class PipelineService:
 
         if not parent_stage:
             raise BadRequestError("Could not resolve a parent stage for this pipeline.")
-        if parent_stage.is_won or parent_stage.is_lost:
-            raise BadRequestError("Cannot create custom sub-columns inside closed terminal stages (Won / Lost).")
 
         resolved_base_stage = parent_stage.parent_base_stage or parent_stage.name
-        resolved_prob = win_probability if win_probability is not None else parent_stage.win_probability
+        resolved_is_won = bool(parent_stage.is_won)
+        resolved_is_lost = bool(parent_stage.is_lost)
+
+        if resolved_is_won:
+            resolved_prob = win_probability if win_probability is not None else 100
+            default_color = "#10b981"
+        elif resolved_is_lost:
+            resolved_prob = win_probability if win_probability is not None else 0
+            default_color = "#ef4444"
+        else:
+            resolved_prob = win_probability if win_probability is not None else parent_stage.win_probability
+            default_color = "#06b6d4"
+
         new_order = await self._allocate_order_index_after(visible_stages, parent_stage, ctx.user_uuid)
 
         new_stage = PipelineStage(
@@ -131,12 +141,12 @@ class PipelineService:
             parent_base_stage=resolved_base_stage,
             name=clean_name,
             order_index=new_order,
-            color=color or "#06b6d4",
+            color=color or default_color,
             win_probability=resolved_prob,
             qualification_tags=list(qualification_tags or []),
             is_system=False,
-            is_won=False,
-            is_lost=False,
+            is_won=resolved_is_won,
+            is_lost=resolved_is_lost,
         )
         self.session.add(new_stage)
         await self.session.flush()

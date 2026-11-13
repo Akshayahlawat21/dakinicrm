@@ -17,6 +17,26 @@ logger = logging.getLogger("gateway.proxy")
 
 router = APIRouter(prefix="/v1", tags=["Layer 3 API Proxy"])
 
+
+def upstream_timeout_for_path(path: str) -> float:
+    """Return a route-appropriate timeout while retaining the configured default.
+
+    AI chat may need multiple model round trips around controlled database tools.
+    Import history can perform role/team lookups before its final indexed query.
+    """
+    normalized = (path or "").strip("/").lower()
+    if normalized == "agent" or normalized.startswith("agent/"):
+        return max(
+            float(settings.UPSTREAM_TIMEOUT_SECONDS),
+            float(settings.AI_AGENT_UPSTREAM_TIMEOUT_SECONDS),
+        )
+    if normalized == "leads/imports" or normalized.startswith("leads/imports/"):
+        return max(
+            float(settings.UPSTREAM_TIMEOUT_SECONDS),
+            float(settings.LEAD_IMPORT_HISTORY_UPSTREAM_TIMEOUT_SECONDS),
+        )
+    return float(settings.UPSTREAM_TIMEOUT_SECONDS)
+
 # Known registered API resource modules (OpenAPI contract)
 REGISTERED_RESOURCES: Set[str] = {
     "leads",
@@ -186,9 +206,11 @@ async def proxy_to_upstream(path: str, request: Request) -> Response:
 
     body = await request.body()
 
-    # 5. Forward request to Layer 3 upstream
+    # 5. Forward request to Layer 3 upstream. Long-running AI and import-history
+    # routes get explicit budgets even when an older .env still sets 15 seconds.
+    route_timeout_seconds = upstream_timeout_for_path(path)
     try:
-        async with httpx.AsyncClient(timeout=settings.UPSTREAM_TIMEOUT_SECONDS) as client:
+        async with httpx.AsyncClient(timeout=route_timeout_seconds) as client:
             upstream_resp = await client.request(
                 method=request.method,
                 url=target_url,
@@ -233,9 +255,9 @@ async def proxy_to_upstream(path: str, request: Request) -> Response:
 
     except httpx.ReadTimeout:
         logger.error(
-            f"Upstream Layer 3 read timeout ({target_url}) after {settings.UPSTREAM_TIMEOUT_SECONDS}s",
+            f"Upstream Layer 3 read timeout ({target_url}) after {route_timeout_seconds}s",
             extra={"correlation_id": correlation_id},
         )
         raise GatewayTimeoutException(
-            message=f"Upstream service timed out after {settings.UPSTREAM_TIMEOUT_SECONDS} seconds"
+            message=f"Upstream service timed out after {route_timeout_seconds} seconds"
         )

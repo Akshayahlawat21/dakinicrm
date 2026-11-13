@@ -1110,7 +1110,7 @@ export default function LeadsPage() {
           style={{
             position: 'fixed',
             top: 64,
-            right: isAgentDockOpen ? 360 : 0,
+            right: isAgentDockOpen ? 'min(100vw, clamp(440px, 44vw, 540px))' : 0,
             bottom: 0,
             width: 380,
             maxWidth: 'calc(100vw - 380px)',
@@ -1217,7 +1217,7 @@ export default function LeadsPage() {
           style={{
             position: 'fixed',
             top: 64,
-            right: isAgentDockOpen ? 360 : 0,
+            right: isAgentDockOpen ? 'min(100vw, clamp(440px, 44vw, 540px))' : 0,
             bottom: 0,
             width: 500,
             maxWidth: 'calc(100vw - 380px)',

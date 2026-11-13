@@ -594,10 +594,10 @@ export const gatewayApi = {
     return gatewayFetch(endpoint, { method: 'GET' });
   },
 
-  async sendAgentMessage(message, context = {}) {
+  async sendAgentMessage(message, history = []) {
     return gatewayFetch('/agent', {
       method: 'POST',
-      body: JSON.stringify({ message, context }),
+      body: JSON.stringify({ message, history }),
       headers: { 'X-Mock-Fallback': 'false' },
     });
   },

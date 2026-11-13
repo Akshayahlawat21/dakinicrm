@@ -508,7 +508,7 @@ export default function DealsPage() {
     })
     .reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
 
-  const renderDealCard = (deal, col, subStages = []) => {
+  const renderDealCard = (deal, col, subStages = [], isInsideSubStage = false) => {
     const isStuck = deal.daysInStage >= 5 && !col.is_won && !col.is_lost;
     const isCardSelected = selectedDeal?.id === deal.id;
     const dealSubStage = subStages.find(
@@ -545,7 +545,7 @@ export default function DealsPage() {
         </div>
 
         {/* In-Card Sub-stage Selector Badge & Menu */}
-        {subStages.length > 0 && (
+        {subStages.length > 0 && !isInsideSubStage && (
           <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.45rem' }}>
             <button
               type="button"
@@ -1288,9 +1288,9 @@ export default function DealsPage() {
                             </div>
                           </div>
 
-                          {/* Sub-stage Box Cards (Full size like southerncompany) */}
+                          {/* Sub-stage Box Cards (Wide & sleek like southerncompany) */}
                           {!isSubCollapsed && (
-                            <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: 60 }}>
+                            <div style={{ padding: '0.65rem 0.45rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', minHeight: 60 }}>
                               {dealsInSub.length === 0 ? (
                                 <div
                                   style={{
@@ -1306,7 +1306,7 @@ export default function DealsPage() {
                                   Drop deals here
                                 </div>
                               ) : (
-                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages))
+                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages, true))
                               )}
                             </div>
                           )}
@@ -1379,8 +1379,8 @@ export default function DealsPage() {
                           </div>
                         </div>
                         {!isUnassignedCollapsed && (
-                          <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages))}
+                          <div style={{ padding: '0.65rem 0.45rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages, true))}
                           </div>
                         )}
                       </div>

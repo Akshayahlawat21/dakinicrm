@@ -1,4 +1,5 @@
 import io
+import os
 import re
 import csv
 import copy
@@ -101,16 +102,82 @@ class LeadImportService:
             updated_at=now,
         )
 
+    @staticmethod
+    def _parse_file_rows(file_content: bytes, file_name: str) -> List[List[str]]:
+        ext = os.path.splitext(file_name or "")[1].lower()
+
+        def _format_cell(val: Any) -> str:
+            if val is None:
+                return ""
+            if isinstance(val, float) and val.is_integer():
+                return str(int(val))
+            return str(val).strip()
+
+        if ext == ".xlsx":
+            try:
+                import openpyxl
+            except ImportError:
+                raise BadRequestError("openpyxl is required to parse .xlsx files.")
+            try:
+                wb = openpyxl.load_workbook(io.BytesIO(file_content), read_only=True, data_only=True)
+                sheet = wb.active
+                if sheet is None:
+                    return []
+                rows = []
+                for row in sheet.iter_rows(values_only=True):
+                    rows.append([_format_cell(c) for c in row])
+                return rows
+            except Exception as e:
+                raise BadRequestError(f"Failed to parse Excel (.xlsx) file: {str(e)}")
+
+        elif ext == ".xls":
+            try:
+                import xlrd
+            except ImportError:
+                raise BadRequestError("xlrd is required to parse .xls files.")
+            try:
+                book = xlrd.open_workbook(file_contents=file_content)
+                sheet = book.sheet_by_index(0)
+                rows = []
+                for r_idx in range(sheet.nrows):
+                    row_vals = sheet.row_values(r_idx)
+                    rows.append([_format_cell(c) for c in row_vals])
+                return rows
+            except Exception as e:
+                raise BadRequestError(f"Failed to parse Excel (.xls) file: {str(e)}")
+
+        else:
+            # Default to CSV decoder
+            try:
+                text = file_content.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                try:
+                    text = file_content.decode("utf-8")
+                except UnicodeDecodeError:
+                    text = file_content.decode("latin-1")
+
+            csv_reader = csv.reader(io.StringIO(text))
+            return [list(r) for r in csv_reader]
+
     async def import_leads_csv(
         self,
         ctx: RequestContext,
         file_content: bytes,
         file_name: str,
     ) -> Dict[str, Any]:
+        """Backward-compatible alias for import_leads_file."""
+        return await self.import_leads_file(ctx, file_content, file_name)
+
+    async def import_leads_file(
+        self,
+        ctx: RequestContext,
+        file_content: bytes,
+        file_name: str,
+    ) -> Dict[str, Any]:
         """
-        Executes end-to-end bulk lead import:
+        Executes end-to-end bulk lead import for CSV, XLSX, and XLS files:
         1. Creates batch audit record (status: 'processing')
-        2. Streams & parses CSV rows
+        2. Streams & parses rows
         3. Validates required fields and formatting
         4. Detects intra-file and database-level duplicates (product-aware)
         5. Batch-inserts clean leads (chunks of 500)
@@ -136,20 +203,11 @@ class LeadImportService:
         self.session.add(batch)
         await self.session.flush()
 
-        # 2. Decode content (supports utf-8-sig for Excel CSV BOM, utf-8, latin-1 fallback)
-        try:
-            text = file_content.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            try:
-                text = file_content.decode("utf-8")
-            except UnicodeDecodeError:
-                text = file_content.decode("latin-1")
-
-        csv_reader = csv.reader(io.StringIO(text))
-        rows = list(csv_reader)
+        # 2. Parse file rows (supports CSV, XLSX, and XLS)
+        rows = self._parse_file_rows(file_content, file_name)
         if not rows or len(rows) < 2:
             batch.status = "failed"
-            batch.error_log = [{"row": 0, "error": "CSV file is empty or missing data rows."}]
+            batch.error_log = [{"row": 0, "error": "File is empty or missing data rows."}]
             await self.session.commit()
             raise BadRequestError("Uploaded file is empty or missing header/data rows.")
 

@@ -141,11 +141,11 @@ async def test_bulk_import_rejects_non_csv_and_empty_files(client: AsyncClient, 
         "X-Correlation-ID": "test_bad_file",
     }
 
-    # Non-CSV
+    # Non-CSV/XLSX/XLS
     files = {"file": ("data.json", b'{"name": "test"}', "application/json")}
     resp = await client.post("/v1/leads/bulk-import", files=files, headers=headers)
     assert resp.status_code == 400
-    assert "Only CSV files" in resp.text
+    assert "Only CSV, XLSX, and XLS files" in resp.text
 
     # Empty CSV
     files_empty = {"file": ("empty.csv", b"", "text/csv")}
@@ -273,3 +273,94 @@ async def test_allow_duplicate_leads_selective_and_bulk(client: AsyncClient, db_
     leads_stmt = select(Lead).where(Lead.import_batch_id == uuid.UUID(batch_id))
     leads = (await db_session.execute(leads_stmt)).scalars().all()
     assert len(leads) == 3
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_xlsx_file_success(client: AsyncClient, db_session: AsyncSession, seed_data):
+    """Verifies that modern Excel .xlsx files are parsed and leads are imported correctly."""
+    import openpyxl
+
+    tenant_id = str(seed_data["tenant_a"].id)
+    user_id = str(seed_data["owner_a"].id)
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "owner",
+        "X-Correlation-ID": "test_bulk_import_xlsx",
+    }
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Name", "Email", "Phone", "Company", "Interested Product", "Score"])
+    ws.append(["Excel Lead One", "lead1@xlsx-test.com", 9900000010, "XLSX Corp", "Dakini CRM", 88])
+    ws.append(["Excel Lead Two", "lead2@xlsx-test.com", 9900000011, "OpenPyXL LLC", "AI Agents", 92])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    xlsx_bytes = buf.getvalue()
+
+    files = {"file": ("leads_test.xlsx", xlsx_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+    resp = await client.post("/v1/leads/bulk-import", files=files, headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()["data"]
+    assert data["total_rows"] == 2
+    assert data["inserted_count"] == 2
+    assert data["status"] == "completed"
+
+    batch_id = data["batch_id"]
+    leads_stmt = select(Lead).where(Lead.import_batch_id == uuid.UUID(batch_id))
+    leads = (await db_session.execute(leads_stmt)).scalars().all()
+    assert len(leads) == 2
+    l1 = next(l for l in leads if l.email == "lead1@xlsx-test.com")
+    assert l1.name == "Excel Lead One"
+    assert l1.company == "XLSX Corp"
+    assert l1.score == 88
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_xls_file_success(client: AsyncClient, db_session: AsyncSession, seed_data):
+    """Verifies that legacy Excel .xls files are parsed and leads are imported correctly."""
+    import xlwt
+
+    tenant_id = str(seed_data["tenant_a"].id)
+    user_id = str(seed_data["owner_a"].id)
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-Tenant-Id": tenant_id,
+        "X-User-Roles": "owner",
+        "X-Correlation-ID": "test_bulk_import_xls",
+    }
+
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet("Leads")
+    headers_list = ["Name", "Email", "Phone", "Company", "Interested Product", "Score"]
+    for col_idx, h in enumerate(headers_list):
+        ws.write(0, col_idx, h)
+
+    row1 = ["Legacy Lead One", "lead1@xls-legacy.com", "+15551112233", "Legacy Inc", "Dakini CRM", 70]
+    for col_idx, val in enumerate(row1):
+        ws.write(1, col_idx, val)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    xls_bytes = buf.getvalue()
+
+    files = {"file": ("leads_legacy.xls", xls_bytes, "application/vnd.ms-excel")}
+    resp = await client.post("/v1/leads/bulk-import", files=files, headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()["data"]
+    assert data["total_rows"] == 1
+    assert data["inserted_count"] == 1
+    assert data["status"] == "completed"
+
+    batch_id = data["batch_id"]
+    leads_stmt = select(Lead).where(Lead.import_batch_id == uuid.UUID(batch_id))
+    leads = (await db_session.execute(leads_stmt)).scalars().all()
+    assert len(leads) == 1
+    assert leads[0].name == "Legacy Lead One"
+    assert leads[0].email == "lead1@xls-legacy.com"
+    assert leads[0].score == 70

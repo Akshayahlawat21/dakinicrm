@@ -466,7 +466,7 @@ export default function LeadsPage() {
             type="file"
             ref={fileInputRef}
             style={{ display: 'none' }}
-            accept=".csv,.json,.txt"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileUpload}
           />
 
@@ -490,7 +490,7 @@ export default function LeadsPage() {
             <span>📊 Import History</span>
           </button>
 
-          <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV or JSON file">
+          <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV, XLSX, or XLS file">
             <Upload size={14} />
             <span>Import</span>
           </button>

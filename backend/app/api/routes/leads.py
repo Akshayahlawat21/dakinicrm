@@ -413,17 +413,19 @@ async def bulk_import_leads(
 ):
     """
     CRM-BE-02: Streaming bulk lead import endpoint with product-aware deduplication.
-    Accepts .csv files, validates records, checks tenant duplicates, and records batch metrics.
+    Accepts .csv, .xlsx, and .xls files, validates records, checks tenant duplicates, and records batch metrics.
     """
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise BadRequestError("Only CSV files are currently supported for bulk import.")
+    allowed_exts = (".csv", ".xlsx", ".xls")
+    fname = (file.filename or "").lower()
+    if not any(fname.endswith(ext) for ext in allowed_exts):
+        raise BadRequestError("Only CSV, XLSX, and XLS files are currently supported for bulk import.")
 
     content = await file.read()
     if not content:
         raise BadRequestError("Uploaded file is empty.")
 
     service = LeadImportService(session)
-    result = await service.import_leads_csv(
+    result = await service.import_leads_file(
         ctx=ctx,
         file_content=content,
         file_name=file.filename,

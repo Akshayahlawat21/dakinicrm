@@ -440,7 +440,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   transition: all var(--transition-fast);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -457,6 +457,7 @@
   box-shadow: 0 0 14px var(--primary-glow) !important;
 }
 .substage-header {
+  border-radius: 9px 9px 0 0;
   padding: 0.85rem 1rem;
   background: var(--surface-soft);
   border-bottom: 1.5px solid var(--border-default);

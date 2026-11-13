@@ -508,7 +508,7 @@ export default function DealsPage() {
     })
     .reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
 
-  const renderDealCard = (deal, col, subStages = [], isInsideSubStage = false) => {
+  const renderDealCard = (deal, col, subStages = []) => {
     const isStuck = deal.daysInStage >= 5 && !col.is_won && !col.is_lost;
     const isCardSelected = selectedDeal?.id === deal.id;
     const dealSubStage = subStages.find(
@@ -527,6 +527,8 @@ export default function DealsPage() {
         }}
         className={`deal-card ${isStuck ? 'stuck-amber' : ''}`}
         style={{
+          position: 'relative',
+          zIndex: openCardMenuDealId === deal.id ? 50 : undefined,
           border: isCardSelected ? '2px solid var(--primary)' : undefined,
           boxShadow: isCardSelected ? '0 4px 14px var(--primary-glow)' : undefined,
         }}
@@ -545,7 +547,7 @@ export default function DealsPage() {
         </div>
 
         {/* In-Card Sub-stage Selector Badge & Menu */}
-        {subStages.length > 0 && !isInsideSubStage && (
+        {subStages.length > 0 && (
           <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.45rem' }}>
             <button
               type="button"
@@ -590,6 +592,8 @@ export default function DealsPage() {
                   zIndex: 100,
                   minWidth: 200,
                   fontSize: '0.75rem',
+                  maxHeight: 280,
+                  overflowY: 'auto',
                 }}
               >
                 <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
@@ -608,6 +612,7 @@ export default function DealsPage() {
                     border: 0,
                     cursor: 'pointer',
                     display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                   }}
                   onClick={(e) => {
@@ -637,6 +642,7 @@ export default function DealsPage() {
                         border: 0,
                         cursor: 'pointer',
                         display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                       onClick={(e) => {
@@ -645,7 +651,10 @@ export default function DealsPage() {
                         setOpenCardMenuDealId(null);
                       }}
                     >
-                      <span>{sub.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: sub.color || 'var(--primary)' }} />
+                        <span>{sub.name}</span>
+                      </div>
                       {isCurrent && <Check size={12} color="var(--primary)" />}
                     </button>
                   );
@@ -653,38 +662,71 @@ export default function DealsPage() {
 
                 <div style={{ borderTop: '1px solid var(--border-default)', margin: '0.35rem 0', paddingTop: '0.25rem' }}>
                   <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
-                    Move to Parent Stage
+                    Move to Other Stages
                   </div>
                   {rootColumns
                     .filter((rc) => rc.id !== col.id)
-                    .map((targetParent) => (
-                      <button
-                        key={targetParent.id}
-                        type="button"
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '0.35rem 0.5rem',
-                          borderRadius: 6,
-                          background: 'transparent',
-                          color: targetParent.is_won ? 'var(--success, #10b981)' : targetParent.is_lost ? 'var(--danger, #ef4444)' : 'var(--text-main)',
-                          fontWeight: 600,
-                          border: 0,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectDealStage(deal, targetParent);
-                          setOpenCardMenuDealId(null);
-                        }}
-                      >
-                        <ArrowRight size={12} />
-                        <span>{targetParent.is_won ? 'Mark Won' : targetParent.is_lost ? 'Mark Lost' : `Move to ${targetParent.name}`}</span>
-                      </button>
-                    ))}
+                    .map((targetParent) => {
+                      const otherSubStages = getSubStagesForColumn(targetParent);
+                      return (
+                        <div key={targetParent.id}>
+                          <button
+                            type="button"
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '0.35rem 0.5rem',
+                              borderRadius: 6,
+                              background: 'transparent',
+                              color: targetParent.is_won ? 'var(--success, #10b981)' : targetParent.is_lost ? 'var(--danger, #ef4444)' : 'var(--text-main)',
+                              fontWeight: 600,
+                              border: 0,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectDealStage(deal, targetParent);
+                              setOpenCardMenuDealId(null);
+                            }}
+                          >
+                            <ArrowRight size={12} />
+                            <span>{targetParent.is_won ? 'Mark Won' : targetParent.is_lost ? 'Mark Lost' : `Move to ${targetParent.name}`}</span>
+                          </button>
+                          {otherSubStages.map((otherSub) => (
+                            <button
+                              key={otherSub.id}
+                              type="button"
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '0.25rem 0.5rem 0.25rem 1.4rem',
+                                borderRadius: 6,
+                                background: 'transparent',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.6875rem',
+                                fontWeight: 500,
+                                border: 0,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectDealStage(deal, otherSub);
+                                setOpenCardMenuDealId(null);
+                              }}
+                            >
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: otherSub.color || 'var(--primary)' }} />
+                              <span>↳ {otherSub.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -1306,7 +1348,7 @@ export default function DealsPage() {
                                   Drop deals here
                                 </div>
                               ) : (
-                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages, true))
+                                dealsInSub.map((deal) => renderDealCard(deal, col, subStages))
                               )}
                             </div>
                           )}
@@ -1380,7 +1422,7 @@ export default function DealsPage() {
                         </div>
                         {!isUnassignedCollapsed && (
                           <div style={{ padding: '0.65rem 0.45rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages, true))}
+                            {unassignedDeals.map((deal) => renderDealCard(deal, col, subStages))}
                           </div>
                         )}
                       </div>

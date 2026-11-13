@@ -22,7 +22,8 @@ import {
   Mail,
   UserPlus,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Package
 } from 'lucide-react';
 
 function getPageNumbers(current, total) {
@@ -400,9 +401,9 @@ export default function LeadsPage() {
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       {dashboardFilterContext && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', marginBottom: 14, border: '1px solid #bfdbfe', borderRadius: 10, background: '#eff6ff', color: '#1e40af', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', marginBottom: 14, border: '1px solid var(--border-active)', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--primary-dark)', fontSize: 13 }}>
           <span>{dashboardLeadLoading ? 'Loading matching leads from the database…' : dashboardLeadError || `Showing ${dashboardLeads?.length ?? 0} database records matching Dashboard filters`}</span>
-          <button type="button" onClick={() => { setDashboardFilterContext(null); setDashboardLeads(null); setDashboardLeadError(''); setLeadPage(0); }} style={{ border: 0, background: 'transparent', color: '#1d4ed8', fontWeight: 700, cursor: 'pointer' }}>Clear filter</button>
+          <button type="button" onClick={() => { setDashboardFilterContext(null); setDashboardLeads(null); setDashboardLeadError(''); setLeadPage(0); }} style={{ border: 0, background: 'transparent', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}>Clear filter</button>
         </div>
       )}
       {/* Header */}
@@ -466,7 +467,7 @@ export default function LeadsPage() {
             type="file"
             ref={fileInputRef}
             style={{ display: 'none' }}
-            accept=".csv,.json,.txt"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileUpload}
           />
 
@@ -490,7 +491,7 @@ export default function LeadsPage() {
             <span>📊 Import History</span>
           </button>
 
-          <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV or JSON file">
+          <button className="btn btn-secondary btn-sm" onClick={handleImportClick} title="Import leads from CSV, XLSX, or XLS file">
             <Upload size={14} />
             <span>Import</span>
           </button>
@@ -795,7 +796,8 @@ export default function LeadsPage() {
                           }}
                           title={lead.interested_product}
                         >
-                          📦 {lead.interested_product}
+                          <Package size={12} style={{ flexShrink: 0, opacity: 0.85 }} />
+                          <span>{lead.interested_product}</span>
                         </span>
                       ) : (
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>—</span>
@@ -932,7 +934,7 @@ export default function LeadsPage() {
               })}
             </tbody>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: '1px solid #e2e8f0', color: '#64748b', fontSize: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: 12 }}>
             <span>Showing {filteredLeads.length ? leadPage * LEADS_PAGE_SIZE + 1 : 0}–{Math.min((leadPage + 1) * LEADS_PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length.toLocaleString()} leads</span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-secondary btn-sm" disabled={leadPage === 0} onClick={() => setLeadPage((page) => Math.max(0, page - 1))}>Previous</button>
@@ -968,8 +970,9 @@ export default function LeadsPage() {
                       <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-main)' }}>{lead.name}</h4>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginBottom: '0.35rem' }}>{lead.company}</div>
                       {lead.interested_product && (
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span>📦 {lead.interested_product}</span>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <Package size={11} style={{ flexShrink: 0, opacity: 0.85 }} />
+                          <span>{lead.interested_product}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1151,7 +1154,10 @@ export default function LeadsPage() {
               {quickPreviewLead.interested_product && (
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Interested Product</span>
-                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>📦 {quickPreviewLead.interested_product}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <Package size={14} style={{ flexShrink: 0, opacity: 0.85 }} />
+                    <span>{quickPreviewLead.interested_product}</span>
+                  </div>
                 </div>
               )}
               <div>

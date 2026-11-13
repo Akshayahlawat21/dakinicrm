@@ -1,5 +1,7 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.application.context import RequestContext
 from backend.app.application.permissions import PermissionService
@@ -8,7 +10,8 @@ from backend.app.data.models.lead import Lead, LeadConversion
 from backend.app.data.models.user import User
 from backend.app.data.models.account import Account
 from backend.app.data.models.contact import Contact
-from backend.app.data.models.deal import Deal
+from backend.app.data.models.deal import Deal, Opportunity
+from backend.app.data.models.audit import AuditLog
 from backend.app.data.repositories.lead_repository import LeadRepository
 from backend.app.data.repositories.account_repository import AccountRepository
 from backend.app.data.repositories.contact_repository import ContactRepository
@@ -920,12 +923,81 @@ class LeadService:
         lead_ids: List[str | uuid.UUID],
         assignee_id: str | uuid.UUID,
     ) -> List[Lead]:
+        """
+        High-performance atomic bulk lead reassignment.
+        Batches database lookups, permission checks, entity transfers, and audit logs
+        to eliminate the N+1 sequential waterfall.
+        """
+        if not lead_ids:
+            return []
+
+        if ctx.is_salesperson:
+            raise ForbiddenError("Salespersons are not authorized to reassign leads")
+
         try:
             assignee = await self.user_repo.get_by_id_scoped(assignee_id, ctx.tenant_id)
         except RecordNotFoundError:
             raise NotFoundError(f"Assignee user '{assignee_id}' does not exist in this organization")
 
-        leads = [await self.get_lead(ctx, lid) for lid in lead_ids]
+        assignee_role = assignee.role_name.lower().strip()
+
+        # Manager role checks (performed ONCE)
+        if ctx.is_manager:
+            if assignee_role in ("owner", "admin"):
+                raise ForbiddenError("Managers cannot assign leads to the Owner")
+            if assignee_role == "manager" and str(assignee.id) != str(ctx.user_uuid):
+                raise ForbiddenError("Managers cannot assign leads to other Managers")
+
+            mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+            if not mgr_team:
+                raise ForbiddenError("Manager has no active team")
+
+            is_in_team = (
+                str(assignee.id) == str(ctx.user_uuid) or
+                await self.team_repo.is_user_in_team(
+                    user_id=assignee.id, team_id=mgr_team.id, tenant_id=ctx.tenant_id
+                )
+            )
+            if not is_in_team:
+                raise ForbiddenError("Managers can only assign leads to salespersons within their active team")
+
+        # Parse and validate lead UUIDs
+        parsed_uuids = []
+        for lid in lead_ids:
+            try:
+                parsed_uuids.append(lid if isinstance(lid, uuid.UUID) else uuid.UUID(str(lid)))
+            except (ValueError, TypeError):
+                raise NotFoundError(f"Lead '{lid}' was not found in this organization")
+
+        # 1. Fetch all requested leads in 1 single bulk query
+        stmt = select(Lead).where(
+            Lead.organization_id == ctx.tenant_uuid,
+            Lead.id.in_(parsed_uuids)
+        )
+        leads = list((await self.session.execute(stmt)).scalars().all())
+
+        # Preserve exact error if any requested lead is missing from the organization
+        found_ids = {l.id for l in leads}
+        for req_id in parsed_uuids:
+            if req_id not in found_ids:
+                raise NotFoundError(f"Lead '{req_id}' was not found in this organization")
+
+        # 2. Scope verification for Managers
+        if ctx.is_manager:
+            mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
+            team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+            team_user_uuids = {u.id for u in team_users}
+            team_user_uuids.add(ctx.user_uuid)
+            is_auth_mgr = getattr(ctx, "can_access_unassigned", False)
+
+            for l in leads:
+                if not l.assigned_to:
+                    if not is_auth_mgr:
+                        raise ForbiddenError("Manager is not authorized to access unassigned leads")
+                elif l.assigned_to not in team_user_uuids:
+                    raise ForbiddenError(f"Lead '{l.name}' is outside of manager's active team scope")
+
+        # 3. Check "already assigned" condition
         already_assigned = [l for l in leads if l.assigned_to and str(l.assigned_to) == str(assignee.id)]
         if len(already_assigned) == len(leads):
             lead_names = ", ".join([f"'{l.name}'" for l in leads[:2]])
@@ -933,11 +1005,74 @@ class LeadService:
                 f"Lead {lead_names} is already assigned to {assignee.name}. Please select a different team member."
             )
 
-        updated_leads = []
-        for l in leads:
-            if l.assigned_to and str(l.assigned_to) == str(assignee.id):
-                continue
-            updated = await self.assign_lead(ctx, l.id, assignee_id)
-            updated_leads.append(updated)
-        return updated_leads
+        leads_to_update = [l for l in leads if not (l.assigned_to and str(l.assigned_to) == str(assignee.id))]
+        if not leads_to_update:
+            return []
+
+        target_lead_ids = [l.id for l in leads_to_update]
+        now = datetime.now(timezone.utc)
+
+        # 4. Batch update leads table
+        await self.session.execute(
+            update(Lead)
+            .where(Lead.id.in_(target_lead_ids), Lead.organization_id == ctx.tenant_uuid)
+            .values(assigned_to=assignee.id, updated_at=now)
+        )
+        for l in leads_to_update:
+            l.assigned_to = assignee.id
+            l.updated_at = now
+
+        # 5. Batch update any converted Opportunities and Deals
+        conv_stmt = select(LeadConversion).where(LeadConversion.lead_id.in_(target_lead_ids))
+        conversions = list((await self.session.execute(conv_stmt)).scalars().all())
+
+        affected_opp_ids = [c.opportunity_id for c in conversions if c.opportunity_id]
+        affected_deal_ids = []
+
+        if affected_opp_ids:
+            await self.session.execute(
+                update(Opportunity)
+                .where(Opportunity.id.in_(affected_opp_ids))
+                .values(owner_id=assignee.id)
+            )
+            deal_stmt = select(Deal.id).where(Deal.opportunity_id.in_(affected_opp_ids))
+            deal_ids_res = (await self.session.execute(deal_stmt)).scalars().all()
+            affected_deal_ids = [str(did) for did in deal_ids_res]
+
+            if affected_deal_ids:
+                deal_uuids = [uuid.UUID(did) for did in affected_deal_ids]
+                await self.session.execute(
+                    update(Deal)
+                    .where(Deal.id.in_(deal_uuids))
+                    .values(owner_id=assignee.id)
+                )
+
+        for l in leads_to_update:
+            setattr(l, "_affected_deal_ids", affected_deal_ids)
+
+        # 6. Batch record audit trail events
+        actor_user_id = ctx.user_uuid if ctx.user_uuid else None
+        audit_records = [
+            AuditLog(
+                id=uuid.uuid4(),
+                organization_id=ctx.tenant_uuid,
+                user_id=actor_user_id,
+                action="ASSIGN_LEAD",
+                resource_type="lead",
+                resource_id=l.id,
+                old_values={"assigned_to": str(l.assigned_to) if l.assigned_to else None},
+                new_values={
+                    "assigned_to": str(assignee.id),
+                    "assignee_name": assignee.name,
+                    "assigned_by": str(ctx.user_id),
+                },
+                created_at=now,
+                updated_at=now,
+            )
+            for l in leads_to_update
+        ]
+        self.session.add_all(audit_records)
+        await self.session.flush()
+
+        return leads_to_update
 

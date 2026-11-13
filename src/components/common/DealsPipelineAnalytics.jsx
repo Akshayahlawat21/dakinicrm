@@ -74,6 +74,7 @@ export default function DealsPipelineAnalytics({
   onFilteredDealsChange,
   selectedStage: controlledSelectedStage,
   onSelectStage,
+  hideOverview = false,
 }) {
   const { setAssistantContext } = useCRM();
   const [campaignId,setCampaignId] = useState('all');
@@ -120,30 +121,8 @@ export default function DealsPipelineAnalytics({
       setInternalSelectedStage(next);
     }
   };
-  return <section className="crm-card" style={{margin:'0 0 1.35rem',padding:'1.25rem',border:'1px solid var(--border-default)',boxShadow:'var(--shadow-card)'}}>
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}}>
-      <div><h2 style={{fontSize:18,fontWeight:800,color:'var(--text-main)',margin:0}}>Pipeline analytics</h2><p style={{fontSize:12,color:'var(--text-muted)',margin:'5px 0 0'}}>Explore stage distribution, deal value and filtered opportunities</p></div>
-      <button className="btn btn-outline btn-sm" onClick={()=>{setCampaignId('all');setProductId('all');setDateRange('all');selectStage(null);}}><RotateCcw size={13}/> Reset filters</button>
-    </div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:16}}>
-      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>CAMPAIGN<select value={campaignId} onChange={e=>setCampaignId(e.target.value)} style={selectStyle}><option value="all">All campaigns</option>{campaigns.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>PRODUCT<select value={productId} onChange={e=>setProductId(e.target.value)} style={selectStyle}><option value="all">All products</option>{products.map(p=><option key={p.id} value={p.id}>{p.name || p.product_name}</option>)}</select></label>
-      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>DATE RANGE<select value={dateRange} onChange={e=>setDateRange(e.target.value)} style={selectStyle}><option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select></label>
-    </div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(145px,1fr))',gap:10,marginBottom:18}}>
-      {[['Total deals',total],['Open deals',rows.filter(r=>!['Won','Lost'].includes(r.stage)).reduce((s,r)=>s+r.count,0)],['Won deals',rows.find(r=>r.stage==='Won')?.count||0],['Total deal value',fmt(totalValue)]].map(([label,value])=><div key={label} style={{background:'var(--surface-soft)',border:'1px solid var(--border-default)',borderRadius:10,padding:'11px 13px'}}><div style={{fontSize:11,color:'var(--text-muted)',fontWeight:600}}>{label}</div><strong style={{display:'block',fontSize:20,color:'var(--text-main)',marginTop:4}}>{value}</strong></div>)}
-    </div>
-    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:14}}>
-      <div style={{fontSize:14,fontWeight:800,color:'var(--text-main)'}}>Deals by pipeline stage</div>
-      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{['Funnel','Pie','Donut','Bar'].map(v=><button key={v} onClick={()=>setChart(v)} style={{border:chart===v?'1px solid var(--primary)':'1px solid var(--border-default)',background:chart===v?'var(--primary-light)':'var(--bg-card)',color:chart===v?'var(--primary-dark)':'var(--text-body)',borderRadius:8,padding:'7px 11px',fontSize:12,fontWeight:700,cursor:'pointer'}}>{v}</button>)}</div>
-    </div>
-    {total===0 ? <div style={{padding:28,textAlign:'center',background:'var(--surface-soft)',borderRadius:10,color:'var(--text-muted)',fontSize:13}}>No deals match the selected filters. Try another campaign, product or date range.</div> :
-      chart==='Funnel' ? <Funnel rows={rows} total={total} onSelect={selectStage}/> : chart==='Pie' ? <Pie rows={rows} total={total} onSelect={selectStage}/> : chart==='Donut' ? <Donut rows={rows} total={total} onSelect={selectStage}/> : <Bars rows={rows} total={total} onSelect={selectStage}/>}
-    <div style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:18}}>
-      <button type="button" onClick={()=>selectStage(null)} style={{border:!selectedStage?'2px solid var(--primary)':'1px solid var(--border-default)',background:!selectedStage?'var(--primary-light)':'var(--bg-card)',borderRadius:9,padding:'8px 11px',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}><span style={{fontSize:12,fontWeight:700,color:!selectedStage?'var(--primary-dark)':'var(--text-body)'}}>All Stages</span><b style={{fontSize:12,color:'var(--text-main)'}}>{total}</b></button>
-      {rows.map(r=><button key={r.stage} type="button" onClick={()=>selectStage(selectedStage===r.stage?null:r.stage)} style={{border:selectedStage===r.stage?`2px solid ${r.color}`:'1px solid var(--border-default)',background:selectedStage===r.stage?`${r.color}1f`:'var(--bg-card)',borderRadius:9,padding:'8px 11px',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}><i style={{width:8,height:8,borderRadius:4,background:r.color}}/><span style={{fontSize:12,fontWeight:700,color:'var(--text-body)'}}>{r.stage}</span><b style={{fontSize:12,color:'var(--text-main)'}}>{r.count}</b></button>)}
-    </div>
-    {selectedStage && <div style={{marginTop:18,border:'1px solid var(--primary-subtle)',background:'var(--bg-card)',borderRadius:12,overflow:'hidden'}}>
+  const stageDetailsCard = selectedStage ? (
+    <div style={{marginTop:hideOverview?0:18,marginBottom:hideOverview?'1.35rem':0,border:'1px solid var(--primary-subtle)',background:'var(--bg-card)',borderRadius:12,overflow:'hidden',boxShadow:hideOverview?'var(--shadow-card)':'none'}}>
       <div style={{background:'var(--primary-light)',padding:'12px 15px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,flexWrap:'wrap'}}>
         <div><div style={{fontSize:11,color:'var(--primary-dark)',fontWeight:800,textTransform:'uppercase'}}>Stage details</div><strong style={{fontSize:17,color:'var(--text-main)'}}>{selectedStage} · {currentRows[0]?.count||0} deals</strong></div>
         <button className="btn btn-ghost btn-sm" onClick={()=>selectStage(null)}><ChevronLeft size={14}/> Back to all stages</button>
@@ -169,7 +148,37 @@ export default function DealsPipelineAnalytics({
           </tr>;
         })}
       </tbody></table></div>
-    </div>}
+    </div>
+  ) : null;
+
+  if (hideOverview && selectedStage) {
+    return stageDetailsCard;
+  }
+
+  return <section className="crm-card" style={{margin:'0 0 1.35rem',padding:'1.25rem',border:'1px solid var(--border-default)',boxShadow:'var(--shadow-card)'}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap',marginBottom:16}}>
+      <div><h2 style={{fontSize:18,fontWeight:800,color:'var(--text-main)',margin:0}}>Pipeline analytics</h2><p style={{fontSize:12,color:'var(--text-muted)',margin:'5px 0 0'}}>Explore stage distribution, deal value and filtered opportunities</p></div>
+      <button className="btn btn-outline btn-sm" onClick={()=>{setCampaignId('all');setProductId('all');setDateRange('all');selectStage(null);}}><RotateCcw size={13}/> Reset filters</button>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:16}}>
+      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>CAMPAIGN<select value={campaignId} onChange={e=>setCampaignId(e.target.value)} style={selectStyle}><option value="all">All campaigns</option>{campaigns.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>PRODUCT<select value={productId} onChange={e=>setProductId(e.target.value)} style={selectStyle}><option value="all">All products</option>{products.map(p=><option key={p.id} value={p.id}>{p.name || p.product_name}</option>)}</select></label>
+      <label style={{fontSize:11,fontWeight:700,color:'var(--text-muted)'}}>DATE RANGE<select value={dateRange} onChange={e=>setDateRange(e.target.value)} style={selectStyle}><option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select></label>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(145px,1fr))',gap:10,marginBottom:18}}>
+      {[['Total deals',total],['Open deals',rows.filter(r=>!['Won','Lost'].includes(r.stage)).reduce((s,r)=>s+r.count,0)],['Won deals',rows.find(r=>r.stage==='Won')?.count||0],['Total deal value',fmt(totalValue)]].map(([label,value])=><div key={label} style={{background:'var(--surface-soft)',border:'1px solid var(--border-default)',borderRadius:10,padding:'11px 13px'}}><div style={{fontSize:11,color:'var(--text-muted)',fontWeight:600}}>{label}</div><strong style={{display:'block',fontSize:20,color:'var(--text-main)',marginTop:4}}>{value}</strong></div>)}
+    </div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:14}}>
+      <div style={{fontSize:14,fontWeight:800,color:'var(--text-main)'}}>Deals by pipeline stage</div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{['Funnel','Pie','Donut','Bar'].map(v=><button key={v} onClick={()=>setChart(v)} style={{border:chart===v?'1px solid var(--primary)':'1px solid var(--border-default)',background:chart===v?'var(--primary-light)':'var(--bg-card)',color:chart===v?'var(--primary-dark)':'var(--text-body)',borderRadius:8,padding:'7px 11px',fontSize:12,fontWeight:700,cursor:'pointer'}}>{v}</button>)}</div>
+    </div>
+    {total===0 ? <div style={{padding:28,textAlign:'center',background:'var(--surface-soft)',borderRadius:10,color:'var(--text-muted)',fontSize:13}}>No deals match the selected filters. Try another campaign, product or date range.</div> :
+      chart==='Funnel' ? <Funnel rows={rows} total={total} onSelect={selectStage}/> : chart==='Pie' ? <Pie rows={rows} total={total} onSelect={selectStage}/> : chart==='Donut' ? <Donut rows={rows} total={total} onSelect={selectStage}/> : <Bars rows={rows} total={total} onSelect={selectStage}/>}
+    <div style={{display:'flex',gap:7,flexWrap:'wrap',marginTop:18}}>
+      <button type="button" onClick={()=>selectStage(null)} style={{border:!selectedStage?'2px solid var(--primary)':'1px solid var(--border-default)',background:!selectedStage?'var(--primary-light)':'var(--bg-card)',borderRadius:9,padding:'8px 11px',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}><span style={{fontSize:12,fontWeight:700,color:!selectedStage?'var(--primary-dark)':'var(--text-body)'}}>All Stages</span><b style={{fontSize:12,color:'var(--text-main)'}}>{total}</b></button>
+      {rows.map(r=><button key={r.stage} type="button" onClick={()=>selectStage(selectedStage===r.stage?null:r.stage)} style={{border:selectedStage===r.stage?`2px solid ${r.color}`:'1px solid var(--border-default)',background:selectedStage===r.stage?`${r.color}1f`:'var(--bg-card)',borderRadius:9,padding:'8px 11px',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}><i style={{width:8,height:8,borderRadius:4,background:r.color}}/><span style={{fontSize:12,fontWeight:700,color:'var(--text-body)'}}>{r.stage}</span><b style={{fontSize:12,color:'var(--text-main)'}}>{r.count}</b></button>)}
+    </div>
+    {stageDetailsCard}
   </section>;
 }
 const selectStyle = {display:'block',width:'100%',marginTop:6,padding:'10px 11px',border:'1px solid var(--border-default)',borderRadius:8,background:'var(--surface-soft)',color:'var(--text-main)',fontSize:13,outline:'none'};

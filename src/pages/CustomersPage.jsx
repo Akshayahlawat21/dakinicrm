@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   Clock,
   Layers,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 
 export default function CustomersPage() {
@@ -191,23 +192,19 @@ export default function CustomersPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', paddingBottom: '2.5rem' }}>
-      {/* 1. Header & Summary Stats */}
+      {/* 1. Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
               Customers
             </h1>
-            <span className="badge badge-blue" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
-              <BadgeCheck size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-              {wonCustomers.length} Closed Won
-            </span>
-            <span className="badge badge-green" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.65rem' }}>
-              Total Won Revenue: ${totalRevenue.toLocaleString()}
+            <span className="badge badge-blue">
+              {wonCustomers.length} total
             </span>
           </div>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 2 }}>
-            Closed-won client directory with account stakeholders, contract values, and relationship lifecycle
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 6 }}>
+            Closed-won client accounts, ARR contract values, and relationship status
           </p>
         </div>
 
@@ -218,64 +215,57 @@ export default function CustomersPage() {
             title="View Active Pipeline Kanban"
           >
             <Handshake size={15} />
-            <span>View Deals & Pipeline</span>
+            <span>View Deals</span>
           </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-secondary"
             onClick={() => navigateTo('accounts')}
             title="Open Accounts Directory"
           >
             <Building2 size={15} />
-            <span>Accounts Directory</span>
+            <span>Accounts</span>
           </button>
         </div>
       </div>
 
       {/* 2. Key Metrics Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               Won Customers
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BadgeCheck size={18} />
-            </div>
+            <Users size={16} color="var(--primary)" />
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {wonCustomers.length}
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-            <TrendingUp size={13} />
-            100% conversion rate from won stage
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+            Closed-won client accounts
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               Total Won Revenue
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--success-bg)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <DollarSign size={18} />
-            </div>
+            <DollarSign size={16} color="var(--success-text)" />
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success-text)' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             ${totalRevenue.toLocaleString()}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-            Cumulative revenue booked
+            Cumulative closed-won ARR
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               Average Deal (ACV)
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--purple-bg)', color: 'var(--purple-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Award size={18} />
-            </div>
+            <TrendingUp size={16} color="var(--primary)" />
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             ${avgContractValue.toLocaleString()}
@@ -285,21 +275,18 @@ export default function CustomersPage() {
           </span>
         </div>
 
-        <div className="crm-card" style={{ padding: '1rem 1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 10 }}>
+        <div className="crm-card" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               Avg. Client Health
             </span>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--danger-bg)', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <HeartHandshake size={18} />
-            </div>
+            <ShieldCheck size={16} color="var(--success-text)" />
           </div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)' }}>
             {avgHealth}%
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-            <ShieldCheck size={13} />
-            Excellent retention stability
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+            Portfolio health score
           </span>
         </div>
       </div>
@@ -308,10 +295,10 @@ export default function CustomersPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div className="tab-group" style={{ marginBottom: 0 }}>
           {[
-            { id: 'All', label: 'All Customers', count: wonCustomers.length },
-            { id: 'Enterprise', label: 'Enterprise ($50k+)', count: wonCustomers.filter((c) => c.tier === 'Enterprise').length },
-            { id: 'Mid-Market', label: 'Mid-Market ($25k-$50k)', count: wonCustomers.filter((c) => c.tier === 'Mid-Market').length },
-            { id: 'Growth', label: 'Growth (<$25k)', count: wonCustomers.filter((c) => c.tier === 'Growth').length },
+            { id: 'All', label: 'All', count: wonCustomers.length },
+            { id: 'Enterprise', label: 'Enterprise', count: wonCustomers.filter((c) => c.tier === 'Enterprise').length },
+            { id: 'Mid-Market', label: 'Mid-Market', count: wonCustomers.filter((c) => c.tier === 'Mid-Market').length },
+            { id: 'Growth', label: 'Growth', count: wonCustomers.filter((c) => c.tier === 'Growth').length },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -329,7 +316,7 @@ export default function CustomersPage() {
             <Search size={16} className="search-icon-inside" />
             <input
               type="text"
-              placeholder="Search customers, contacts, deals..."
+              placeholder="Search customers by company or contact..."
               className="search-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -362,8 +349,8 @@ export default function CustomersPage() {
                 <th>Primary Stakeholder</th>
                 <th>Account Manager</th>
                 <th>Close Date</th>
-                <th>Lifecycle Status</th>
-                <th style={{ width: 100, textAlign: 'center' }}>Details</th>
+                <th>Status</th>
+                <th style={{ width: 40 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -382,34 +369,34 @@ export default function CustomersPage() {
                   >
                     {/* Customer & Company */}
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                         <div
                           style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: 10,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
                             background: 'var(--primary-light)',
                             color: 'var(--primary)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontWeight: 800,
-                            fontSize: '0.95rem',
+                            fontWeight: 700,
+                            fontSize: '0.875rem',
                             flexShrink: 0
                           }}
                         >
-                          {cust.company.charAt(0).toUpperCase()}
+                          <Building2 size={16} />
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.875rem' }}>
                             {cust.company}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: 2 }}>
                             <span
                               style={{
                                 fontSize: '0.6875rem',
                                 fontWeight: 700,
-                                padding: '0.1rem 0.45rem',
+                                padding: '0.1rem 0.4rem',
                                 borderRadius: 4,
                                 background: cust.tierBg,
                                 color: cust.tierColor,
@@ -428,23 +415,10 @@ export default function CustomersPage() {
                     {/* Won Deal & Contract Value */}
                     <td>
                       <div>
-                        <div style={{ fontWeight: 700, color: 'var(--success-text)', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--success-text)', fontSize: '0.9375rem' }}>
                           ${cust.dealAmount.toLocaleString()}
-                          <span
-                            style={{
-                              fontSize: '0.6875rem',
-                              fontWeight: 700,
-                              background: 'var(--success-bg)',
-                              color: 'var(--success-text)',
-                              border: '1px solid var(--success-border)',
-                              padding: '0.1rem 0.4rem',
-                              borderRadius: 9999,
-                            }}
-                          >
-                            Won
-                          </span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginTop: 2, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cust.dealName}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cust.dealName}>
                           {cust.dealName}
                         </div>
                       </div>
@@ -459,15 +433,12 @@ export default function CustomersPage() {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           {cust.primaryContact.title}
                         </div>
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary)', marginTop: 1 }}>
-                          {cust.primaryContact.email}
-                        </div>
                       </div>
                     </td>
 
                     {/* Account Manager / Owner */}
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                         <div
                           style={{
                             width: 24,
@@ -479,12 +450,13 @@ export default function CustomersPage() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '0.6875rem',
-                            fontWeight: 700
+                            fontWeight: 700,
+                            flexShrink: 0
                           }}
                         >
-                          {cust.owner.charAt(0).toUpperCase()}
+                          {(cust.owner || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-body)' }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-main)' }}>
                           {cust.owner}
                         </span>
                       </div>
@@ -492,40 +464,22 @@ export default function CustomersPage() {
 
                     {/* Close Date */}
                     <td>
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-body)' }}>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                         {cust.closeDate}
                       </span>
                     </td>
 
                     {/* Lifecycle Status & Health */}
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <span className="badge badge-green" style={{ width: 'fit-content' }}>
-                          <span className="badge-dot" />
-                          {cust.status}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                          <span>Health: {cust.healthScore}%</span>
-                          <div style={{ width: 45, height: 4, background: 'var(--surface-alt)', borderRadius: 2 }}>
-                            <div style={{ width: `${cust.healthScore}%`, height: '100%', background: 'var(--success)', borderRadius: 2 }} />
-                          </div>
-                        </div>
-                      </div>
+                      <span className="badge badge-green" style={{ width: 'fit-content' }}>
+                        <span className="badge-dot" />
+                        Active Customer
+                      </span>
                     </td>
 
                     {/* Details Action */}
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCustomer(cust);
-                        }}
-                      >
-                        <span>360° Profile</span>
-                        <ChevronRight size={13} />
-                      </button>
+                      <ChevronRight size={16} color="var(--text-muted)" />
                     </td>
                   </tr>
                 );
@@ -603,35 +557,34 @@ export default function CustomersPage() {
             </div>
             <button
               onClick={() => setSelectedCustomer(null)}
-              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', padding: '0.25rem' }}
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               title="Close Drawer"
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
 
           {/* Drawer Body Scroll */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Top Value Summary Card */}
-            <div style={{ background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--success-bg) 100%)', border: '1px solid var(--primary-subtle)', borderRadius: 12, padding: '1.1rem' }}>
+            <div className="crm-card" style={{ padding: '1.25rem', border: '1px solid var(--border-default)', borderRadius: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-dark)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                     Total Contract Value
                   </span>
-                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--success-text-dark)', marginTop: 2 }}>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--success-text)', marginTop: 2 }}>
                     ${selectedCustomer.dealAmount.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
                     Closed-Won on {selectedCustomer.closeDate}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Account Health</span>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Client Health</span>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)', marginTop: 2 }}>
                     {selectedCustomer.healthScore}%
                   </div>
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--success)', fontWeight: 600 }}>Prime Condition</span>
                 </div>
               </div>
             </div>

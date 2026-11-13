@@ -147,13 +147,34 @@ export default function ReportsPage() {
           <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Reports & Pipeline Intelligence</h1>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 6 }}>
             {isOwner
-              ? 'Database-backed overall company reports from all leads, contacts, deals, activities, and pipelines.'
+              ? `Overall company performance across all leads, contacts, deals, and pipelines · ${currentUser?.name || 'Owner'}`
               : isManager
-              ? 'Database-backed team reports from your managed team members and your own leads, contacts, and pipeline.'
-              : 'Database-backed personal reports from your assigned leads, contacts, and pipeline deals.'}
+              ? `Team performance across managed members and pipeline · ${currentUser?.name || 'Manager'}`
+              : `Personal performance from your assigned leads and deals · ${currentUser?.name || 'Salesperson'}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            padding: '0.45rem 0.85rem',
+            borderRadius: 8,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: isOwner ? 'rgba(59, 130, 246, 0.12)' : isManager ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+            color: isOwner ? '#60a5fa' : isManager ? '#34d399' : '#fbbf24',
+            border: `1px solid ${isOwner ? 'rgba(59, 130, 246, 0.25)' : isManager ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+          }}>
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: isOwner ? '#3b82f6' : isManager ? '#10b981' : '#f59e0b',
+              boxShadow: `0 0 6px ${isOwner ? 'rgba(59, 130, 246, 0.8)' : isManager ? 'rgba(16, 185, 129, 0.8)' : 'rgba(245, 158, 11, 0.8)'}`,
+            }} />
+            <span>{isOwner ? 'Scope: Organization' : isManager ? 'Scope: Team Records' : 'Scope: Personal'}</span>
+          </div>
           <select className="input-field" style={{ width: 155 }} value={dateRange} onChange={(event) => setDateRange(event.target.value)}>
             <option value="Last 7 Days">Last 7 Days</option>
             <option value="Last 30 Days">Last 30 Days</option>
@@ -167,51 +188,6 @@ export default function ReportsPage() {
             <Download size={15} /> <span>{exporting ? 'Exporting…' : 'Export CSV'}</span>
           </button>
         </div>
-      </div>
-
-      {/* Role-Based Scope Indicator Banner */}
-      <div style={{
-        background: isOwner ? 'linear-gradient(90deg, var(--primary-light) 0%, var(--bg-card) 100%)' : isManager ? 'linear-gradient(90deg, var(--success-bg) 0%, var(--bg-card) 100%)' : 'linear-gradient(90deg, var(--warning-bg) 0%, var(--bg-card) 100%)',
-        border: `1px solid ${isOwner ? 'var(--primary-subtle)' : isManager ? 'var(--success-border)' : 'var(--warning-border)'}`,
-        borderRadius: 12,
-        padding: '0.85rem 1.25rem',
-        marginBottom: '1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 34,
-            height: 34,
-            borderRadius: 8,
-            background: isOwner ? '#2563eb' : isManager ? '#059669' : '#d97706',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1rem'
-          }}>
-            {isOwner ? '👑' : isManager ? '👥' : '👤'}
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '0.925rem', color: 'var(--text-main)' }}>
-              {isOwner ? 'Overall Organization Records' : isManager ? 'Managed Team & Personal Records' : 'Personal Assigned Records'}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginTop: 2 }}>
-              {isOwner
-                ? `Displaying overall company records from all leads, contacts, deals, activities, and pipelines across all teams (User: ${currentUser?.name || 'Owner'})`
-                : isManager
-                ? `Displaying records from your managed team members and your own leads, contacts, and pipeline (User: ${currentUser?.name || 'Manager'})`
-                : `Displaying your personal records from your assigned leads, contacts, and pipeline deals (User: ${currentUser?.name || 'Salesperson'})`}
-            </div>
-          </div>
-        </div>
-        <span className={`badge ${isOwner ? 'badge-blue' : isManager ? 'badge-green' : 'badge-amber'}`} style={{ padding: '0.4rem 0.85rem', fontSize: '0.75rem', fontWeight: 700 }}>
-          {isOwner ? 'Scope: Overall Organization' : isManager ? 'Scope: Team Records' : 'Scope: Personal Records'}
-        </span>
       </div>
 
       {error && <div role="alert" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', border: '1px solid var(--danger-border)', borderRadius: 8, background: 'var(--danger-bg)', color: 'var(--danger-text-dark)', fontSize: '0.8125rem' }}><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />{error}</div>}

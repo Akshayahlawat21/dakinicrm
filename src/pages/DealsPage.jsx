@@ -19,7 +19,9 @@ import {
   ArrowRight,
   Trash2,
   Pencil,
-  X
+  X,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 const CANONICAL_STAGES = ['Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
@@ -94,8 +96,20 @@ export default function DealsPage() {
 
   const [draggedDealId, setDraggedDealId] = useState(null);
   const [dragOverColId, setDragOverColId] = useState(null);
+  const [columnSubStageFilter, setColumnSubStageFilter] = useState({});
+  const [openColumnMenuColId, setOpenColumnMenuColId] = useState(null);
+  const [openCardMenuDealId, setOpenCardMenuDealId] = useState(null);
   const kanbanBoardRef = useRef(null);
   const [kanbanScroll, setKanbanScroll] = useState({ scrollLeft: 0, maxScroll: 0 });
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setOpenColumnMenuColId(null);
+      setOpenCardMenuDealId(null);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   const syncKanbanScroll = useCallback(() => {
     const el = kanbanBoardRef.current;
@@ -185,15 +199,85 @@ export default function DealsPage() {
     }
   }, [searchParams, setSearchParams]);
 
+  // Canonical parent stages (always rendered as the core Kanban columns)
+  const rootColumns = useMemo(() => {
+    const roots = activeColumns.filter((col) => {
+      if (col.parent_stage_id) return false;
+      if (col.parent_base_stage && col.parent_base_stage.toLowerCase() !== col.name.toLowerCase()) {
+        return false;
+      }
+      return true;
+    });
+
+    const orderedRoots = [];
+    for (const stg of CANONICAL_STAGES) {
+      const match = roots.find((r) => normalizeStage(r.parent_base_stage || r.name) === stg);
+      if (match) {
+        orderedRoots.push(match);
+      } else {
+        const fallbackCol = activeColumns.find((c) => normalizeStage(c.name) === stg) || {
+          id: stg,
+          name: stg,
+          scope: 'org',
+          is_system: true,
+          is_won: stg === 'Won',
+          is_lost: stg === 'Lost',
+          win_probability: stg === 'Won' ? 100 : stg === 'Lost' ? 0 : 50,
+          color: stg === 'Won' ? '#10b981' : stg === 'Lost' ? '#ef4444' : stg === 'Proposal' ? '#8b5cf6' : stg === 'Negotiation' ? '#f59e0b' : '#3b82f6',
+        };
+        orderedRoots.push(fallbackCol);
+      }
+    }
+    roots.forEach((r) => {
+      if (!orderedRoots.some((or) => or.id === r.id)) {
+        orderedRoots.push(r);
+      }
+    });
+
+    return orderedRoots;
+  }, [activeColumns]);
+
+  const getSubStagesForColumn = useCallback(
+    (parentCol) => {
+      if (!parentCol) return [];
+      const parentBase = normalizeStage(parentCol.parent_base_stage || parentCol.name).toLowerCase();
+      return activeColumns.filter((col) => {
+        if (col.id === parentCol.id) return false;
+        if (col.parent_stage_id === parentCol.id) return true;
+        const colBase = normalizeStage(col.parent_base_stage || '').toLowerCase();
+        return colBase === parentBase && col.id !== parentCol.id;
+      });
+    },
+    [activeColumns]
+  );
+
+  const dealBelongsToParent = useCallback(
+    (deal, parentCol) => {
+      if (!deal || !parentCol) return false;
+      const dealParentStage = normalizeStage(deal.stage).toLowerCase();
+      const parentColBase = resolveColumnBaseStage(parentCol).toLowerCase();
+      if (dealParentStage === parentColBase) return true;
+      if (deal.display_stage_id && activeColumns.some((c) => c.id === deal.display_stage_id)) {
+        const stageObj = activeColumns.find((c) => c.id === deal.display_stage_id);
+        if (stageObj) {
+          const stageObjBase = resolveColumnBaseStage(stageObj).toLowerCase();
+          return stageObjBase === parentColBase;
+        }
+      }
+      return false;
+    },
+    [activeColumns]
+  );
+
   const displayedColumns = useMemo(() => {
-    if (!selectedStage) return activeColumns;
+    if (!selectedStage) return rootColumns;
     const target = selectedStage.toLowerCase();
-    const matching = activeColumns.filter((col) => {
+    const matching = rootColumns.filter((col) => {
       const colBase = resolveColumnBaseStage(col).toLowerCase();
       return col.name.toLowerCase() === target || colBase === target;
     });
-    return matching.length > 0 ? matching : activeColumns;
-  }, [activeColumns, selectedStage]);
+    return matching.length > 0 ? matching : rootColumns;
+  }, [rootColumns, selectedStage]);
 
   useEffect(() => {
     const el = kanbanBoardRef.current;
@@ -292,6 +376,12 @@ export default function DealsPage() {
       setIsSavingStage(false);
       if (res?.success) {
         setStageModalMode(null);
+        if (stageModalParent?.id) {
+          const newId = res.data?.id || res.data?.stage?.id;
+          if (newId) {
+            setColumnSubStageFilter((prev) => ({ ...prev, [stageModalParent.id]: newId }));
+          }
+        }
       } else {
         setStageError(res?.error?.message || 'Failed to add custom column.');
       }
@@ -537,22 +627,46 @@ export default function DealsPage() {
 
           </div>
 
-          {/* Salesforce Path Chevrons */}
+          {/* Salesforce Path Chevrons (Canonical Root Stages) */}
           <div className="salesforce-path" style={{ overflowX: 'auto' }}>
-            {activeColumns.map((col, idx) => {
-              const currentColId = resolveDealColumnId(selectedDeal);
-              const currentIdx = activeColumns.findIndex((c) => c.id === currentColId);
-              const isCurrent = currentColId === col.id;
-              const isPast = idx < currentIdx;
+            {rootColumns.map((col, idx) => {
+              const selectedDealParentStage = normalizeStage(selectedDeal.stage).toLowerCase();
+              const colBase = resolveColumnBaseStage(col).toLowerCase();
+              const isCurrent = selectedDealParentStage === colBase;
+
+              const currentIdx = rootColumns.findIndex((c) => resolveColumnBaseStage(c).toLowerCase() === selectedDealParentStage);
+              const isPast = currentIdx >= 0 && idx < currentIdx;
+
+              const selectedDealSubCol = activeColumns.find(
+                (c) => c.id === selectedDeal.display_stage_id || (selectedDeal.display_stage_name && c.name.toLowerCase() === selectedDeal.display_stage_name.toLowerCase())
+              );
+              const hasSubStage = isCurrent && selectedDealSubCol && selectedDealSubCol.id !== col.id;
 
               return (
                 <div
                   key={col.id}
                   className={`path-step ${isCurrent ? 'current' : isPast ? 'completed' : ''}`}
                   onClick={() => handleSelectDealStage(selectedDeal, col)}
+                  title={`Move to ${col.name}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   {isPast && <CheckCircle size={13} color="var(--primary)" />}
                   <span>{col.name}</span>
+                  {hasSubStage && (
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        marginLeft: '0.35rem',
+                        padding: '0.1rem 0.4rem',
+                        borderRadius: 4,
+                        background: 'rgba(255,255,255,0.22)',
+                        color: 'inherit',
+                      }}
+                    >
+                      {selectedDealSubCol.name}
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -652,7 +766,19 @@ export default function DealsPage() {
             className="deals-kanban-board"
           >
         {displayedColumns.map((col) => {
-          const stageDeals = visibleDeals.filter((d) => resolveDealColumnId(d) === col.id);
+          const subStages = getSubStagesForColumn(col);
+          const allParentDeals = visibleDeals.filter((d) => dealBelongsToParent(d, col));
+          const activeSubFilterId = columnSubStageFilter[col.id];
+          const activeSubStage = subStages.find((s) => s.id === activeSubFilterId);
+
+          const stageDeals = activeSubStage
+            ? visibleDeals.filter(
+                (d) =>
+                  resolveDealColumnId(d) === activeSubStage.id ||
+                  (d.display_stage_name && d.display_stage_name.toLowerCase() === activeSubStage.name.toLowerCase())
+              )
+            : allParentDeals;
+
           const stageValue = stageDeals.reduce((acc, d) => acc + (Number(d.value || d.amount) || 0), 0);
           const colBaseStage = resolveColumnBaseStage(col);
           const isCanonicalCol = CANONICAL_STAGES.includes(colBaseStage);
@@ -676,47 +802,208 @@ export default function DealsPage() {
                 e.preventDefault();
                 setDragOverColId(null);
                 if (draggedDealId) {
-                  updateDealStage(draggedDealId, col.name, col.id);
+                  if (activeSubStage) {
+                    updateDealStage(draggedDealId, col.name, activeSubStage.id);
+                  } else {
+                    updateDealStage(draggedDealId, col.name, col.id);
+                  }
                   setDraggedDealId(null);
                 }
               }}
             >
               <div className="kanban-column-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', minWidth: 0 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isCanonicalCol) return;
-                      handleSelectStage(selectedStage === colBaseStage ? null : colBaseStage);
-                    }}
-                    title={
-                      !isCanonicalCol
-                        ? col.name
-                        : selectedStage === colBaseStage
-                          ? 'Click to show all stages'
-                          : `Show only ${colBaseStage} stage`
-                    }
-                    style={{
-                      background: 'transparent',
-                      border: 0,
-                      padding: 0,
-                      cursor: isCanonicalCol ? 'pointer' : 'default',
-                      color: 'inherit',
-                      font: 'inherit',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span className="kanban-column-title">
-                      {col.name}
-                      <span className="badge badge-gray">{stageDeals.length}</span>
-                    </span>
-                  </button>
-                  {col.scope === 'personal' && (
-                    <span className="kanban-personal-badge" title="Visible only on your personal Kanban board">
-                      Personal
-                    </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isCanonicalCol) return;
+                        handleSelectStage(selectedStage === colBaseStage ? null : colBaseStage);
+                      }}
+                      title={
+                        !isCanonicalCol
+                          ? col.name
+                          : selectedStage === colBaseStage
+                            ? 'Click to show all stages'
+                            : `Show only ${colBaseStage} stage`
+                      }
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        padding: 0,
+                        cursor: isCanonicalCol ? 'pointer' : 'default',
+                        color: 'inherit',
+                        font: 'inherit',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span className="kanban-column-title">
+                        {activeSubStage ? `${col.name} > ${activeSubStage.name}` : col.name}
+                        <span className="badge badge-gray">{stageDeals.length}</span>
+                      </span>
+                    </button>
+
+                    {activeSubStage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setColumnSubStageFilter((prev) => ({ ...prev, [col.id]: 'all' }));
+                        }}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '0.1rem 0.35rem', fontSize: '0.6875rem', color: 'var(--primary)' }}
+                        title="Show all deals in this stage"
+                      >
+                        <X size={11} /> All
+                      </button>
+                    )}
+                  </div>
+
+                  {/* In-Column Sub-stage Selector Dropdown */}
+                  {subStages.length > 0 && (
+                    <div style={{ position: 'relative', marginTop: '0.15rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{
+                          fontSize: '0.6875rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '6px',
+                          borderColor: activeSubStage ? 'var(--primary)' : 'var(--border-default)',
+                          background: activeSubStage ? 'var(--primary-light)' : 'var(--bg-card)',
+                          color: activeSubStage ? 'var(--primary-dark)' : 'var(--text-body)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenColumnMenuColId(openColumnMenuColId === col.id ? null : col.id);
+                          setOpenCardMenuDealId(null);
+                        }}
+                      >
+                        <span>Sub-stage: {activeSubStage ? activeSubStage.name : 'All'}</span>
+                        <ChevronDown size={11} />
+                      </button>
+
+                      {openColumnMenuColId === col.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: '100%',
+                            marginTop: 4,
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 8,
+                            boxShadow: 'var(--shadow-card)',
+                            padding: '0.35rem',
+                            zIndex: 100,
+                            minWidth: 200,
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
+                            Filter by Sub-stage
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '0.35rem 0.5rem',
+                              borderRadius: 6,
+                              background: !activeSubStage ? 'var(--primary-light)' : 'transparent',
+                              color: !activeSubStage ? 'var(--primary)' : 'var(--text-main)',
+                              fontWeight: !activeSubStage ? 700 : 500,
+                              border: 0,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setColumnSubStageFilter((prev) => ({ ...prev, [col.id]: 'all' }));
+                              setOpenColumnMenuColId(null);
+                            }}
+                          >
+                            <span>All {col.name} Deals</span>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{allParentDeals.length}</span>
+                          </button>
+
+                          {subStages.map((sub) => {
+                            const isSelected = activeSubStage?.id === sub.id;
+                            const subDealsCount = visibleDeals.filter(
+                              (d) =>
+                                resolveDealColumnId(d) === sub.id ||
+                                (d.display_stage_name && d.display_stage_name.toLowerCase() === sub.name.toLowerCase())
+                            ).length;
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '0.35rem 0.5rem',
+                                  borderRadius: 6,
+                                  background: isSelected ? 'var(--primary-light)' : 'transparent',
+                                  color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  border: 0,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setColumnSubStageFilter((prev) => ({ ...prev, [col.id]: sub.id }));
+                                  setOpenColumnMenuColId(null);
+                                }}
+                              >
+                                <span>{sub.name}</span>
+                                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{subDealsCount}</span>
+                              </button>
+                            );
+                          })}
+
+                          {canAddSubColumn && (
+                            <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '0.25rem', paddingTop: '0.25rem' }}>
+                              <button
+                                type="button"
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  padding: '0.35rem 0.5rem',
+                                  borderRadius: 6,
+                                  background: 'transparent',
+                                  color: 'var(--primary)',
+                                  fontWeight: 700,
+                                  border: 0,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenColumnMenuColId(null);
+                                  openAddColumnModal(col);
+                                }}
+                              >
+                                <Plus size={12} />
+                                <span>Add Sub-column...</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -731,7 +1018,7 @@ export default function DealsPage() {
                         <button
                           type="button"
                           className="kanban-icon-btn"
-                          title={`Add column after "${col.name}"`}
+                          title={`Add sub-column under "${col.name}"`}
                           onClick={() => openAddColumnModal(col)}
                         >
                           <Plus size={13} />
@@ -771,6 +1058,9 @@ export default function DealsPage() {
                   stageDeals.map((deal) => {
                     const isStuck = deal.daysInStage >= 5 && !col.is_won && !col.is_lost;
                     const isCardSelected = selectedDeal?.id === deal.id;
+                    const dealSubStage = subStages.find(
+                      (s) => s.id === deal.display_stage_id || (deal.display_stage_name && s.name.toLowerCase() === deal.display_stage_name.toLowerCase())
+                    );
 
                     return (
                       <div
@@ -799,6 +1089,153 @@ export default function DealsPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* In-Card Sub-stage Selector Badge & Menu */}
+                        {subStages.length > 0 && (
+                          <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.45rem' }}>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              style={{
+                                fontSize: '0.6875rem',
+                                fontWeight: 700,
+                                padding: '0.15rem 0.45rem',
+                                borderRadius: '6px',
+                                background: dealSubStage ? 'var(--primary-light)' : 'var(--surface-hover)',
+                                color: dealSubStage ? 'var(--primary)' : 'var(--text-muted)',
+                                border: `1px solid ${dealSubStage ? 'var(--primary-subtle)' : 'var(--border-default)'}`,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenCardMenuDealId(openCardMenuDealId === deal.id ? null : deal.id);
+                                setOpenColumnMenuColId(null);
+                              }}
+                              title="Change sub-stage or advance deal"
+                            >
+                              <span>{dealSubStage ? dealSubStage.name : `General ${col.name}`}</span>
+                              <ChevronDown size={11} />
+                            </button>
+
+                            {openCardMenuDealId === deal.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: '100%',
+                                  marginTop: 4,
+                                  background: 'var(--bg-card)',
+                                  border: '1px solid var(--border-default)',
+                                  borderRadius: 8,
+                                  boxShadow: 'var(--shadow-card)',
+                                  padding: '0.35rem',
+                                  zIndex: 100,
+                                  minWidth: 200,
+                                  fontSize: '0.75rem',
+                                }}
+                              >
+                                <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
+                                  Sub-stages ({col.name})
+                                </div>
+                                <button
+                                  type="button"
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '0.35rem 0.5rem',
+                                    borderRadius: 6,
+                                    background: !dealSubStage ? 'var(--primary-light)' : 'transparent',
+                                    color: !dealSubStage ? 'var(--primary)' : 'var(--text-main)',
+                                    fontWeight: !dealSubStage ? 700 : 500,
+                                    border: 0,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectDealStage(deal, col);
+                                    setOpenCardMenuDealId(null);
+                                  }}
+                                >
+                                  <span>General {col.name}</span>
+                                  {!dealSubStage && <Check size={12} color="var(--primary)" />}
+                                </button>
+
+                                {subStages.map((sub) => {
+                                  const isCurrent = dealSubStage?.id === sub.id;
+                                  return (
+                                    <button
+                                      key={sub.id}
+                                      type="button"
+                                      style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '0.35rem 0.5rem',
+                                        borderRadius: 6,
+                                        background: isCurrent ? 'var(--primary-light)' : 'transparent',
+                                        color: isCurrent ? 'var(--primary)' : 'var(--text-main)',
+                                        fontWeight: isCurrent ? 700 : 500,
+                                        border: 0,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSelectDealStage(deal, sub);
+                                        setOpenCardMenuDealId(null);
+                                      }}
+                                    >
+                                      <span>{sub.name}</span>
+                                      {isCurrent && <Check size={12} color="var(--primary)" />}
+                                    </button>
+                                  );
+                                })}
+
+                                <div style={{ borderTop: '1px solid var(--border-default)', margin: '0.35rem 0', paddingTop: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
+                                    Move to Parent Stage
+                                  </div>
+                                  {rootColumns
+                                    .filter((rc) => rc.id !== col.id)
+                                    .map((targetParent) => (
+                                      <button
+                                        key={targetParent.id}
+                                        type="button"
+                                        style={{
+                                          width: '100%',
+                                          textAlign: 'left',
+                                          padding: '0.35rem 0.5rem',
+                                          borderRadius: 6,
+                                          background: 'transparent',
+                                          color: targetParent.is_won ? 'var(--success, #10b981)' : targetParent.is_lost ? 'var(--danger, #ef4444)' : 'var(--text-main)',
+                                          fontWeight: 600,
+                                          border: 0,
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '0.35rem',
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectDealStage(deal, targetParent);
+                                          setOpenCardMenuDealId(null);
+                                        }}
+                                      >
+                                        <ArrowRight size={12} />
+                                        <span>{targetParent.is_won ? 'Mark Won' : targetParent.is_lost ? 'Mark Lost' : `Move to ${targetParent.name}`}</span>
+                                      </button>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <h4 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.3, marginBottom: '0.5rem' }}>
                           {deal.name}
@@ -889,7 +1326,7 @@ export default function DealsPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                 {stageModalMode === 'add'
-                  ? `Add Column after "${stageModalParent?.name || 'Qualified'}"`
+                  ? `Add Sub-column under "${stageModalParent?.name || 'Qualified'}"`
                   : `Edit Column "${editingStage?.name || ''}"`}
               </h3>
               <button
@@ -1027,7 +1464,7 @@ export default function DealsPage() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary btn-sm" disabled={isSavingStage}>
-                  {isSavingStage ? 'Saving...' : stageModalMode === 'add' ? 'Create Column' : 'Save Changes'}
+                  {isSavingStage ? 'Saving...' : stageModalMode === 'add' ? 'Create Sub-column' : 'Save Changes'}
                 </button>
               </div>
             </form>

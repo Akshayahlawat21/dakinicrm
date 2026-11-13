@@ -1205,66 +1205,86 @@ export default function DealsPage() {
                             }
                           }}
                         >
-                          {/* Sub-stage Box Header (80-85% bigger bold container title) */}
+                          {/* Card-Style Sub-Stage Header (Big like a Deal Card, full text presentation) */}
                           <div
                             className="substage-header"
                             onClick={() => toggleSubStageCollapsed(sub.id)}
                             title="Click to toggle collapse"
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0, flex: 1 }}>
-                              {isSubCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                              <span
-                                className="substage-title"
-                                style={{
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {sub.name}
-                              </span>
-                              <span
-                                className="badge badge-blue substage-badge"
-                              >
-                                {dealsInSub.length}
-                              </span>
+                            {/* Row 1: Sub-stage Tag & Actions / Chevron */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <span
+                                  style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: sub.color || 'var(--primary)',
+                                    display: 'inline-block',
+                                    flexShrink: 0,
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    fontSize: '0.6875rem',
+                                    fontWeight: 700,
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.04em',
+                                  }}
+                                >
+                                  {col.name} Sub-stage
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={(e) => e.stopPropagation()}>
+                                {canManageSub && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="kanban-icon-btn"
+                                      title={`Edit sub-column "${sub.name}"`}
+                                      style={{ width: 22, height: 22, padding: 0 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditColumnModal(sub);
+                                      }}
+                                    >
+                                      <Pencil size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="kanban-icon-btn danger"
+                                      title={`Delete sub-column "${sub.name}"`}
+                                      style={{ width: 22, height: 22, padding: 0, color: 'var(--danger, #ef4444)' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteColumnModal(sub);
+                                      }}
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </>
+                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', marginLeft: '0.15rem' }}>
+                                  {isSubCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                </div>
+                              </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                              <span className="substage-total">
-                                ${(subValue / 1000).toFixed(0)}k
+                            {/* Row 2: Full Title (All text presented clearly, never truncated with ellipsis) */}
+                            <h4 className="substage-card-title">
+                              {sub.name}
+                            </h4>
+
+                            {/* Row 3: Deal Count & Stage Total Revenue */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.15rem' }}>
+                              <span className="badge badge-blue substage-card-badge">
+                                {dealsInSub.length} {dealsInSub.length === 1 ? 'deal' : 'deals'}
                               </span>
-                              {canManageSub && (
-                                <div
-                                  style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    className="kanban-icon-btn"
-                                    title={`Edit sub-column "${sub.name}"`}
-                                    style={{ width: 24, height: 24, padding: 0 }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditColumnModal(sub);
-                                    }}
-                                  >
-                                    <Pencil size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="kanban-icon-btn danger"
-                                    title={`Delete sub-column "${sub.name}"`}
-                                    style={{ width: 24, height: 24, padding: 0, color: 'var(--danger, #ef4444)' }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openDeleteColumnModal(sub);
-                                    }}
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              )}
+                              <span className="substage-card-amount">
+                                ${subValue.toLocaleString()}
+                              </span>
                             </div>
                           </div>
 
@@ -1319,23 +1339,44 @@ export default function DealsPage() {
                           }
                         }}
                       >
+                        {/* Card-Style General Sub-Stage Header */}
                         <div
                           className="substage-header"
                           onClick={() => toggleSubStageCollapsed(`${col.id}_general`)}
                           title="Click to toggle collapse"
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0, flex: 1 }}>
-                            {isUnassignedCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                            <span className="substage-title" style={{ color: 'var(--text-muted)' }}>
-                              General {col.name}
+                          {/* Row 1: General Pool Tag & Chevron */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.6875rem',
+                                fontWeight: 700,
+                                color: 'var(--text-muted)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                              }}
+                            >
+                              General Pool
                             </span>
-                            <span className="badge badge-gray substage-badge">
-                              {unassignedDeals.length}
+                            <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
+                              {isUnassignedCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                            </div>
+                          </div>
+
+                          {/* Row 2: Full Title */}
+                          <h4 className="substage-card-title" style={{ color: 'var(--text-muted)' }}>
+                            General {col.name}
+                          </h4>
+
+                          {/* Row 3: Deal Count & Stage Total Revenue */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.15rem' }}>
+                            <span className="badge badge-gray substage-card-badge">
+                              {unassignedDeals.length} {unassignedDeals.length === 1 ? 'deal' : 'deals'}
+                            </span>
+                            <span className="substage-card-amount" style={{ color: 'var(--text-muted)' }}>
+                              ${unassignedValue.toLocaleString()}
                             </span>
                           </div>
-                          <span className="substage-total" style={{ color: 'var(--text-muted)' }}>
-                            ${(unassignedValue / 1000).toFixed(0)}k
-                          </span>
                         </div>
                         {!isUnassignedCollapsed && (
                           <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>

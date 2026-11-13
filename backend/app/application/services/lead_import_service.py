@@ -69,6 +69,7 @@ class LeadImportService:
         data: Dict[str, Any],
         now: datetime,
         fallback_assignee: Optional[uuid.UUID] = None,
+        product_id: Optional[uuid.UUID] = None,
     ) -> Lead:
         """Builds a Lead ORM instance from normalized import candidate data."""
         raw_assigned = data.get("assigned_to")
@@ -81,6 +82,13 @@ class LeadImportService:
                 assigned_uuid = fallback_assignee
         else:
             assigned_uuid = fallback_assignee
+
+        resolved_product_id = product_id
+        if not resolved_product_id and data.get("product_id"):
+            try:
+                resolved_product_id = uuid.UUID(str(data.get("product_id")))
+            except (ValueError, TypeError):
+                resolved_product_id = None
 
         return Lead(
             id=uuid.uuid4(),
@@ -97,6 +105,7 @@ class LeadImportService:
             source=data.get("source") or "Bulk Import",
             score=int(data.get("score")) if str(data.get("score") or "").isdigit() else 50,
             status="New",
+            product_id=resolved_product_id,
             interested_product=data.get("interested_product"),
             created_at=now,
             updated_at=now,
@@ -365,6 +374,48 @@ class LeadImportService:
             if e_phone:
                 existing_phone_prod_set.add((_clean_phone(e_phone), norm_e_prod))
 
+        # 4.5. Resolve & Auto-Create Products in Catalog
+        from backend.app.data.models.deal import Product
+
+        raw_prod_names = {
+            (c.get("interested_product") or "").strip()
+            for c in valid_candidates
+            if (c.get("interested_product") or "").strip()
+        }
+
+        product_id_lookup: Dict[str, uuid.UUID] = {}
+        if raw_prod_names:
+            prod_stmt = select(Product).where(
+                Product.organization_id == ctx.tenant_uuid,
+                Product.deleted_at.is_(None),
+            )
+            existing_org_prods = (await self.session.execute(prod_stmt)).scalars().all()
+            for p in existing_org_prods:
+                product_id_lookup[p.name.lower().strip()] = p.id
+
+            new_prods_to_create = []
+            for raw_name in raw_prod_names:
+                norm_key = raw_name.lower().strip()
+                if norm_key not in product_id_lookup:
+                    sku_clean = re.sub(r'[^A-Z0-9]', '', raw_name.upper())[:6] or "PROD"
+                    new_sku = f"SKU-{sku_clean}-{uuid.uuid4().hex[:4].upper()}"
+                    new_p = Product(
+                        id=uuid.uuid4(),
+                        organization_id=ctx.tenant_uuid,
+                        name=raw_name,
+                        sku=new_sku,
+                        category="Imported",
+                        price=0.0,
+                        currency="USD",
+                        is_active=True,
+                    )
+                    new_prods_to_create.append(new_p)
+                    product_id_lookup[norm_key] = new_p.id
+
+            if new_prods_to_create:
+                self.session.add_all(new_prods_to_create)
+                await self.session.flush()
+
         to_insert: List[Lead] = []
         db_duplicate_count = 0
 
@@ -392,12 +443,16 @@ class LeadImportService:
                     "error": f"Duplicate skipped: Active lead already exists for '{candidate['name']}' inquiring about '{candidate['interested_product'] or 'General'}'.",
                 })
             else:
+                prod_name = (candidate["lead_data"].get("interested_product") or "").strip()
+                matched_product_id = product_id_lookup.get(prod_name.lower().strip()) if prod_name else None
+
                 new_lead = self._build_lead_from_data(
                     organization_id=ctx.tenant_uuid,
                     batch_id=batch_id,
                     data=candidate["lead_data"],
                     now=now,
                     fallback_assignee=ctx.user_uuid,
+                    product_id=matched_product_id,
                 )
                 to_insert.append(new_lead)
 
@@ -558,6 +613,45 @@ class LeadImportService:
         to_insert: List[Lead] = []
         fallback_assignee = batch.user_id or ctx.user_uuid
 
+        from backend.app.data.models.deal import Product
+
+        # Resolve products for allowed duplicates
+        raw_dup_prod_names = {
+            (item.get("lead_data", {}).get("interested_product") or "").strip()
+            for item in updated_log
+            if item.get("lead_data", {}).get("interested_product")
+        }
+        dup_product_lookup: Dict[str, uuid.UUID] = {}
+        if raw_dup_prod_names:
+            dup_p_stmt = select(Product).where(
+                Product.organization_id == ctx.tenant_uuid,
+                Product.deleted_at.is_(None),
+            )
+            existing_p = (await self.session.execute(dup_p_stmt)).scalars().all()
+            for p in existing_p:
+                dup_product_lookup[p.name.lower().strip()] = p.id
+
+            new_dup_prods = []
+            for rname in raw_dup_prod_names:
+                nkey = rname.lower().strip()
+                if nkey not in dup_product_lookup:
+                    sclean = re.sub(r'[^A-Z0-9]', '', rname.upper())[:6] or "PROD"
+                    np = Product(
+                        id=uuid.uuid4(),
+                        organization_id=ctx.tenant_uuid,
+                        name=rname,
+                        sku=f"SKU-{sclean}-{uuid.uuid4().hex[:4].upper()}",
+                        category="Imported",
+                        price=0.0,
+                        currency="USD",
+                        is_active=True,
+                    )
+                    new_dup_prods.append(np)
+                    dup_product_lookup[nkey] = np.id
+            if new_dup_prods:
+                self.session.add_all(new_dup_prods)
+                await self.session.flush()
+
         for item in updated_log:
             is_dup = item.get("is_duplicate") or "duplicate" in (item.get("error") or "").lower()
             if not is_dup or item.get("allowed"):
@@ -569,6 +663,9 @@ class LeadImportService:
             if not lead_data:
                 continue
 
+            pname = (lead_data.get("interested_product") or "").strip()
+            matched_pid = dup_product_lookup.get(pname.lower().strip()) if pname else None
+
             to_insert.append(
                 self._build_lead_from_data(
                     organization_id=ctx.tenant_uuid,
@@ -576,6 +673,7 @@ class LeadImportService:
                     data=lead_data,
                     now=now,
                     fallback_assignee=fallback_assignee,
+                    product_id=matched_pid,
                 )
             )
             item["allowed"] = True

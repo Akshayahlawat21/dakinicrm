@@ -109,14 +109,16 @@ dakinicrm/
 │   ├── main.jsx
 │   ├── App.jsx
 │   ├── context/
-│   │   └── CRMContext.jsx                 # Global CRM state, auth, theme, entity CRUD
+│   │   ├── CRMContext.jsx                 # Global CRM state, auth, theme, entity CRUD
+│   │   └── CallContext.jsx                # WebRTC LiveKit softphone state machine, DTMF audio tone synthesis & conference merge
 │   ├── data/
 │   │   ├── countryCodes.js
 │   │   └── mockData.js
 │   ├── services/
 │   │   ├── aiApi.js                       # Layer 5 AI Copilot & transcript client
 │   │   ├── analyticsApi.js                # Layer 9 Analytics API client
-│   │   └── api.js                         # Layer 2/3 authenticated gateway API client
+│   │   ├── api.js                         # Layer 2/3 authenticated gateway API client
+│   │   └── telephonyApi.js                # Layer 2/3 WebRTC telephony client (token, call, hangup, dtmf, control, merge, history)
 │   ├── styles/
 │   │   ├── index.css                      # Semantic Light/Dark theme CSS variables & base styles
 │   │   ├── components.css                 # Shared cards, tables, buttons, badges, inputs
@@ -124,14 +126,19 @@ dakinicrm/
 │   │   └── pages.css                      # Page layouts, Kanban board & tab styles
 │   ├── components/
 │   │   ├── common/                        # Charts, CommandPalette, CountryPhoneInput, ErrorBoundary, LoadingSymbol
-│   │   ├── layout/                        # AgentDock, Sidebar, TopBar
+│   │   ├── layout/                        # AgentDock, Sidebar, TopBar (with Dialer trigger)
 │   │   ├── modals/                        # AssignOwnerModal, ChangePasswordModal, ConvertLeadModal, NotificationsModal, QuickCreateModal, SignInModal
-│   │   └── settings/                      # TeamRolesSettings
+│   │   ├── settings/                      # TeamRolesSettings
+│   │   └── telephony/                     # Outbound Telephony & WebRTC Softphone Components
+│   │       ├── ActiveCallPanel.jsx        # Floating call window with telemetry, mute, hold/resume, DTMF keypad & merge
+│   │       ├── CallButton.jsx             # One-click lead table calling with phone normalization
+│   │       └── DialerModal.jsx            # Floatable, minimizable softphone dialer with audio touch tones & navigation persistence
 │   └── pages/                             # Route views
 │       ├── AccountsPage.jsx
 │       ├── AgentsPage.jsx
 │       ├── AutomationsPage.jsx
 │       ├── CalendarPage.jsx
+│       ├── CallHistoryPage.jsx            # Engagement: Live call records, KPIs, filters & one-click call back
 │       ├── CampaignsPage.jsx
 │       ├── ContactsPage.jsx
 │       ├── CustomerFeedbackPage.jsx
@@ -156,7 +163,7 @@ dakinicrm/
 │   ├── pytest.ini
 │   ├── requirements.txt
 │   ├── middleware/                        # correlation, edge_shield, rate_limiter, request_validation
-│   ├── routers/                           # analytics, auth, health, proxy, webhooks
+│   ├── routers/                           # analytics, auth, health, proxy (registered telephony resource), webhooks
 │   ├── security/                          # auth (JWT)
 │   └── tests/                             # test_e1..e8 & test_analytics_proxy
 │
@@ -171,18 +178,18 @@ dakinicrm/
 │   ├── run.py
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── core/                          # config, logging
+│   │   ├── core/                          # config (telephony configuration & livekit signaling), logging
 │   │   ├── api/
 │   │   │   ├── dependencies.py
-│   │   │   ├── routes/                    # accounts, agent, auth, calls, campaigns, contacts, dashboard, deals, health, leads, products, targets, tasks, teams, users
-│   │   │   └── schemas/                   # Pydantic request/response schemas
-│   │   ├── application/                   # context, exceptions, permissions, services/ (incl. lead_import_service.py)
+│   │   │   ├── routes/                    # accounts, agent, auth, calls, campaigns, contacts, dashboard, deals, health, leads, products, targets, tasks, teams, telephony, users
+│   │   │   └── schemas/                   # Pydantic request/response schemas (incl. telephony.py)
+│   │   ├── application/                   # context, exceptions, permissions, services/ (incl. telephony_service.py, lead_import_service.py)
 │   │   └── data/                          # database, session, transactions, models/, repositories/
 │   ├── sql/
 │   │   ├── schema.sql
 │   │   ├── supabase_demo_data.sql
 │   │   └── migrations/                    # 001_team_and_roles .. 006_lead_bulk_import SQL migrations
-│   └── tests/                             # RBAC, tenancy, CRUD, duplicate detection, bulk import tests
+│   └── tests/                             # RBAC, tenancy, CRUD, duplicate detection, bulk import, test_telephony.py
 │
 ├── ai/                                    # Layer 5: AI Copilot & Transcript Service (Port 8005)
 │   ├── .env.example
@@ -379,6 +386,13 @@ Navigate to [http://localhost:3000/login](http://localhost:3000/login):
   - Live unread tracking, simulated inbound mail testing, Smart Reply, real-time Supabase task status updates (`PATCH /v1/tasks/{id}/status`), and profile name synchronization (`PATCH /v1/users/{id}`).
 - **In-Memory Analytics Caching & Responsive Drawers**:
   - 60-second TTL caching for analytics metrics and non-overlapping detail/copilot drawers across smaller viewports.
+- **Outbound WebRTC Telephony & Human Softphone Integration**:
+  - Direct salesperson browser audio calling powered by LiveKit WebRTC and carrier PSTN multi-trunk infrastructure.
+  - One-click calling from Leads table and Lead detail views with automated E.164 phone normalization.
+  - Floatable, minimizable manual phone dialer accessible globally with full navigation persistence across all CRM pages.
+  - Active Call Panel with LiveKit/PSTN telemetry, timer, mute, hold/resume, interactive touch-tone DTMF keypad, and multi-party Call Merge (Conference).
+  - Dedicated Call History & Telephony module under Engagement with live call logs, KPI summaries, and one-click call back.
+  - Strict `HUMAN_ONLY` dispatch mode with complete AI agent isolation and configurable backend integration.
 
 ---
 

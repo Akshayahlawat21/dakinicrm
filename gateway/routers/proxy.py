@@ -38,6 +38,7 @@ REGISTERED_RESOURCES: Set[str] = {
     "approvals",
     "products",
     "calls",
+    "telephony",
     "export",
     "import",
 }

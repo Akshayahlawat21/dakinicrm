@@ -22,7 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  BadgeCheck
+  BadgeCheck,
+  PhoneCall
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -56,7 +57,8 @@ export default function Sidebar() {
       items: [
         { id: "tasks", label: "Tasks & To-Dos", icon: CheckSquare, count: tasks.filter(t => !t.completed).length },
         { id: "inbox", label: "Inbox", icon: Mail, count: unreadEmailCount > 0 ? unreadEmailCount : undefined },
-        { id: "calendar", label: "Calendar", icon: Calendar }
+        { id: "calendar", label: "Calendar", icon: Calendar },
+        { id: "calls", label: "Call History", icon: PhoneCall }
       ]
     },
     {

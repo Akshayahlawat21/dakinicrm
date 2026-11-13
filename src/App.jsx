@@ -9,6 +9,7 @@ import {
   useLocation
 } from 'react-router-dom';
 import { CRMProvider, useCRM } from './context/CRMContext';
+import { CallProvider } from './context/CallContext';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import AgentDock from './components/layout/AgentDock';
@@ -18,6 +19,8 @@ import CommandPalette from './components/common/CommandPalette';
 import NotificationsModal from './components/modals/NotificationsModal';
 import SignInModal from './components/modals/SignInModal';
 import ChangePasswordModal from './components/modals/ChangePasswordModal';
+import DialerModal from './components/telephony/DialerModal';
+import ActiveCallPanel from './components/telephony/ActiveCallPanel';
 
 // Pages
 import SignInPage from './pages/SignInPage';
@@ -32,6 +35,7 @@ import CampaignsPage from './pages/CampaignsPage';
 import TasksPage from './pages/TasksPage';
 import InboxPage from './pages/InboxPage';
 import CalendarPage from './pages/CalendarPage';
+import CallHistoryPage from './pages/CallHistoryPage';
 import ReportsPage from './pages/ReportsPage';
 import CustomerFeedbackPage from './pages/CustomerFeedbackPage';
 import AutomationsPage from './pages/AutomationsPage';
@@ -87,6 +91,8 @@ function AppLayout() {
       <NotificationsModal />
       <SignInModal />
       <ChangePasswordModal />
+      <DialerModal />
+      <ActiveCallPanel />
     </div>
   );
 }
@@ -135,6 +141,7 @@ function AppRoutes() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/calls" element={<CallHistoryPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/customer-feedback" element={<CustomerFeedbackPage />} />
         <Route path="/automations" element={<AutomationsPage />} />
@@ -153,7 +160,9 @@ export default function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <CRMProvider>
-          <AppRoutes />
+          <CallProvider>
+            <AppRoutes />
+          </CallProvider>
         </CRMProvider>
       </ErrorBoundary>
     </BrowserRouter>

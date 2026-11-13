@@ -22,7 +22,8 @@ import {
   Mail,
   UserPlus,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Package
 } from 'lucide-react';
 
 function getPageNumbers(current, total) {
@@ -795,7 +796,8 @@ export default function LeadsPage() {
                           }}
                           title={lead.interested_product}
                         >
-                          📦 {lead.interested_product}
+                          <Package size={12} style={{ flexShrink: 0, opacity: 0.85 }} />
+                          <span>{lead.interested_product}</span>
                         </span>
                       ) : (
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>—</span>
@@ -968,8 +970,9 @@ export default function LeadsPage() {
                       <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-main)' }}>{lead.name}</h4>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-body)', marginBottom: '0.35rem' }}>{lead.company}</div>
                       {lead.interested_product && (
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span>📦 {lead.interested_product}</span>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <Package size={11} style={{ flexShrink: 0, opacity: 0.85 }} />
+                          <span>{lead.interested_product}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1151,7 +1154,10 @@ export default function LeadsPage() {
               {quickPreviewLead.interested_product && (
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Interested Product</span>
-                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)' }}>📦 {quickPreviewLead.interested_product}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--primary-dark)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <Package size={14} style={{ flexShrink: 0, opacity: 0.85 }} />
+                    <span>{quickPreviewLead.interested_product}</span>
+                  </div>
                 </div>
               )}
               <div>

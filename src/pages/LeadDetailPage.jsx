@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { analyzeTranscript } from '../services/aiApi';
+import CallButton from '../components/telephony/CallButton';
 import {
   ChevronLeft,
   Phone,
@@ -331,11 +332,8 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Quick Contact Action Icons */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-            <a href={`tel:${lead.phone}`} className="btn btn-secondary btn-sm" title="Call">
-              <Phone size={14} color="var(--primary)" />
-              <span>Call</span>
-            </a>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <CallButton lead={lead} size="sm" />
             <a href={`mailto:${lead.email}`} className="btn btn-secondary btn-sm" title="Email">
               <Mail size={14} color="var(--primary)" />
               <span>Email</span>

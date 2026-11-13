@@ -553,6 +553,15 @@ export function CRMProvider({ children }) {
           // Fetch all live entities from Supabase via Gateway if authenticated
           if (getStoredToken()) {
             await fetchSupabaseData();
+            // If token expired during server restart (401 cleared the token), seamlessly re-authenticate
+            if (!getStoredToken() && localStorage.getItem('dakini_signed_out') !== 'true') {
+              const loginRes = await gatewayApi.login('elena.rostova@dakini.ai', 'dakini_secure_2026', 'b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
+              if (loginRes.success && isMounted) {
+                setCurrentUser(loginRes.data.user);
+                setIsAuthenticated(true);
+                await fetchSupabaseData();
+              }
+            }
           } else if (localStorage.getItem('dakini_signed_out') !== 'true') {
             const loginRes = await gatewayApi.login('elena.rostova@dakini.ai', 'dakini_secure_2026', 'b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
             if (loginRes.success && isMounted) {

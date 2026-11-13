@@ -269,6 +269,13 @@ input, select, textarea {
   background-color: var(--surface-soft);
   color: var(--text-main);
   border-color: var(--border-default);
+  color-scheme: dark;
+}
+
+[data-theme="dark"] select option {
+  background-color: var(--bg-card, #0f172a);
+  color: var(--text-main, #f8fafc);
+  color-scheme: dark;
 }
 
 [data-theme="dark"] .input-field:focus,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../../context/CRMContext';
+import { useDialer } from '../../context/CallContext';
 import {
   Search,
   Sparkles,
@@ -15,10 +16,13 @@ import {
   Loader2,
   RefreshCw,
   Sun,
-  Moon
+  Moon,
+  Phone
 } from 'lucide-react';
 
 export default function TopBar() {
+  const { openDialer, callState } = useDialer();
+  const isCallActive = callState !== 'idle' && callState !== 'completed' && callState !== 'failed';
   const {
     isAgentDockOpen,
     setIsAgentDockOpen,
@@ -86,6 +90,36 @@ export default function TopBar() {
         >
           <Sparkles size={16} />
           <span>Ask Dakini</span>
+        </button>
+
+        {/* Global Phone Dialer Button */}
+        <button
+          className="btn btn-secondary"
+          onClick={() => openDialer()}
+          title="Open Outbound Phone Dialer"
+          style={{
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            background: isCallActive ? 'var(--success-bg)' : undefined,
+            color: isCallActive ? 'var(--success)' : undefined,
+            borderColor: isCallActive ? 'var(--success)' : undefined,
+          }}
+        >
+          <Phone size={15} />
+          <span>Dialer</span>
+          {isCallActive && (
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'var(--success)',
+              }}
+              className="animate-ping"
+            />
+          )}
         </button>
 
         {/* + New Record Menu */}

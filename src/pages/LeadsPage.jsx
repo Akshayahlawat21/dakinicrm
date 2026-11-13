@@ -3,6 +3,7 @@ import { useCRM } from '../context/CRMContext';
 import { gatewayApi } from '../services/api';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import AssignOwnerModal from '../components/modals/AssignOwnerModal';
+import CallButton from '../components/telephony/CallButton';
 import { matchesLeadFilters } from '../utils/dealAnalyticsFilters';
 import { fetchAllPaginatedLeads } from '../utils/fetchAllPaginatedLeads';
 import {
@@ -726,6 +727,7 @@ export default function LeadsPage() {
                 <th>Owner</th>
                 <th>Last Touched</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
+                <th style={{ width: 64, textAlign: 'center' }}>CALL</th>
               </tr>
             </thead>
             <tbody>
@@ -928,6 +930,9 @@ export default function LeadsPage() {
                           <ArrowRight size={14} />
                         </button>
                       </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                      <CallButton lead={lead} />
                     </td>
                   </tr>
                 );
@@ -1166,7 +1171,10 @@ export default function LeadsPage() {
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Phone</span>
-                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{quickPreviewLead.phone}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  <span>{quickPreviewLead.phone || 'No phone'}</span>
+                  <CallButton lead={quickPreviewLead} size="sm" />
+                </div>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Owner</span>

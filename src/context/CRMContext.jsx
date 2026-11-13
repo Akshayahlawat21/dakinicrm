@@ -132,14 +132,7 @@ export function CRMProvider({ children }) {
   const [automations, setAutomations] = useState(automationsList);
 
   // AI Agent Chat State
-  const [agentMessages, setAgentMessages] = useState([
-    {
-      id: "msg-1",
-      sender: "dakini",
-      text: "Aarav is already converted. His score of 128 comes mostly from the website demo request. Next step: book a discovery call with Marcus Vance.",
-      time: "Just now"
-    }
-  ]);
+  const [agentMessages, setAgentMessages] = useState([]);
   const [agentThinking, setAgentThinking] = useState(false);
   const [assistantContext, setAssistantContext] = useState({});
 
@@ -1870,11 +1863,14 @@ export function CRMProvider({ children }) {
     setAgentMessages((prev) => [...prev, userMsg]);
     setAgentThinking(true);
     try {
-      const res = await gatewayApi.sendAgentMessage(text, {
-        page: currentTab,
-        selected_lead_id: selectedLead?.id || null,
-        ...assistantContext,
-      });
+      const history = agentMessages
+        .slice(-8)
+        .filter((message) => message.sender === 'user' || message.sender === 'dakini')
+        .map((message) => ({
+          role: message.sender === 'user' ? 'user' : 'assistant',
+          content: String(message.text || '').slice(0, 2000),
+        }));
+      const res = await gatewayApi.sendAgentMessage(text, history);
       const reply = res.success && res.data?.reply
         ? res.data.reply
         : (res.error?.message || "Dakini could not retrieve CRM data right now. Please try again.");

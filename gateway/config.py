@@ -34,6 +34,8 @@ class GatewaySettings(BaseSettings):
     # Private Layer 9 reporting service. Reach it only through this gateway.
     ANALYTICS_API_URL: str = "http://localhost:8090"
     UPSTREAM_TIMEOUT_SECONDS: float = 60.0
+    AI_AGENT_UPSTREAM_TIMEOUT_SECONDS: float = 120.0
+    LEAD_IMPORT_HISTORY_UPSTREAM_TIMEOUT_SECONDS: float = 60.0
     MOCK_UPSTREAM_IF_DOWN: bool = False  # False by default; only allowed in development
 
     @property

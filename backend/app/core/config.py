@@ -16,7 +16,7 @@ class AppSettings(BaseSettings):
         extra="ignore"
     )
 
-    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_URL: str = "http://127.0.0.1:8005"
     AI_INTERNAL_API_KEY: str = ""
 
     # Runtime

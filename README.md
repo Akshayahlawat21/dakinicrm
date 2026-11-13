@@ -7,7 +7,7 @@
 
 An enterprise-grade Customer Relationship Management (CRM) platform built with a **React 18 / Vite SPA**, a **FastAPI Layer 2 Edge & API Gateway**, a **FastAPI Layer 3 Application & Data Layer**, a **FastAPI Layer 5 AI Transcript & Copilot Service**, and a **FastAPI Layer 9 Analytics Service** backed by **Supabase PostgreSQL**.
 
-Dakini CRM provides automated pipeline management, multi-tenant row-level security (RLS), autonomous AI copilot agents, Kanban deal velocity boards with interactive stage filtering, bulk CSV/JSON lead imports with batch audit logs, full Light & Dark mode theming, calendar scheduling, a bidirectional inbox hub, and sales performance analytics.
+Dakini CRM provides automated pipeline management, multi-tenant row-level security (RLS), a role-scoped, read-only AI CRM assistant with LLM-selected database filters, Kanban deal velocity boards with interactive stage filtering, bulk CSV/JSON lead imports with batch audit logs, full Light & Dark mode theming, calendar scheduling, a bidirectional inbox hub, and sales performance analytics.
 
 ---
 

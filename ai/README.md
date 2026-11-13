@@ -1,21 +1,35 @@
-# Dakini CRM — Layer 5 Transcript Analysis
+# Dakini CRM — Layer 5 AI Service
 
-Layer 5 implements only the current AI requirement: one sales-call transcript in, two structured outputs out. It does not provide the old general CRM AI chat, lead-scoring endpoint, CRM database queries, autonomous agents, or AI-output persistence.
+Layer 5 provides two authenticated AI capabilities: CRM question answering with OpenAI-compatible tool-call responses, and sales-call transcript analysis. It does not connect directly to the CRM database. All CRM data reads and role checks are performed by Layer 3.
 
-## Flow
+## CRM assistant architecture
+
+`React AgentDock → Layer 2 Gateway → Layer 3 authenticated agent route → Layer 5 Gemini → Layer 3 read-only CRM tool registry → PostgreSQL`
+
+For each chat request, Layer 3 sends the conversation and an allow-listed set of tool definitions to Layer 5. Layer 5 returns either a final assistant message or a function/tool call. Layer 3 executes supported tools against PostgreSQL, applies tenant and role restrictions, then sends the tool result back to Layer 5. The loop is bounded and read-only.
+
+Available Layer 3 tools:
+
+- `search_leads`: status, source, score, campaign, product, text, and creation-date filters.
+- `search_deals`: stage, status, account, campaign, product, currency, amount, text, and creation-date filters.
+- `get_pipeline_summary`: stage/currency counts, pipeline value, and weighted pipeline value.
+- `get_campaign_performance`: campaign type/status/budget and visible lead counts.
+- `get_product_performance`: product, visible lead counts, and deal totals separated by currency.
+- `get_account_summary`: visible account deal counts and deal values.
+
+The model chooses filters from the user's natural-language question. Browser-supplied dashboard filters are not treated as data scope. Layer 3 enforces scope on every tool call: owners can read tenant records, managers can read their active team's records plus their own, and sales roles can read only their own assigned/owned records. Unassigned leads are not returned to non-owner roles. Client input cannot provide a tenant ID, user ID, team ID, or SQL statement.
+
+The assistant tools are read-only. Changes to leads, deals, campaigns, approvals, or other CRM records must continue through their separately authenticated CRM workflows.
+
+## Transcript analysis
 
 `Dialer/CRM transcript → Layer 3 authenticated bridge → Layer 5 LLM prompt → Summary + Improvements → CRM UI`
 
-For each submitted transcript, the hosted LLM returns exactly two top-level sections:
-
-- `summary`: `call_summary`, `positive_feedback`, `negative_feedback`, `customer_needs`, `buying_signals`
-- `improvements`: `conversion_blockers`, `product_improvements`, `sales_recommendations`, `next_steps`
-
-Layer 5 returns these outputs directly and does not store the transcript or results in the CRM database. If the user submits the same transcript again, it will be analyzed again; there is no result cache or database persistence in the current scope.
+The transcript endpoint returns the structured sections `summary` and `improvements`. Layer 5 does not store transcript content or AI output.
 
 ## Configuration
 
-From the `ai` folder on Windows PowerShell:
+Run the AI service from the `ai` folder on Windows PowerShell:
 
 ```powershell
 py -m venv .venv
@@ -24,17 +38,18 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Set these server-side environment variables in `ai\.env`:
+Set these server-side variables in `ai\.env`:
 
 ```dotenv
 AI_INTERNAL_API_KEY=<long random secret shared only with Layer 3>
-LLM_API_KEY=<your hosted LLM provider key>
-LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=openai/gpt-oss-20b
-LLM_TIMEOUT_SECONDS=40
+GEMINI_API_KEY=<your Gemini API key>
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_FALLBACK_MODELS=gemini-3.6-flash,gemini-3.8-flash
+GEMINI_TIMEOUT_SECONDS=12
 ```
 
-Use an LLM base URL/model that is enabled for your provider account. Never expose either key in the browser or commit it to Git.
+Set the matching `AI_INTERNAL_API_KEY` and `AI_SERVICE_URL=http://127.0.0.1:8005` in Layer 3 `backend\.env`. Keep both secret values server-side and do not commit either `.env` file.
 
 ## Start and test
 
@@ -44,22 +59,14 @@ py -m uvicorn app.main:app --host 127.0.0.1 --port 8005 --reload
 
 - Health: `http://127.0.0.1:8005/health`
 - Swagger: `http://127.0.0.1:8005/docs`
-- Required authenticated route: `POST /v1/ai/transcript-analysis`
+- CRM chat (internal Layer 3 only): `POST /v1/ai/chat`
+- Transcript analysis (internal Layer 3 only): `POST /v1/ai/transcript-analysis`
 
-Layer 3 exposes `POST /v1/agent/transcript-analysis`; it forwards the call to Layer 5 after authenticating the CRM request and adding trusted identity headers. The browser must call Layer 3/Gateway, not Layer 5 directly.
-
-Run unit tests from this folder:
+The browser must call Layer 3/Gateway, not Layer 5 directly. Run tests from this folder:
 
 ```powershell
-$env:PYTHONPATH = "."
 py -m pytest -q
 py -m py_compile app\*.py
 ```
 
-The tests mock the LLM provider. They do not prove live credentials or the provider/model are configured correctly.
-
-## Current limits
-
-- Transcript input is pasted text from the UI; audio transcription and automatic dialer ingestion are not included in this patch.
-- Outputs remain only in browser/application state; they are not retained when the state is cleared or the page reloads.
-- The overall product-wide aggregate report is not part of this transcript-only patch. To build it later without resending every transcript to the LLM, the team must agree on a source/history and aggregation strategy.
+Tests mock the LLM provider; they do not prove that live credentials, selected Gemini model, or provider-side tool calling are enabled for your account.

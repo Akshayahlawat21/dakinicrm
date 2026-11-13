@@ -434,10 +434,20 @@ export default function DealsPage() {
     if (!activePipelineId || !deleteStageTarget || isDeletingStage) return;
     setIsDeletingStage(true);
     setStageError('');
-    const res = await deleteCustomStage(activePipelineId, deleteStageTarget.id, reassignTargetId || null);
+    const targetId = deleteStageTarget.id;
+    const res = await deleteCustomStage(activePipelineId, targetId, reassignTargetId || null);
     setIsDeletingStage(false);
     if (res?.success) {
       setDeleteStageTarget(null);
+      setColumnSubStageFilter((prev) => {
+        const next = { ...prev };
+        for (const k of Object.keys(next)) {
+          if (next[k] === targetId) {
+            next[k] = 'all';
+          }
+        }
+        return next;
+      });
     } else {
       setStageError(res?.error?.message || 'Unable to delete column.');
     }
@@ -784,6 +794,11 @@ export default function DealsPage() {
           const isCanonicalCol = CANONICAL_STAGES.includes(colBaseStage);
           const canAddSubColumn = Boolean(activePipelineId) && !col.is_won && !col.is_lost;
           const canManageColumn = Boolean(activePipelineId) && !col.is_system && (col.scope === 'personal' || isOwner);
+          const canManageActiveSubStage =
+            Boolean(activePipelineId) &&
+            Boolean(activeSubStage) &&
+            !activeSubStage.is_system &&
+            (activeSubStage.scope === 'personal' || isOwner);
           const isDragTarget = dragOverColId === col.id;
 
           return (
@@ -943,32 +958,80 @@ export default function DealsPage() {
                                 resolveDealColumnId(d) === sub.id ||
                                 (d.display_stage_name && d.display_stage_name.toLowerCase() === sub.name.toLowerCase())
                             ).length;
+                            const canManageSub =
+                              Boolean(activePipelineId) &&
+                              !sub.is_system &&
+                              (sub.scope === 'personal' || isOwner);
+
                             return (
-                              <button
+                              <div
                                 key={sub.id}
-                                type="button"
                                 style={{
-                                  width: '100%',
-                                  textAlign: 'left',
-                                  padding: '0.35rem 0.5rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
                                   borderRadius: 6,
                                   background: isSelected ? 'var(--primary-light)' : 'transparent',
-                                  color: isSelected ? 'var(--primary)' : 'var(--text-main)',
-                                  fontWeight: isSelected ? 700 : 500,
-                                  border: 0,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setColumnSubStageFilter((prev) => ({ ...prev, [col.id]: sub.id }));
-                                  setOpenColumnMenuColId(null);
+                                  paddingRight: canManageSub ? '0.25rem' : 0,
                                 }}
                               >
-                                <span>{sub.name}</span>
-                                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{subDealsCount}</span>
-                              </button>
+                                <button
+                                  type="button"
+                                  style={{
+                                    flex: 1,
+                                    textAlign: 'left',
+                                    padding: '0.35rem 0.5rem',
+                                    borderRadius: 6,
+                                    background: 'transparent',
+                                    color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                                    fontWeight: isSelected ? 700 : 500,
+                                    border: 0,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnSubStageFilter((prev) => ({ ...prev, [col.id]: sub.id }));
+                                    setOpenColumnMenuColId(null);
+                                  }}
+                                >
+                                  <span>{sub.name}</span>
+                                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{subDealsCount}</span>
+                                </button>
+
+                                {canManageSub && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                                    <button
+                                      type="button"
+                                      className="kanban-icon-btn"
+                                      title={`Edit sub-column "${sub.name}"`}
+                                      style={{ width: 22, height: 22, padding: 0 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenColumnMenuColId(null);
+                                        openEditColumnModal(sub);
+                                      }}
+                                    >
+                                      <Pencil size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="kanban-icon-btn danger"
+                                      title={`Delete sub-column "${sub.name}"`}
+                                      style={{ width: 22, height: 22, padding: 0, color: 'var(--danger, #ef4444)' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenColumnMenuColId(null);
+                                        openDeleteColumnModal(sub);
+                                      }}
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             );
                           })}
 
@@ -1012,7 +1075,7 @@ export default function DealsPage() {
                     ${(stageValue / 1000).toFixed(0)}k
                   </span>
 
-                  {(canAddSubColumn || canManageColumn) && (
+                  {(canAddSubColumn || canManageColumn || canManageActiveSubStage) && (
                     <div className="kanban-col-actions">
                       {canAddSubColumn && (
                         <button
@@ -1024,7 +1087,26 @@ export default function DealsPage() {
                           <Plus size={13} />
                         </button>
                       )}
-                      {canManageColumn && (
+                      {canManageActiveSubStage ? (
+                        <>
+                          <button
+                            type="button"
+                            className="kanban-icon-btn"
+                            title={`Edit sub-column "${activeSubStage.name}"`}
+                            onClick={() => openEditColumnModal(activeSubStage)}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="kanban-icon-btn danger"
+                            title={`Delete sub-column "${activeSubStage.name}"`}
+                            onClick={() => openDeleteColumnModal(activeSubStage)}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      ) : canManageColumn ? (
                         <>
                           <button
                             type="button"
@@ -1043,7 +1125,7 @@ export default function DealsPage() {
                             <Trash2 size={12} />
                           </button>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -1495,7 +1577,7 @@ export default function DealsPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                Delete Column "{deleteStageTarget.name}"
+                Delete {deleteStageTarget.parent_stage_id || deleteStageTarget.parent_base_stage ? 'Sub-column' : 'Column'} "{deleteStageTarget.name}"
               </h3>
               <button
                 type="button"

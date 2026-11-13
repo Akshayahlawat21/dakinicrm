@@ -448,6 +448,32 @@ export const gatewayApi = {
   },
 
   /**
+   * Calendar resource (Live Supabase DB)
+   */
+  async getCalendarEvents(status = 'all') {
+    const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+    return gatewayFetch(`/calendar${query}`, { method: 'GET' });
+  },
+
+  async createCalendarEvent(eventData) {
+    return gatewayFetch('/calendar', {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  },
+
+  async updateCalendarEventStatus(eventId, status) {
+    return gatewayFetch(`/calendar/${eventId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async deleteCalendarEvent(eventId) {
+    return gatewayFetch(`/calendar/${eventId}`, { method: 'DELETE' });
+  },
+
+  /**
    * Teams resource
    */
   async getTeams(status = 'active') {

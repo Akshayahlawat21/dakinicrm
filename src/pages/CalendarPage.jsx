@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
+import gatewayApi from '../services/api';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -153,12 +154,13 @@ const INITIAL_EVENTS = [
 
 export default function CalendarPage() {
   const navigate = useNavigate();
-  const { leads, addTask } = useCRM();
+  const { leads, addTask, currentUser } = useCRM();
 
   const [viewMode, setViewMode] = useState('Week'); // 'Day' | 'Week' | 'Month'
   const [meetingAlert, setMeetingAlert] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Follow-ups' | 'Upcoming' | 'Completed' | 'Passed'
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoadingDb, setIsLoadingDb] = useState(false);
 
   // Dynamic Current Week Start (Monday of current week)
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -176,7 +178,7 @@ export default function CalendarPage() {
   // Month navigation state
   const [selectedMonthDate, setSelectedMonthDate] = useState(() => new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
 
-  // Load events from localStorage or fallback
+  // Load events from database (Supabase activities) with fallback
   const [events, setEvents] = useState(() => {
     try {
       const saved = localStorage.getItem('dakini_calendar_events_v3');
@@ -187,7 +189,29 @@ export default function CalendarPage() {
     return INITIAL_EVENTS;
   });
 
-  // Save to localStorage on any change
+  // Fetch live calendar events from database for current user/tenant
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDbEvents = async () => {
+      try {
+        setIsLoadingDb(true);
+        const res = await gatewayApi.getCalendarEvents(statusFilter);
+        if (isMounted && res.success && Array.isArray(res.data?.data)) {
+          if (res.data.data.length > 0) {
+            setEvents(res.data.data);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not retrieve calendar events from database:', err);
+      } finally {
+        if (isMounted) setIsLoadingDb(false);
+      }
+    };
+    fetchDbEvents();
+    return () => { isMounted = false; };
+  }, [currentUser?.id, statusFilter]);
+
+  // Keep localStorage updated as cache
   useEffect(() => {
     try {
       localStorage.setItem('dakini_calendar_events_v3', JSON.stringify(events));
@@ -351,12 +375,14 @@ export default function CalendarPage() {
   };
 
   // Helper: toggle completion
-  const handleToggleComplete = (id, e) => {
+  const handleToggleComplete = async (id, e) => {
     if (e) e.stopPropagation();
+    let targetStatus = 'completed';
     setEvents((prev) =>
       prev.map((ev) => {
         if (ev.id === id) {
           const updated = !ev.completed;
+          targetStatus = updated ? 'completed' : 'scheduled';
           setMeetingAlert(updated ? `Marked "${ev.title}" as completed! ✅` : `Reopened "${ev.title}".`);
           setTimeout(() => setMeetingAlert(null), 3000);
           return { ...ev, completed: updated };
@@ -364,15 +390,25 @@ export default function CalendarPage() {
         return ev;
       })
     );
+    try {
+      await gatewayApi.updateCalendarEventStatus(id, targetStatus);
+    } catch (err) {
+      console.warn('Could not sync event status to DB:', err);
+    }
   };
 
   // Helper: delete single event
-  const handleDeleteEvent = (id, e) => {
+  const handleDeleteEvent = async (id, e) => {
     if (e) e.stopPropagation();
     const target = events.find((ev) => ev.id === id);
     setEvents((prev) => prev.filter((ev) => ev.id !== id));
     setMeetingAlert(`Removed "${target?.title || 'Event'}" from calendar. 🗑️`);
     setTimeout(() => setMeetingAlert(null), 3000);
+    try {
+      await gatewayApi.deleteCalendarEvent(id);
+    } catch (err) {
+      console.warn('Could not delete event from DB:', err);
+    }
   };
 
   // Helper: clean up all completed or passed events
@@ -409,7 +445,7 @@ export default function CalendarPage() {
   };
 
   // Submit new event
-  const handleCreateEventSubmit = (e) => {
+  const handleCreateEventSubmit = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) {
       alert("Please enter a follow-up or meeting title");
@@ -422,8 +458,9 @@ export default function CalendarPage() {
     const endMinutes = newDuration === '30m' ? '30' : newDuration === '45m' ? '45' : '00';
     const endHourLabel = endHour > 12 ? `${endHour - 12}:${endMinutes} PM` : `${endHour}:${endMinutes} ${endHour === 12 ? 'PM' : 'AM'}`;
 
+    const tempId = `evt-${Date.now()}`;
     const newEvt = {
-      id: `evt-${Date.now()}`,
+      id: tempId,
       title: newTitle.trim(),
       company: newCompany.trim() || 'Enterprise Client',
       time: `${hourLabel} - ${endHourLabel}`,
@@ -432,7 +469,7 @@ export default function CalendarPage() {
       monthIndex: matchedDay.monthIndex,
       year: matchedDay.year,
       type: newType,
-      attendees: newAttendees ? newAttendees.split(',').map((s) => s.trim()) : ['Elena Rostova'],
+      attendees: newAttendees ? newAttendees.split(',').map((s) => s.trim()) : [currentUser?.name || 'Elena Rostova'],
       desc: newDesc.trim() || `Scheduled ${newType} with ${newCompany}`,
       videoUrl: newType === 'meeting' || newType === 'demo' ? `https://meet.google.com/dak-${Math.random().toString(36).substring(7)}` : null,
       completed: false
@@ -448,6 +485,30 @@ export default function CalendarPage() {
     setIsModalOpen(false);
     setMeetingAlert(`Added "${newTitle}" to ${matchedDay.day} ${matchedDay.date}! 📅`);
     setTimeout(() => setMeetingAlert(null), 3500);
+
+    // Persist to Supabase database
+    try {
+      const payload = {
+        title: newTitle.trim(),
+        company: newCompany.trim() || 'Enterprise Client',
+        type: newType,
+        day_number: matchedDay.dayNumber,
+        month_index: matchedDay.monthIndex,
+        year: matchedDay.year,
+        hour: Number(newHour),
+        duration: newDuration,
+        location: newEvt.videoUrl,
+        description: newEvt.desc,
+        attendees: newEvt.attendees,
+        sync_task: newSyncTask,
+      };
+      const res = await gatewayApi.createCalendarEvent(payload);
+      if (res && res.success && res.data?.data?.id) {
+        setEvents((prev) => prev.map((ev) => ev.id === tempId ? { ...ev, id: res.data.data.id } : ev));
+      }
+    } catch (err) {
+      console.warn('Could not save new event to DB:', err);
+    }
   };
 
   // Hours for Day view (8:00 AM to 6:00 PM)

@@ -31,12 +31,13 @@ class CalendarService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         status_filter: Optional[str] = None,
+        scope: Optional[str] = "personal",
     ) -> List[Dict[str, Any]]:
         """
         Lists calendar events scoped by tenant and user role.
-        Owners see all events in org.
-        Managers see their own events and team members' events.
-        Salespersons see only their own events.
+        scope='personal' (default): Returns strictly the caller's own calendar markings.
+        scope='team' / 'all': Allows Owners (all org events) and Managers (team events)
+        to review shared team calendar markings. Salespersons always see only personal events.
         """
         tenant_uuid = ctx.tenant_uuid
         user_uuid = ctx.user_uuid
@@ -46,18 +47,24 @@ class CalendarService:
             Activity.type.in_(["meeting", "call", "follow-up", "demo", "task", "review"]),
         ]
 
-        # Role-based visibility
-        if not (ctx.is_owner or ctx.is_admin):
-            if ctx.is_manager and ctx.team_id:
-                # Find all user IDs in this manager's team
-                team_detail = await self.team_repo.get_team_detail(ctx.team_id, ctx.tenant_id)
-                team_user_ids = [m.user_id for m in team_detail.members if m.user_id] if team_detail else []
-                if user_uuid not in team_user_ids:
-                    team_user_ids.append(user_uuid)
-                base_filter.append(or_(Activity.user_id.in_(team_user_ids), Activity.user_id.is_(None)))
-            else:
-                # Salesperson: strictly own events or unassigned
-                base_filter.append(or_(Activity.user_id == user_uuid, Activity.user_id.is_(None)))
+        normalized_scope = (scope or "personal").lower().strip()
+
+        # Enforce personal calendar by default or strictly for sales reps
+        if normalized_scope == "personal" or ctx.is_salesperson:
+            base_filter.append(Activity.user_id == user_uuid)
+        else:
+            # Shared / Team view requested by manager or owner
+            if ctx.is_manager:
+                if ctx.team_id:
+                    team_detail = await self.team_repo.get_team_detail(ctx.team_id, ctx.tenant_id)
+                    team_user_ids = [m.user_id for m in team_detail.members if m.user_id] if team_detail else []
+                    if user_uuid not in team_user_ids:
+                        team_user_ids.append(user_uuid)
+                    base_filter.append(Activity.user_id.in_(team_user_ids))
+                else:
+                    base_filter.append(Activity.user_id == user_uuid)
+            elif not ctx.is_owner:
+                base_filter.append(Activity.user_id == user_uuid)
 
         if start_date:
             base_filter.append(Activity.start_at >= start_date)
@@ -71,6 +78,7 @@ class CalendarService:
 
         stmt = (
             select(Activity)
+            .options(selectinload(Activity.assigned_user))
             .where(*base_filter)
             .order_by(Activity.start_at.asc().nulls_last(), Activity.created_at.desc())
         )
@@ -78,7 +86,9 @@ class CalendarService:
         activities = res.scalars().all()
 
         # If database has zero calendar events for this organization, auto-seed realistic starter events
-        if len(activities) == 0:
+        tenant_count_stmt = select(func.count(Activity.id)).where(Activity.organization_id == tenant_uuid)
+        tenant_count = (await self.session.execute(tenant_count_stmt)).scalar() or 0
+        if tenant_count == 0:
             activities = await self._seed_default_org_events(ctx)
 
         # Format events into DTOs

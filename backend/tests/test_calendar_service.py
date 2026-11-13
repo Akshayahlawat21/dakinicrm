@@ -78,3 +78,43 @@ async def test_calendar_cross_tenant_isolation(db_session, ctx_owner_a, ctx_owne
     events_b = await cal_service.list_events(ctx_owner_b)
     assert not any(e["id"] == str(activity_a.id) for e in events_b)
 
+
+@pytest.mark.asyncio
+async def test_calendar_personal_isolation_salesperson_vs_owner(db_session, ctx_owner_a, ctx_sales_a1):
+    """Test that salesperson cannot view owner's personal calendar markings."""
+    cal_service = CalendarService(db_session)
+
+    # Owner creates a personal event
+    owner_event = await cal_service.create_event(
+        ctx=ctx_owner_a,
+        title="Owner Executive Strategy Session",
+        type="meeting",
+    )
+
+    # Salesperson creates a personal event
+    sales_event = await cal_service.create_event(
+        ctx=ctx_sales_a1,
+        title="Salesperson Client Call",
+        type="call",
+    )
+
+    # Salesperson listing events (default personal scope) -> sees ONLY their event, NEVER owner's
+    sales_events = await cal_service.list_events(ctx_sales_a1, scope="personal")
+    assert any(e["id"] == str(sales_event.id) for e in sales_events)
+    assert not any(e["id"] == str(owner_event.id) for e in sales_events)
+
+    # Even if salesperson tries scope="team", salesperson is restricted to personal
+    sales_events_team = await cal_service.list_events(ctx_sales_a1, scope="team")
+    assert not any(e["id"] == str(owner_event.id) for e in sales_events_team)
+
+    # Owner with scope="personal" sees only their own event
+    owner_personal = await cal_service.list_events(ctx_owner_a, scope="personal")
+    assert any(e["id"] == str(owner_event.id) for e in owner_personal)
+    assert not any(e["id"] == str(sales_event.id) for e in owner_personal)
+
+    # Owner with scope="team" can oversee all events in the organization
+    owner_team = await cal_service.list_events(ctx_owner_a, scope="team")
+    assert any(e["id"] == str(owner_event.id) for e in owner_team)
+    assert any(e["id"] == str(sales_event.id) for e in owner_team)
+
+

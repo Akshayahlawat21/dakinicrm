@@ -178,16 +178,41 @@ export default function CalendarPage() {
   // Month navigation state
   const [selectedMonthDate, setSelectedMonthDate] = useState(() => new Date(TODAY.getFullYear(), TODAY.getMonth(), 1));
 
-  // Load events from database (Supabase activities) with fallback
+  const isOwnerOrManager =
+    currentUser?.role?.toLowerCase().includes('owner') ||
+    currentUser?.role?.toLowerCase().includes('admin') ||
+    currentUser?.role?.toLowerCase().includes('manager') ||
+    currentUser?.roles?.includes('owner') ||
+    currentUser?.roles?.includes('admin') ||
+    currentUser?.roles?.includes('manager');
+
+  const [calendarScope, setCalendarScope] = useState('personal'); // 'personal' | 'team'
+
+  const getStorageKey = (userId, scope = 'personal') =>
+    userId ? `dakini_calendar_${userId}_${scope}` : 'dakini_calendar_guest';
+
+  // Load events from database (Supabase activities) with user-isolated cache fallback
   const [events, setEvents] = useState(() => {
     try {
-      const saved = localStorage.getItem('dakini_calendar_events_v3');
+      const key = getStorageKey(currentUser?.id, 'personal');
+      const saved = localStorage.getItem(key);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.warn('Failed to parse saved calendar events', e);
     }
-    return INITIAL_EVENTS;
+    return [];
   });
+
+  // Switch cache immediately when user or scope changes
+  useEffect(() => {
+    try {
+      const key = getStorageKey(currentUser?.id, calendarScope);
+      const saved = localStorage.getItem(key);
+      setEvents(saved ? JSON.parse(saved) : []);
+    } catch {
+      setEvents([]);
+    }
+  }, [currentUser?.id, calendarScope]);
 
   // Fetch live calendar events from database for current user/tenant
   useEffect(() => {
@@ -195,10 +220,14 @@ export default function CalendarPage() {
     const fetchDbEvents = async () => {
       try {
         setIsLoadingDb(true);
-        const res = await gatewayApi.getCalendarEvents(statusFilter);
+        const res = await gatewayApi.getCalendarEvents(statusFilter, calendarScope);
         if (isMounted && res.success && Array.isArray(res.data?.data)) {
-          if (res.data.data.length > 0) {
-            setEvents(res.data.data);
+          setEvents(res.data.data);
+          try {
+            const key = getStorageKey(currentUser?.id, calendarScope);
+            localStorage.setItem(key, JSON.stringify(res.data.data));
+          } catch (e) {
+            console.warn('Failed to cache events:', e);
           }
         }
       } catch (err) {
@@ -209,16 +238,18 @@ export default function CalendarPage() {
     };
     fetchDbEvents();
     return () => { isMounted = false; };
-  }, [currentUser?.id, statusFilter]);
+  }, [currentUser?.id, statusFilter, calendarScope]);
 
-  // Keep localStorage updated as cache
+  // Keep user-isolated localStorage updated as cache
   useEffect(() => {
+    if (!currentUser?.id) return;
     try {
-      localStorage.setItem('dakini_calendar_events_v3', JSON.stringify(events));
+      const key = getStorageKey(currentUser?.id, calendarScope);
+      localStorage.setItem(key, JSON.stringify(events));
     } catch (e) {
       console.warn('Failed to save calendar events', e);
     }
-  }, [events]);
+  }, [events, currentUser?.id, calendarScope]);
 
   // Form state for creating a follow-up or meeting
   const [newTitle, setNewTitle] = useState('');
@@ -737,7 +768,51 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          {isOwnerOrManager && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              background: 'var(--bg-subtle, rgba(255,255,255,0.04))',
+              padding: '2px',
+              borderRadius: 8,
+              border: '1px solid var(--border-default)'
+            }}>
+              <button
+                onClick={() => setCalendarScope('personal')}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  fontSize: '0.75rem',
+                  fontWeight: calendarScope === 'personal' ? 700 : 500,
+                  borderRadius: 6,
+                  border: 'none',
+                  background: calendarScope === 'personal' ? 'var(--primary)' : 'transparent',
+                  color: calendarScope === 'personal' ? '#ffffff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Personal Calendar
+              </button>
+              <button
+                onClick={() => setCalendarScope('team')}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  fontSize: '0.75rem',
+                  fontWeight: calendarScope === 'team' ? 700 : 500,
+                  borderRadius: 6,
+                  border: 'none',
+                  background: calendarScope === 'team' ? 'var(--primary)' : 'transparent',
+                  color: calendarScope === 'team' ? '#ffffff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Team Calendar
+              </button>
+            </div>
+          )}
+
           <button
             onClick={handleJumpToToday}
             className="btn btn-secondary btn-sm"

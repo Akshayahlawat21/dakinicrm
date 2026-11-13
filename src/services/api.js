@@ -450,8 +450,11 @@ export const gatewayApi = {
   /**
    * Calendar resource (Live Supabase DB)
    */
-  async getCalendarEvents(status = 'all') {
-    const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+  async getCalendarEvents(status = 'all', scope = 'personal') {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (scope) params.append('scope', scope);
+    const query = params.toString() ? `?${params.toString()}` : '';
     return gatewayFetch(`/calendar${query}`, { method: 'GET' });
   },
 

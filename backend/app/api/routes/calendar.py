@@ -19,15 +19,16 @@ router = APIRouter(prefix="/v1/calendar", tags=["Calendar & Meetings"])
 @router.get("", response_model=StandardResponse[List[Dict[str, Any]]])
 async def list_calendar_events(
     status: Optional[str] = Query(None),
+    scope: Optional[str] = Query("personal"),
     ctx: RequestContext = Depends(get_request_context),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
     Retrieves database-backed calendar events from Supabase `activities` table.
-    Enforces multi-tenant isolation and role-based permissions.
+    Enforces multi-tenant isolation, user-level personal calendar isolation, and role-based permissions.
     """
     service = CalendarService(session)
-    events = await service.list_events(ctx, status_filter=status)
+    events = await service.list_events(ctx, status_filter=status, scope=scope)
     await session.commit()
 
     return StandardResponse(

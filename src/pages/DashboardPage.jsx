@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyticsApi } from '../services/analyticsApi';
 import { matchesDealFilters, matchesLeadFilters } from '../utils/dealAnalyticsFilters';
 import { useCRM } from '../context/CRMContext';
@@ -20,6 +20,8 @@ import {
   ArrowUpRight,
   Clock,
   ChevronRight,
+  ChevronDown,
+  Check,
   Calendar,
   AlertCircle
 } from 'lucide-react';
@@ -50,6 +52,18 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('This month');
   const [campaignFilter, setCampaignFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const productDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (productDropdownRef.current && !productDropdownRef.current.contains(e.target)) {
+        setIsProductDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState(() => ({ overview: null, revenue: [], pipeline: [], team: [], targetPace: [] }));
   const [analyticsError, setAnalyticsError] = useState('');
@@ -188,10 +202,131 @@ export default function DashboardPage() {
             <option value="all">All campaigns</option>
             {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
           </select>
-          <select className="input-field" value={productFilter} onChange={(e) => setProductFilter(e.target.value)} style={{ width: 170, fontWeight: 600 }}>
-            <option value="all">All products</option>
-            {products.map((product) => <option key={product.id} value={product.id}>{product.name || product.product_name}</option>)}
-          </select>
+          {/* Custom Scrollable Product Filter Dropdown */}
+          <div ref={productDropdownRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="input-field"
+              onClick={() => setIsProductDropdownOpen((prev) => !prev)}
+              style={{
+                width: 175,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.4rem',
+                cursor: 'pointer',
+                textAlign: 'left',
+                padding: '0.45rem 0.75rem',
+                borderColor: isProductDropdownOpen ? 'var(--primary)' : undefined,
+              }}
+              title="Filter dashboard by product"
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {productFilter === 'all'
+                  ? 'All products'
+                  : products.find((p) => p.id === productFilter)?.name ||
+                    products.find((p) => p.id === productFilter)?.product_name ||
+                    'All products'}
+              </span>
+              <ChevronDown
+                size={14}
+                style={{
+                  flexShrink: 0,
+                  transform: isProductDropdownOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.15s ease',
+                  color: 'var(--text-muted)',
+                }}
+              />
+            </button>
+
+            {isProductDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 4,
+                  minWidth: 260,
+                  maxWidth: 320,
+                  maxHeight: 220,
+                  overflowY: 'auto',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 8,
+                  boxShadow: 'var(--shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.5))',
+                  padding: '0.35rem',
+                  zIndex: 100,
+                }}
+              >
+                <div
+                  onClick={() => {
+                    setProductFilter('all');
+                    setIsProductDropdownOpen(false);
+                  }}
+                  style={{
+                    padding: '0.45rem 0.65rem',
+                    fontSize: '0.8125rem',
+                    color: productFilter === 'all' ? 'var(--primary)' : 'var(--text-main)',
+                    fontWeight: productFilter === 'all' ? 700 : 500,
+                    background: productFilter === 'all' ? 'var(--primary-light)' : 'transparent',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (productFilter !== 'all') e.currentTarget.style.background = 'var(--surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (productFilter !== 'all') e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span>All products</span>
+                  {productFilter === 'all' && <Check size={14} color="var(--primary)" />}
+                </div>
+
+                {products.map((product) => {
+                  const isSelected = productFilter === product.id;
+                  const name = product.name || product.product_name;
+                  return (
+                    <div
+                      key={product.id}
+                      onClick={() => {
+                        setProductFilter(product.id);
+                        setIsProductDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: '0.45rem 0.65rem',
+                        fontSize: '0.8125rem',
+                        color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                        fontWeight: isSelected ? 700 : 500,
+                        background: isSelected ? 'var(--primary-light)' : 'transparent',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.5rem',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = 'var(--surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={name}>
+                        {name}
+                      </span>
+                      {isSelected && <Check size={14} color="var(--primary)" style={{ flexShrink: 0 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <button
             className="btn btn-secondary"
             onClick={handleRefresh}

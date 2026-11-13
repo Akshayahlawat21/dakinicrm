@@ -120,7 +120,7 @@ async def test_bulk_assign_leads_success_and_deal_sync(client: AsyncClient, db_s
 
 
 @pytest.mark.asyncio
-async def test_bulk_assign_leads_already_assigned_raises_400(client: AsyncClient, seed_data):
+async def test_bulk_assign_leads_already_assigned_raises_400(client: AsyncClient, db_session: AsyncSession, seed_data):
     """Verifies that attempting to reassign leads to their existing owner raises 400 Bad Request."""
     tenant_id = str(seed_data["tenant_a"].id)
     owner_id = str(seed_data["owner_a"].id)
@@ -130,8 +130,6 @@ async def test_bulk_assign_leads_already_assigned_raises_400(client: AsyncClient
         "X-User-Roles": "owner",
     }
 
-    # Try reassigning leads already assigned to owner_a back to owner_a
-    # We already have seed leads or we create one
     lead = Lead(
         id=uuid.uuid4(),
         organization_id=seed_data["tenant_a"].id,
@@ -139,14 +137,16 @@ async def test_bulk_assign_leads_already_assigned_raises_400(client: AsyncClient
         assigned_to=seed_data["owner_a"].id,
         status="New",
     )
-    # create via endpoint or direct db if needed, or use client
-    # Let's test with non-existent lead
+    db_session.add(lead)
+    await db_session.commit()
+
     resp = await client.post(
         "/v1/leads/assign",
-        json={"lead_ids": [str(uuid.uuid4())], "assignee_id": owner_id},
+        json={"lead_ids": [str(lead.id)], "assignee_id": owner_id},
         headers=headers,
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 400
+    assert "already assigned" in resp.text
 
 
 @pytest.mark.asyncio

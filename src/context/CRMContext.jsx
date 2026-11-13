@@ -170,6 +170,12 @@ export function CRMProvider({ children }) {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(() => !!getStoredToken());
 
+  // Reset Ask Dakini chat messages and thinking state when active user changes or signs out
+  useEffect(() => {
+    setAgentMessages([]);
+    setAgentThinking(false);
+  }, [currentUser?.id]);
+
   const mapApiDeal = (d) => {
     const STAGE_NORM = {
       discovery: 'Qualified',
@@ -444,6 +450,8 @@ export function CRMProvider({ children }) {
     }
     const res = await gatewayApi.login(email, password, tenantId);
     if (res.success && res.data?.user) {
+      setAgentMessages([]);
+      setAgentThinking(false);
       setCurrentUser(res.data.user);
       setIsAuthenticated(true);
       setIsSignInModalOpen(false);
@@ -467,6 +475,8 @@ export function CRMProvider({ children }) {
         tenant_id: tenantId || "tenant_enterprise_01"
       };
       setStoredToken(`mock_offline_token_${Date.now()}`, fallbackUser);
+      setAgentMessages([]);
+      setAgentThinking(false);
       setCurrentUser(fallbackUser);
       setIsAuthenticated(true);
       setIsSignInModalOpen(false);
@@ -483,6 +493,8 @@ export function CRMProvider({ children }) {
       console.warn(err);
     }
     setTranscriptAnalyses([]);
+    setAgentMessages([]);
+    setAgentThinking(false);
     gatewayApi.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);

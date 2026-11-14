@@ -19,7 +19,7 @@ function splitTableRow(line) { return line.trim().replace(/^\|/, '').replace(/\|
 
 function normalizeChart(raw) {
   const chart = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  const type = String(chart.type || chart.chartType || '').toLowerCase();
+  let type = String(chart.type || chart.chartType || '').toLowerCase();
   const labels = Array.isArray(chart.labels) ? chart.labels : Array.isArray(chart.data) ? chart.data.map((item) => String(item.label ?? item.name ?? item.x ?? '')) : [];
   let series = Array.isArray(chart.series) ? chart.series : Array.isArray(chart.datasets) ? chart.datasets : [];
   if (!series.length && Array.isArray(chart.data) && chart.data.length && typeof chart.data[0] === 'object') {
@@ -30,9 +30,21 @@ function normalizeChart(raw) {
     name: String(item.name || item.label || 'Value'),
     data: (Array.isArray(item.data) ? item.data : []).slice(0, 20).map((value) => Number(value) || 0),
   }));
-  if (!['bar', 'pie', 'line'].includes(type) || !labels.length || !series.length) return null;
+
+  // If type is unspecified or empty, default to 'pie' when categories are <= 10
+  if (!type || !['bar', 'pie', 'line'].includes(type)) {
+    type = labels.length <= 10 ? 'pie' : 'bar';
+  }
+
+  // User requirement: Pie chart is primary for categorical breakdowns
+  // Automatically prefer pie for category comparisons (<= 8 items) if bar was selected without multi-series
+  if (type === 'bar' && series.length === 1 && labels.length <= 8) {
+    type = 'pie';
+  }
+
+  if (!labels.length || !series.length) return null;
   if (type === 'pie' && series.length > 1) series = [series[0]];
-  return { type, title: String(chart.title || 'CRM data visualization'), labels: labels.slice(0, 20).map(String), series };
+  return { type, title: String(chart.title || 'CRM distribution visualization'), labels: labels.slice(0, 20).map(String), series };
 }
 
 function ChartTable({ chart }) {
@@ -121,6 +133,24 @@ export default function AgentMessageContent({ text }) {
       if (chart) blocks.push(React.cloneElement(chart, { key: `chart-${blocks.length}` }));
       else if (jsonLines.length) blocks.push(<pre className="agent-code-block" key={`code-${blocks.length}`}>{jsonLines.join('\n')}</pre>);
       continue;
+    }
+
+    // Handle bare inline crm-chart lines emitted without triple-backticks (e.g. crm-chart {"type":...})
+    const bareChartMatch = line.trim().match(/^(?:crm-chart|chart)\s+(\{.*\}|\{.*)$/i);
+    if (bareChartMatch) {
+      const jsonBuffer = [bareChartMatch[1]];
+      index += 1;
+      if (!bareChartMatch[1].endsWith('}')) {
+        while (index < lines.length && !lines[index].trim().endsWith('}')) {
+          jsonBuffer.push(lines[index++]);
+        }
+        if (index < lines.length) jsonBuffer.push(lines[index++]);
+      }
+      const chart = <ChartBlock raw={jsonBuffer.join('\n')} />;
+      if (chart) {
+        blocks.push(React.cloneElement(chart, { key: `chart-${blocks.length}` }));
+        continue;
+      }
     }
 
     if (isTableRow(line) && lines[index + 1] && isTableDivider(lines[index + 1])) {

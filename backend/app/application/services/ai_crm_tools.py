@@ -315,12 +315,18 @@ async def search_leads(session: AsyncSession, ctx: RequestContext, args: dict[st
     rows = (await session.execute(rows_stmt)).all()
     return {
         "total": total,
+        "total_count": total,
         "returned": len(rows),
+        "summary": f"Found {total} matching leads (showing {len(rows)} records)",
         "records": [{
-            "name": lead.name, "company": lead.company, "status": lead.status,
-            "source": lead.source, "score": lead.score, "campaign": campaign_name,
-            "product": product_name,
-            "created_at": lead.created_at.isoformat() if lead.created_at else None,
+            "name": lead.name,
+            "company": lead.company or "N/A",
+            "status": lead.status,
+            "source": lead.source or "N/A",
+            "score": lead.score,
+            "campaign": campaign_name or "N/A",
+            "product": product_name or "N/A",
+            "created_at": lead.created_at.strftime("%Y-%m-%d") if lead.created_at else None,
         } for lead, campaign_name, product_name in rows],
     }
 
@@ -339,15 +345,221 @@ async def search_deals(session: AsyncSession, ctx: RequestContext, args: dict[st
     total = int((await session.execute(count_stmt)).scalar_one())
     rows_stmt = base.order_by(Deal.created_at.desc()).limit(_limit(args))
     rows = (await session.execute(rows_stmt)).all()
+    total_amount = sum(float(deal.amount or 0) for deal, _ in rows)
     return {
         "total": total,
+        "total_count": total,
         "returned": len(rows),
+        "total_amount": round(total_amount, 2),
+        "summary": f"Found {total} matching deals (showing {len(rows)} records, total value ${total_amount:,.0f})",
         "records": [{
-            "deal": deal.name, "account": account_name, "stage": deal.stage,
-            "status": deal.status, "amount": float(deal.amount or 0), "currency": deal.currency,
+            "deal": deal.name,
+            "account": account_name or "N/A",
+            "stage": deal.stage,
+            "status": deal.status,
+            "amount": float(deal.amount or 0),
+            "currency": deal.currency,
             "close_date": deal.close_date.isoformat() if deal.close_date else None,
-            "created_at": deal.created_at.isoformat() if deal.created_at else None,
+            "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else None,
         } for deal, account_name in rows],
+    }
+
+
+async def get_leads_summary(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
+    """Calculate aggregate lead counts, conversion rate, status and source breakdowns."""
+    bounds = _date_bounds(args)
+    visible_ids = await _visible_user_ids(session, ctx)
+    base = select(Lead)
+    base = _apply_lead_filters(base, args, bounds, visible_ids, ctx.tenant_uuid)
+
+    # 1. Total leads & average score
+    totals_stmt = select(
+        func.count(Lead.id).label("total"),
+        func.coalesce(func.avg(Lead.score), 0).label("avg_score"),
+        func.count(case((Lead.score >= 80, 1))).label("hot_leads"),
+        func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qualified_leads"),
+        func.count(case((func.lower(Lead.status).in_(["converted", "customer"]), 1))).label("converted_leads"),
+    ).where(
+        Lead.organization_id == ctx.tenant_uuid,
+        Lead.deleted_at.is_(None),
+        *_lead_scope(visible_ids),
+    )
+    totals_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
+        func.count(Lead.id).label("total"),
+        func.coalesce(func.avg(Lead.score), 0).label("avg_score"),
+        func.count(case((Lead.score >= 80, 1))).label("hot_leads"),
+        func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qualified_leads"),
+        func.count(case((func.lower(Lead.status).in_(["converted", "customer"]), 1))).label("converted_leads"),
+    )
+    tot_row = (await session.execute(totals_stmt)).one()
+    total = int(tot_row.total or 0)
+    avg_score = round(float(tot_row.avg_score or 0), 1)
+    hot_leads = int(tot_row.hot_leads or 0)
+    qualified = int(tot_row.qualified_leads or 0)
+    converted = int(tot_row.converted_leads or 0)
+
+    # 2. Status breakdown
+    status_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
+        Lead.status,
+        func.count(Lead.id),
+    ).group_by(Lead.status).order_by(func.count(Lead.id).desc())
+    status_rows = (await session.execute(status_stmt)).all()
+    by_status = {str(row[0]): int(row[1]) for row in status_rows if row[0]}
+
+    # 3. Source breakdown
+    source_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
+        func.coalesce(Lead.source, "Direct / Referral"),
+        func.count(Lead.id),
+    ).group_by(func.coalesce(Lead.source, "Direct / Referral")).order_by(func.count(Lead.id).desc()).limit(8)
+    source_rows = (await session.execute(source_stmt)).all()
+    by_source = {str(row[0]): int(row[1]) for row in source_rows}
+
+    conversion_rate = round(converted / max(1, total) * 100, 1) if total else 0.0
+
+    return {
+        "total_leads": total,
+        "total_count": total,
+        "average_score": avg_score,
+        "hot_leads_count": hot_leads,
+        "qualified_leads_count": qualified,
+        "converted_leads_count": converted,
+        "conversion_rate_pct": conversion_rate,
+        "by_status": by_status,
+        "by_source": by_source,
+    }
+
+
+async def get_team_performance(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
+    """Calculate sales team metrics: won deals, revenue, open pipeline and win rates per rep."""
+    bounds = _date_bounds(args)
+    visible_ids = await _visible_user_ids(session, ctx)
+
+    users_stmt = select(User).where(
+        User.organization_id == ctx.tenant_uuid,
+        User.deleted_at.is_(None),
+    )
+    if visible_ids is not None:
+        users_stmt = users_stmt.where(User.id.in_(visible_ids))
+    users = (await session.execute(users_stmt)).scalars().all()
+    user_map = {u.id: (u.name or u.email) for u in users}
+
+    if not user_map:
+        return {"total_reps": 0, "performers": []}
+
+    u_ids = list(user_map.keys())
+
+    # Deals by owner
+    d_stmt = select(
+        Deal.owner_id,
+        func.count(Deal.id).label("total_deals"),
+        func.count(case((func.lower(Deal.status) == "won", 1))).label("won_deals"),
+        func.coalesce(func.sum(case((func.lower(Deal.status) == "won", Deal.amount))), 0).label("won_rev"),
+        func.coalesce(func.sum(case((func.lower(Deal.status) == "open", Deal.amount))), 0).label("pipe_val"),
+    ).where(
+        Deal.organization_id == ctx.tenant_uuid,
+        Deal.deleted_at.is_(None),
+        Deal.owner_id.in_(u_ids),
+    )
+    d_stmt = _apply_created_at(d_stmt, Deal.created_at, bounds)
+    deal_rows = (await session.execute(d_stmt.group_by(Deal.owner_id))).all()
+    deals_by_user = {row[0]: row for row in deal_rows}
+
+    # Leads by assignee
+    l_stmt = select(
+        Lead.assigned_to,
+        func.count(Lead.id).label("total_leads"),
+        func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qual_leads"),
+    ).where(
+        Lead.organization_id == ctx.tenant_uuid,
+        Lead.deleted_at.is_(None),
+        Lead.assigned_to.in_(u_ids),
+    )
+    l_stmt = _apply_created_at(l_stmt, Lead.created_at, bounds)
+    lead_rows = (await session.execute(l_stmt.group_by(Lead.assigned_to))).all()
+    leads_by_user = {row[0]: row for row in lead_rows}
+
+    performers = []
+    total_won_revenue = 0.0
+    for uid, name in user_map.items():
+        d_row = deals_by_user.get(uid)
+        l_row = leads_by_user.get(uid)
+        tot_d = int(d_row[1]) if d_row else 0
+        won_d = int(d_row[2]) if d_row else 0
+        won_val = float(d_row[3]) if d_row else 0.0
+        pipe_val = float(d_row[4]) if d_row else 0.0
+        tot_l = int(l_row[1]) if l_row else 0
+        qual_l = int(l_row[2]) if l_row else 0
+        win_rate = round(won_d / max(1, tot_d) * 100, 1) if tot_d else 0.0
+        total_won_revenue += won_val
+
+        performers.append({
+            "name": name,
+            "won_revenue": won_val,
+            "won_deals": won_d,
+            "pipeline_value": pipe_val,
+            "total_deals": tot_d,
+            "assigned_leads": tot_l,
+            "qualified_leads": qual_l,
+            "win_rate_pct": win_rate,
+        })
+
+    performers.sort(key=lambda x: (x["won_revenue"], x["pipeline_value"], x["won_deals"]), reverse=True)
+    return {
+        "total_reps": len(performers),
+        "total_team_won_revenue": round(total_won_revenue, 2),
+        "performers": performers[:15],
+    }
+
+
+async def get_crm_overview(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
+    """Calculate executive CRM business health KPIs in one fast call."""
+    bounds = _date_bounds(args)
+    visible_ids = await _visible_user_ids(session, ctx)
+
+    d_base = select(
+        func.count(Deal.id).label("total_deals"),
+        func.count(case((func.lower(Deal.status) == "open", 1))).label("open_deals"),
+        func.count(case((func.lower(Deal.status) == "won", 1))).label("won_deals"),
+        func.coalesce(func.sum(case((func.lower(Deal.status) == "open", Deal.amount))), 0).label("pipeline_value"),
+        func.coalesce(func.sum(case((func.lower(Deal.status) == "won", Deal.amount))), 0).label("won_revenue"),
+    ).where(
+        Deal.organization_id == ctx.tenant_uuid,
+        Deal.deleted_at.is_(None),
+        *_deal_scope(visible_ids),
+    )
+    d_base = _apply_created_at(d_base, Deal.created_at, bounds)
+    d_row = (await session.execute(d_base)).one()
+
+    l_base = select(
+        func.count(Lead.id).label("total_leads"),
+        func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qual_leads"),
+        func.count(case((func.lower(Lead.status).in_(["converted", "customer"]), 1))).label("conv_leads"),
+        func.coalesce(func.avg(Lead.score), 0).label("avg_score"),
+    ).where(
+        Lead.organization_id == ctx.tenant_uuid,
+        Lead.deleted_at.is_(None),
+        *_lead_scope(visible_ids),
+    )
+    l_base = _apply_created_at(l_base, Lead.created_at, bounds)
+    l_row = (await session.execute(l_base)).one()
+
+    total_leads = int(l_row.total_leads or 0)
+    converted_leads = int(l_row.conv_leads or 0)
+    total_deals = int(d_row.total_deals or 0)
+    won_deals = int(d_row.won_deals or 0)
+
+    return {
+        "active_pipeline_value": float(d_row.pipeline_value or 0),
+        "total_won_revenue": float(d_row.won_revenue or 0),
+        "open_deals_count": int(d_row.open_deals or 0),
+        "won_deals_count": won_deals,
+        "total_deals_count": total_deals,
+        "deal_win_rate_pct": round(won_deals / max(1, total_deals) * 100, 1) if total_deals else 0.0,
+        "total_leads_count": total_leads,
+        "qualified_leads_count": int(l_row.qual_leads or 0),
+        "converted_leads_count": converted_leads,
+        "lead_conversion_rate_pct": round(converted_leads / max(1, total_leads) * 100, 1) if total_leads else 0.0,
+        "average_lead_score": round(float(l_row.avg_score or 0), 1),
     }
 
 
@@ -577,6 +789,9 @@ async def search_activities(session: AsyncSession, ctx: RequestContext, args: di
 
 
 TOOL_FUNCTIONS = {
+    "get_leads_summary": get_leads_summary,
+    "get_team_performance": get_team_performance,
+    "get_crm_overview": get_crm_overview,
     "search_leads": search_leads,
     "search_deals": search_deals,
     "get_pipeline_summary": get_pipeline_summary,
@@ -599,14 +814,19 @@ async def execute_crm_tool(session: AsyncSession, ctx: RequestContext, name: str
         return await function(session, ctx, arguments)
     except ValueError as exc:
         return {"error": str(exc)}
-    except SQLAlchemyError:
-        return {"error": "CRM data could not be retrieved. Please try again or contact your CRM administrator."}
+    except SQLAlchemyError as exc:
+        import logging
+        logging.getLogger(__name__).exception("SQLAlchemyError in execute_crm_tool '%s': %s", name, exc)
+        return {"error": f"CRM data could not be retrieved: {str(exc.__cause__ or exc)}"}
 
 
 CRM_TOOL_DEFINITIONS = [
+    {"type": "function", "function": {"name": "get_crm_overview", "description": "Calculate high-level executive CRM business health KPIs: total active pipeline value, closed won revenue, open vs won deal counts, total leads, qualified leads, and conversion rate in one fast call. Use when user asks for overall CRM performance, executive summary, or business health.", "parameters": {"type": "object", "properties": {"date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "get_leads_summary", "description": "Calculate aggregate lead counts, conversion rate, breakdown by status, breakdown by source, and average lead scores. ALWAYS prefer this tool over search_leads for questions about lead counts, status breakdowns, sources, or overall lead health.", "parameters": {"type": "object", "properties": {"status": {"type": "string"}, "source": {"type": "string"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "get_team_performance", "description": "Summarize sales team and sales rep performance: deals won, total closed revenue, active open pipeline, win rates, and assigned lead counts per rep. Use whenever the user asks about top sales reps, team performance, rep rankings, or sales quotas.", "parameters": {"type": "object", "properties": {"date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "get_pipeline_summary", "description": "Calculate CRM pipeline deal counts and values grouped by stage and currency, including weighted pipeline values. Accepts the same deal filters as search_deals except account and search.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}, "status": {"type": "string"}, "owner": {"type": "string", "description": "Deal owner name or UUID; results remain role-scoped"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "currency": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "search_leads", "description": "Search CRM leads using optional status, source, score, campaign, product, text, and created-date filters. Only return leads visible to the authenticated user's role.", "parameters": {"type": "object", "properties": {"status": {"type": "string"}, "source": {"type": "string"}, "assigned_to": {"type": "string", "description": "Assignee name or UUID; results remain role-scoped"}, "min_score": {"type": "integer"}, "max_score": {"type": "integer"}, "campaign": {"type": "string", "description": "Campaign name or UUID"}, "product": {"type": "string", "description": "Product name or UUID"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string", "description": "ISO date or datetime"}, "created_before": {"type": "string", "description": "ISO date or datetime"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "search_deals", "description": "Search CRM deals with optional stage, status, account, campaign, product, currency, amount, text, and created-date filters. Only return deals visible to the authenticated user's role.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}, "status": {"type": "string"}, "account": {"type": "string"}, "owner": {"type": "string", "description": "Deal owner name or UUID; results remain role-scoped"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "currency": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
-    {"type": "function", "function": {"name": "get_pipeline_summary", "description": "Calculate CRM pipeline deal counts and values grouped by stage and currency, including weighted pipeline values. Accepts the same deal filters as search_deals except account and search.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}, "status": {"type": "string"}, "owner": {"type": "string", "description": "Deal owner name or UUID; results remain role-scoped"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "currency": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_campaign_performance", "description": "Summarize campaigns by type, status, budget, and lead count visible to the authenticated user, with optional campaign, status, and date filters.", "parameters": {"type": "object", "properties": {"campaign": {"type": "string"}, "status": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_product_performance", "description": "Summarize products with visible lead counts and deal counts and values, with optional product and date filters.", "parameters": {"type": "object", "properties": {"product": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_account_summary", "description": "Summarize accounts by visible associated deals, deal counts and deal values, with optional account and created-date filters.", "parameters": {"type": "object", "properties": {"account": {"type": "string"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},

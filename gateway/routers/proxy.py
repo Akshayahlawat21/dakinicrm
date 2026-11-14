@@ -138,6 +138,42 @@ def get_mock_data_for_resource(resource: str, method: str) -> dict:
             "status": "success",
             "reply": "Layer 2 Gateway received message: Lead score 128 is driven by executive engagement.",
             "sender": "dakini",
+            "data_scope": "role_scoped",
+            "tools_used": ["search_leads"],
+            "tool_calls": [
+                {
+                    "id": "mock-tool-call-1",
+                    "name": "search_leads",
+                    "arguments": {"status": "all", "limit": 10},
+                    "status": "completed",
+                    "duration_ms": 118,
+                    "summary": "Retrieved 10 leads from CRM database",
+                    "result_count": 10,
+                }
+            ],
+            "steps": [
+                {
+                    "id": "step-query-plan",
+                    "title": "Query & permission analysis",
+                    "status": "completed",
+                    "detail": "Verified role-scoped permissions",
+                },
+                {
+                    "id": "step-mock-tool-call-1",
+                    "title": "Called tool: search_leads",
+                    "status": "completed",
+                    "tool": "search_leads",
+                    "duration_ms": 118,
+                    "detail": "Retrieved 10 leads from CRM database",
+                    "arguments": {"status": "all", "limit": 10},
+                },
+                {
+                    "id": "step-synthesis",
+                    "title": "Response synthesis & grounding",
+                    "status": "completed",
+                    "detail": "Generated grounded CRM summary",
+                },
+            ],
         }
     return {
         "status": "success",

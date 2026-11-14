@@ -13,20 +13,24 @@ class Settings(BaseSettings):
         "https://generativelanguage.googleapis.com/v1beta/openai",
         alias="GEMINI_BASE_URL",
     )
-    # Flash-Lite is the latency-first default for short CRM tool selection and answers.
-    gemini_model: str = Field("gemini-3.1-flash-lite", alias="GEMINI_MODEL")
-    # Fallback is intentionally disabled: the deployment is Gemini-only and
-    # model switching cannot solve a project-wide exhausted daily quota.
-    gemini_fallback_models: str = Field("", alias="GEMINI_FALLBACK_MODELS")
-    # Per-request timeout for the single configured Gemini model.
+    # Default model: gemini-2.5-flash is stable, fast and low-latency.
+    gemini_model: str = Field("gemini-2.5-flash", alias="GEMINI_MODEL")
+    # Automatic fallback models in case the configured model returns 404/unavailable.
+    gemini_fallback_models: str = Field("gemini-1.5-flash,gemini-2.0-flash", alias="GEMINI_FALLBACK_MODELS")
+    # Per-request timeout for Gemini calls (in seconds).
     gemini_timeout_seconds: float = Field(
-        12.0, gt=0, le=60, alias="GEMINI_TIMEOUT_SECONDS"
+        35.0, gt=0, le=90, alias="GEMINI_TIMEOUT_SECONDS"
     )
 
     @property
     def gemini_model_chain(self) -> list[str]:
-        # Compatibility for callers/tests: only the configured model is used.
-        return [self.gemini_model]
+        chain = [self.gemini_model.strip()] if self.gemini_model else []
+        if self.gemini_fallback_models:
+            for m in self.gemini_fallback_models.split(","):
+                m_clean = m.strip()
+                if m_clean and m_clean not in chain:
+                    chain.append(m_clean)
+        return chain or ["gemini-2.5-flash"]
     environment: str = Field("development", alias="ENVIRONMENT")
 
 

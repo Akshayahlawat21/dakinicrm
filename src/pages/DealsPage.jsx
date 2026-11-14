@@ -1279,9 +1279,9 @@ export default function DealsPage() {
                                 </span>
                               </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 {canManageSub && (
-                                  <>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={(e) => e.stopPropagation()}>
                                     <button
                                       type="button"
                                       className="kanban-icon-btn"
@@ -1306,9 +1306,9 @@ export default function DealsPage() {
                                     >
                                       <Trash2 size={11} />
                                     </button>
-                                  </>
+                                  </div>
                                 )}
-                                <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', marginLeft: '0.15rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', marginLeft: '0.15rem', cursor: 'pointer' }}>
                                   {isSubCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                 </div>
                               </div>

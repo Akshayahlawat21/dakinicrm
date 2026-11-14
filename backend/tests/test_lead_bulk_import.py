@@ -48,10 +48,13 @@ async def test_bulk_import_leads_endpoint_success(client: AsyncClient, db_sessio
     assert batch_row.inserted_count == 4
     assert batch_row.file_name == "leads.csv"
 
-    # Verify leads tied to batch
+    # Verify leads tied to batch and auto-linked to products catalog
     leads_stmt = select(Lead).where(Lead.import_batch_id == uuid.UUID(batch_id))
     leads = (await db_session.execute(leads_stmt)).scalars().all()
     assert len(leads) == 4
+    for l in leads:
+        assert l.product_id is not None
+        assert l.interested_product in ["Fleet Telematics", "Enterprise Core"]
 
 
 @pytest.mark.asyncio

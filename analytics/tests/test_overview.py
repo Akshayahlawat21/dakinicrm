@@ -22,4 +22,4 @@ def test_period_bounds(period, expected):
 
 def test_invalid_period():
     with pytest.raises(ValueError):
-        period_bounds("all_time", date(2026, 10, 22))
+        period_bounds("next_century", date(2026, 10, 22))

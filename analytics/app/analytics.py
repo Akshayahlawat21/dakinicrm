@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.config import get_settings
 
-PERIODS = {"week", "month", "quarter", "year", "last_7_days", "last_30_days", "ytd"}
+PERIODS = {"week", "month", "quarter", "year", "last_7_days", "last_30_days", "ytd", "all_time"}
 WON_DEFAULTS = {"won", "closed_won", "closed-won"}
 LOST_DEFAULTS = {"lost", "closed_lost", "closed-lost", "cancelled", "canceled"}
 
@@ -14,7 +14,11 @@ LOST_DEFAULTS = {"lost", "closed_lost", "closed-lost", "cancelled", "canceled"}
 def period_bounds(period: str, today: date | None = None) -> tuple[date, date]:
     """Return a half-open [start, end) date range for a supported report period."""
     today = today or datetime.now(timezone.utc).date()
-    if period == "week":
+    if period == "all_time":
+        # Use the earliest representable Python date so the existing half-open
+        # SQL bounds include the full tenant history without an arbitrary cutoff.
+        start = date.min
+    elif period == "week":
         start = today - timedelta(days=today.weekday())
     elif period == "month":
         start = today.replace(day=1)
@@ -774,6 +778,13 @@ async def _matching_target_types(
 
 
 async def quota_leaderboard(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
+    if period == "all_time":
+        return {
+            "period": period,
+            "data": [],
+            "data_status": "not_applicable_all_time",
+            "note": "Quota attainment is period-based and is not meaningful for an all-time date range.",
+        }
     start, end = period_bounds(period)
     if not await table_exists(conn, "sales_targets") or not await table_exists(conn, "users"):
         return {"period": period, "data": [], "data_status": "targets_or_users_table_missing"}
@@ -909,6 +920,18 @@ async def quota_leaderboard(conn: AsyncConnection, org: str, period: str, scoped
 
 
 async def target_pace(conn: AsyncConnection, org: str, period: str, scoped_users: list | None = None) -> dict:
+    if period == "all_time":
+        return {
+            "period": period,
+            "target_available": False,
+            "target_amount": None,
+            "actual_revenue": None,
+            "attainment_percent": None,
+            "expected_pace_percent": None,
+            "data": [],
+            "data_status": "not_applicable_all_time",
+            "note": "Sales targets are evaluated over defined periods; lifetime revenue should not be compared with a single target period.",
+        }
     start, end = period_bounds(period)
     today = datetime.now(timezone.utc).date()
     targets_exist = await table_exists(conn, "sales_targets")

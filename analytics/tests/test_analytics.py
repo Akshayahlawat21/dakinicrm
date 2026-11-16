@@ -55,3 +55,10 @@ def test_deal_status_missing_columns():
 def test_supported_periods():
     assert "month" in PERIODS
     assert "last_30_days" in PERIODS
+
+
+def test_all_time_period_includes_full_history():
+    start, end = period_bounds("all_time", date(2026, 11, 15))
+    assert start == date.min
+    assert end == date(2026, 11, 16)
+    assert "all_time" in PERIODS

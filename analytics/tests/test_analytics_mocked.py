@@ -78,3 +78,21 @@ async def test_pipeline_by_stage_includes_closed_won_and_lost_stages():
     sql = str(conn.execute.call_args.args[0]).lower()
     assert "closed won" in sql and "closed lost" in sql
     assert "not in ('won'" not in sql
+
+
+@pytest.mark.asyncio
+async def test_all_time_quota_leaderboard_is_explicitly_not_applicable():
+    from app.analytics import quota_leaderboard
+
+    result = await quota_leaderboard(AsyncMock(), "test-org", "all_time")
+    assert result["data_status"] == "not_applicable_all_time"
+    assert result["data"] == []
+
+
+@pytest.mark.asyncio
+async def test_all_time_target_pace_is_explicitly_not_applicable():
+    from app.analytics import target_pace
+
+    result = await target_pace(AsyncMock(), "test-org", "all_time")
+    assert result["data_status"] == "not_applicable_all_time"
+    assert result["target_available"] is False

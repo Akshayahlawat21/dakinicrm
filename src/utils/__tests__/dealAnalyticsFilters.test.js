@@ -109,3 +109,11 @@ test('Product names match when spacing and punctuation differ (Dakini CRM / Daki
   const lead = { id: 'l11', interested_product: 'Dakinicrm', created_at: '2026-11-10T10:00:00Z' };
   assert.equal(matchesLeadFilters(lead, { ...base, productId: 'p3', products: [{ id: 'p3', name: 'Dakini CRM' }] }), true);
 });
+
+
+test('All time dashboard filtering includes historical leads and deals', () => {
+  const oldLead = { id: 'old-lead', created_at: '2018-02-10T10:00:00Z' };
+  const oldDeal = { id: 'old-deal', created_at: '2018-02-10T10:00:00Z', stage: 'Won' };
+  assert.equal(matchesLeadFilters(oldLead, { dateRange: 'all' }), true);
+  assert.equal(matchesDealFilters(oldDeal, { dateRange: 'all' }), true);
+});

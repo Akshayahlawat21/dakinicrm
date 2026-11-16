@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { analyticsApi } from '../services/analyticsApi';
 import { matchesDealFilters, matchesLeadFilters } from '../utils/dealAnalyticsFilters';
+import { DASHBOARD_PERIOD_OPTIONS, getDashboardAnalyticsPeriod, getDashboardDateFilter } from '../utils/dashboardPeriods';
 import { useCRM } from '../context/CRMContext';
 import {
   Sparkline,
@@ -20,8 +21,6 @@ import {
   ArrowUpRight,
   Clock,
   ChevronRight,
-  ChevronDown,
-  Check,
   Calendar,
   AlertCircle
 } from 'lucide-react';
@@ -52,23 +51,12 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('This month');
   const [campaignFilter, setCampaignFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const productDropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (productDropdownRef.current && !productDropdownRef.current.contains(e.target)) {
-        setIsProductDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState(() => ({ overview: null, revenue: [], pipeline: [], team: [], targetPace: [] }));
   const [analyticsError, setAnalyticsError] = useState('');
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const periodKey = ({ 'This week': 'week', 'This month': 'month', 'This quarter': 'quarter', 'Year to date': 'ytd' })[period] || 'month';
+  const periodKey = getDashboardAnalyticsPeriod(period);
+  const dashboardDateRange = getDashboardDateFilter(period);
 
   const loadAnalytics = useCallback(async (forceRefresh = false) => {
     setIsRefreshing(true);
@@ -116,12 +104,11 @@ export default function DashboardPage() {
   const wonCurrency = overviewCurrency => overviewCurrency || 'USD';
   const dashboardFilteredDeals = useMemo(() => {
     const leadById = new Map((leads || []).map((lead) => [String(lead.id), lead]));
-    const selectedPeriod = ({ 'This week': 'week', 'This month': 'month', 'This quarter': 'quarter', 'Year to date': 'ytd' })[period] || 'month';
     return (deals || []).filter((deal) => matchesDealFilters(deal, {
-      campaignId: campaignFilter, productId: productFilter, dateRange: selectedPeriod,
+      campaignId: campaignFilter, productId: productFilter, dateRange: dashboardDateRange,
       leadById, leads, campaigns, products
     }));
-  }, [deals, leads, campaigns, products, campaignFilter, productFilter, period]);
+  }, [deals, leads, campaigns, products, campaignFilter, productFilter, dashboardDateRange]);
   const normalizedDealStage = (deal) => {
     const raw = String(deal.stage || deal.status || deal.stage_name || deal.pipeline_stage || '').toLowerCase().replace(/[_-]+/g, ' ').trim();
     if (raw.includes('won')) return 'Won';
@@ -133,7 +120,7 @@ export default function DashboardPage() {
   };
   const filteredWonDeals = dashboardFilteredDeals.filter((deal) => normalizedDealStage(deal) === 'Won');
   const filteredOpenDeals = dashboardFilteredDeals.filter((deal) => !['Won', 'Lost'].includes(normalizedDealStage(deal)));
-  const selectedLeadPeriod = ({ 'This week': 'week', 'This month': 'month', 'This quarter': 'quarter', 'Year to date': 'ytd' })[period] || 'month';
+  const selectedLeadPeriod = dashboardDateRange;
   const dashboardFilteredLeads = (leads || []).filter((lead) => matchesLeadFilters(lead, {
     campaignId: campaignFilter, productId: productFilter, dateRange: selectedLeadPeriod, campaigns, products
   }));
@@ -192,141 +179,19 @@ export default function DashboardPage() {
             onChange={(e) => setPeriod(e.target.value)}
             style={{ width: 140, fontWeight: 600 }}
           >
-            <option value="This week">This week</option>
-            <option value="This month">This month</option>
-            <option value="This quarter">This quarter</option>
-            <option value="Year to date">Year to date</option>
+            {DASHBOARD_PERIOD_OPTIONS.map((option) => (
+              <option key={option.label} value={option.label}>{option.label}</option>
+            ))}
           </select>
 
           <select className="input-field" value={campaignFilter} onChange={(e) => setCampaignFilter(e.target.value)} style={{ width: 180, fontWeight: 600 }}>
             <option value="all">All campaigns</option>
             {campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}
           </select>
-          {/* Custom Scrollable Product Filter Dropdown */}
-          <div ref={productDropdownRef} style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className="input-field"
-              onClick={() => setIsProductDropdownOpen((prev) => !prev)}
-              style={{
-                width: 175,
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.4rem',
-                cursor: 'pointer',
-                textAlign: 'left',
-                padding: '0.45rem 0.75rem',
-                borderColor: isProductDropdownOpen ? 'var(--primary)' : undefined,
-              }}
-              title="Filter dashboard by product"
-            >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {productFilter === 'all'
-                  ? 'All products'
-                  : products.find((p) => p.id === productFilter)?.name ||
-                    products.find((p) => p.id === productFilter)?.product_name ||
-                    'All products'}
-              </span>
-              <ChevronDown
-                size={14}
-                style={{
-                  flexShrink: 0,
-                  transform: isProductDropdownOpen ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.15s ease',
-                  color: 'var(--text-muted)',
-                }}
-              />
-            </button>
-
-            {isProductDropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: 4,
-                  minWidth: 260,
-                  maxWidth: 320,
-                  maxHeight: 220,
-                  overflowY: 'auto',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 8,
-                  boxShadow: 'var(--shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.5))',
-                  padding: '0.35rem',
-                  zIndex: 100,
-                }}
-              >
-                <div
-                  onClick={() => {
-                    setProductFilter('all');
-                    setIsProductDropdownOpen(false);
-                  }}
-                  style={{
-                    padding: '0.45rem 0.65rem',
-                    fontSize: '0.8125rem',
-                    color: productFilter === 'all' ? 'var(--primary)' : 'var(--text-main)',
-                    fontWeight: productFilter === 'all' ? 700 : 500,
-                    background: productFilter === 'all' ? 'var(--primary-light)' : 'transparent',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (productFilter !== 'all') e.currentTarget.style.background = 'var(--surface-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (productFilter !== 'all') e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <span>All products</span>
-                  {productFilter === 'all' && <Check size={14} color="var(--primary)" />}
-                </div>
-
-                {products.map((product) => {
-                  const isSelected = productFilter === product.id;
-                  const name = product.name || product.product_name;
-                  return (
-                    <div
-                      key={product.id}
-                      onClick={() => {
-                        setProductFilter(product.id);
-                        setIsProductDropdownOpen(false);
-                      }}
-                      style={{
-                        padding: '0.45rem 0.65rem',
-                        fontSize: '0.8125rem',
-                        color: isSelected ? 'var(--primary)' : 'var(--text-main)',
-                        fontWeight: isSelected ? 700 : 500,
-                        background: isSelected ? 'var(--primary-light)' : 'transparent',
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) e.currentTarget.style.background = 'var(--surface-hover)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={name}>
-                        {name}
-                      </span>
-                      {isSelected && <Check size={14} color="var(--primary)" style={{ flexShrink: 0 }} />}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <select className="input-field" value={productFilter} onChange={(e) => setProductFilter(e.target.value)} style={{ width: 170, fontWeight: 600 }}>
+            <option value="all">All products</option>
+            {products.map((product) => <option key={product.id} value={product.id}>{product.name || product.product_name}</option>)}
+          </select>
           <button
             className="btn btn-secondary"
             onClick={handleRefresh}
@@ -386,16 +251,20 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div className="kpi-title">Sales target</div>
-              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading ? '—' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : '—')}</div>
+              <div className="kpi-value" style={{ fontSize: '1.5rem', margin: '0.2rem 0' }}>{analyticsLoading || period === 'All time' ? '—' : (analytics.targetPace.length === 1 ? money(analytics.targetPace[0].target_amount, analytics.targetPace[0]?.currency || 'USD') : analytics.targetPace.length > 1 ? 'Multiple currencies' : '—')}</div>
               <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Actual {analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : '—'} · selected period
+                {period === 'All time' ? 'Sales targets are evaluated over defined periods' : `Actual ${analytics.targetPace.length === 1 ? money(analytics.targetPace[0]?.actual_revenue, analytics.targetPace[0]?.currency || 'USD') : '—'} · selected period`}
               </div>
               <div style={{ marginTop: '0.5rem' }}>
-                <span className="badge badge-blue">{analytics.targetPace.length === 1 && analytics.targetPace[0].attainment_percent != null ? `${analytics.targetPace[0].attainment_percent}% attained` : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'No matching target'}</span>
+                <span className="badge badge-blue">{period === 'All time' ? 'Not applicable for All time' : analytics.targetPace.length === 1 && analytics.targetPace[0].attainment_percent != null ? `${analytics.targetPace[0].attainment_percent}% attained` : analytics.targetPace.length > 1 ? 'Multiple currencies' : 'No matching target'}</span>
               </div>
             </div>
             <div>
-              <RadialProgressDonut percent={Math.max(0, Math.min(100, analytics.targetPace.length === 1 ? Number(analytics.targetPace[0]?.attainment_percent) || 0 : 0))} size={76} strokeWidth={9} color="#2563eb" />
+              {period === 'All time' ? (
+                <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-muted)' }}>—</span>
+              ) : (
+                <RadialProgressDonut percent={Math.max(0, Math.min(100, analytics.targetPace.length === 1 ? Number(analytics.targetPace[0]?.attainment_percent) || 0 : 0))} size={76} strokeWidth={9} color="#2563eb" />
+              )}
             </div>
           </div>
         </div>
@@ -459,7 +328,7 @@ export default function DashboardPage() {
           <div className="chart-card-header">
             <div>
               <h3 className="chart-card-title">Revenue trend</h3>
-              <p className="chart-card-subtitle">Monthly revenue vs target quota</p>
+              <p className="chart-card-subtitle">Monthly revenue vs target quota · latest 6 months</p>
             </div>
             <span className="badge badge-blue">Real-time sync</span>
           </div>
@@ -514,7 +383,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {analytics.team.length === 0 ? <tr><td colSpan="5" style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>No quota records found for this period.</td></tr> : analytics.team.map((rep) => (
+                {analytics.team.length === 0 ? <tr><td colSpan="5" style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>{period === 'All time' ? 'Quota attainment is period-based. Select a week, month, quarter, or year-to-date range to compare targets.' : 'No quota records found for this period.'}</td></tr> : analytics.team.map((rep) => (
                   <tr key={rep.user_id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>

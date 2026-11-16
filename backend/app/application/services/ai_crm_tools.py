@@ -201,7 +201,12 @@ def _user_filter_ids(user_text: str | None, tenant_id: uuid.UUID):
         user_uuid = uuid.UUID(user_text)
         return select(User.id).where(User.id == user_uuid, User.organization_id == tenant_id, User.deleted_at.is_(None))
     except ValueError:
-        return select(User.id).where(User.organization_id == tenant_id, User.deleted_at.is_(None), User.name.ilike(f"%{user_text}%"))
+        pattern = f"%{user_text}%"
+        return select(User.id).where(
+            User.organization_id == tenant_id,
+            User.deleted_at.is_(None),
+            or_(User.name.ilike(pattern), User.email.ilike(pattern)),
+        )
 
 
 def _apply_lead_filters(stmt, args: dict[str, Any], bounds, visible_ids, tenant_id: uuid.UUID):
@@ -224,7 +229,13 @@ def _apply_lead_filters(stmt, args: dict[str, Any], bounds, visible_ids, tenant_
         stmt = stmt.where(Lead.assigned_to.in_(assigned_to))
     if search:
         pattern = f"%{search}%"
-        stmt = stmt.where(or_(Lead.name.ilike(pattern), Lead.company.ilike(pattern), Lead.source.ilike(pattern)))
+        stmt = stmt.where(or_(
+            Lead.name.ilike(pattern),
+            Lead.company.ilike(pattern),
+            Lead.source.ilike(pattern),
+            Lead.email.ilike(pattern),
+            Lead.phone.ilike(pattern),
+        ))
     try:
         min_score = args.get("min_score")
         max_score = args.get("max_score")
@@ -343,15 +354,24 @@ async def search_deals(session: AsyncSession, ctx: RequestContext, args: dict[st
     base = _apply_deal_filters(base, args, bounds, visible_ids, ctx.tenant_uuid)
     count_stmt = select(func.count()).select_from(base.order_by(None).subquery())
     total = int((await session.execute(count_stmt)).scalar_one())
+    amount_stmt = base.with_only_columns(
+        Deal.currency, func.coalesce(func.sum(Deal.amount), 0), maintain_column_froms=True
+    ).order_by(None).group_by(Deal.currency)
+    amount_rows = (await session.execute(amount_stmt)).all()
+    total_amount_by_currency = [
+        {"currency": currency, "amount": float(amount or 0)}
+        for currency, amount in amount_rows
+    ]
+    total_amount = total_amount_by_currency[0]["amount"] if len(total_amount_by_currency) == 1 else None
     rows_stmt = base.order_by(Deal.created_at.desc()).limit(_limit(args))
     rows = (await session.execute(rows_stmt)).all()
-    total_amount = sum(float(deal.amount or 0) for deal, _ in rows)
     return {
         "total": total,
         "total_count": total,
         "returned": len(rows),
-        "total_amount": round(total_amount, 2),
-        "summary": f"Found {total} matching deals (showing {len(rows)} records, total value ${total_amount:,.0f})",
+        "total_amount": round(total_amount, 2) if total_amount is not None else None,
+        "total_amount_by_currency": total_amount_by_currency,
+        "summary": f"Found {total} matching deals (showing {len(rows)} records)",
         "records": [{
             "deal": deal.name,
             "account": account_name or "N/A",
@@ -366,64 +386,77 @@ async def search_deals(session: AsyncSession, ctx: RequestContext, args: dict[st
 
 
 async def get_leads_summary(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
-    """Calculate aggregate lead counts, conversion rate, status and source breakdowns."""
+    """Return fast lead KPIs; run grouped breakdowns only when explicitly requested.
+
+    A plain question such as "How many leads do we have?" must not depend on
+    optional GROUP BY queries. This keeps the common count path to one aggregate
+    statement and prevents a source-label grouping issue from hiding the total.
+    """
     bounds = _date_bounds(args)
     visible_ids = await _visible_user_ids(session, ctx)
-    base = select(Lead)
-    base = _apply_lead_filters(base, args, bounds, visible_ids, ctx.tenant_uuid)
 
-    # 1. Total leads & average score
     totals_stmt = select(
         func.count(Lead.id).label("total"),
         func.coalesce(func.avg(Lead.score), 0).label("avg_score"),
         func.count(case((Lead.score >= 80, 1))).label("hot_leads"),
         func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qualified_leads"),
         func.count(case((func.lower(Lead.status).in_(["converted", "customer"]), 1))).label("converted_leads"),
-    ).where(
-        Lead.organization_id == ctx.tenant_uuid,
-        Lead.deleted_at.is_(None),
-        *_lead_scope(visible_ids),
     )
-    totals_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
-        func.count(Lead.id).label("total"),
-        func.coalesce(func.avg(Lead.score), 0).label("avg_score"),
-        func.count(case((Lead.score >= 80, 1))).label("hot_leads"),
-        func.count(case((func.lower(Lead.status) == "qualified", 1))).label("qualified_leads"),
-        func.count(case((func.lower(Lead.status).in_(["converted", "customer"]), 1))).label("converted_leads"),
+    totals_stmt = _apply_lead_filters(
+        totals_stmt, args, bounds, visible_ids, ctx.tenant_uuid
     )
-    tot_row = (await session.execute(totals_stmt)).one()
-    total = int(tot_row.total or 0)
-    avg_score = round(float(tot_row.avg_score or 0), 1)
-    hot_leads = int(tot_row.hot_leads or 0)
-    qualified = int(tot_row.qualified_leads or 0)
-    converted = int(tot_row.converted_leads or 0)
+    totals_row = (await session.execute(totals_stmt)).one()
 
-    # 2. Status breakdown
-    status_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
-        Lead.status,
-        func.count(Lead.id),
-    ).group_by(Lead.status).order_by(func.count(Lead.id).desc())
-    status_rows = (await session.execute(status_stmt)).all()
-    by_status = {str(row[0]): int(row[1]) for row in status_rows if row[0]}
+    total = int(totals_row.total or 0)
+    converted = int(totals_row.converted_leads or 0)
+    raw_breakdown = args.get("breakdown_by")
+    breakdown_by = str(raw_breakdown).strip().lower() if raw_breakdown not in (None, "") else "none"
+    if breakdown_by not in {"none", "source", "status", "all"}:
+        raise ValueError("breakdown_by must be one of: none, source, status, all")
 
-    # 3. Source breakdown
-    source_stmt = _apply_lead_filters(select(Lead), args, bounds, visible_ids, ctx.tenant_uuid).with_only_columns(
-        func.coalesce(Lead.source, "Direct / Referral"),
-        func.count(Lead.id),
-    ).group_by(func.coalesce(Lead.source, "Direct / Referral")).order_by(func.count(Lead.id).desc()).limit(8)
-    source_rows = (await session.execute(source_stmt)).all()
-    by_source = {str(row[0]): int(row[1]) for row in source_rows}
+    by_status: dict[str, int] = {}
+    by_source: dict[str, int] = {}
 
-    conversion_rate = round(converted / max(1, total) * 100, 1) if total else 0.0
+    if breakdown_by in {"status", "all"}:
+        status_stmt = select(Lead.status, func.count(Lead.id))
+        status_stmt = _apply_lead_filters(
+            status_stmt, args, bounds, visible_ids, ctx.tenant_uuid
+        ).group_by(Lead.status).order_by(func.count(Lead.id).desc())
+        status_rows = (await session.execute(status_stmt)).all()
+        by_status = {
+            str(status or "Unknown"): int(count or 0)
+            for status, count in status_rows
+        }
+
+    if breakdown_by in {"source", "all"}:
+        # Group by the raw column, then normalize null/blank labels in Python.
+        # Avoid COALESCE(..., 'literal') in both SELECT and GROUP BY: PostgreSQL
+        # can compile those literals as different bind parameters, yielding a
+        # grouping-expression mismatch.
+        source_stmt = select(Lead.source, func.count(Lead.id))
+        source_stmt = _apply_lead_filters(
+            source_stmt, args, bounds, visible_ids, ctx.tenant_uuid
+        ).group_by(Lead.source).order_by(func.count(Lead.id).desc())
+        source_rows = (await session.execute(source_stmt)).all()
+        for source, count in source_rows:
+            label = (str(source).strip() if source is not None else "") or "Direct / Referral"
+            by_source[label] = by_source.get(label, 0) + int(count or 0)
+        # Keep responses compact while making omitted categories explicit.
+        ordered_sources = sorted(by_source.items(), key=lambda item: item[1], reverse=True)
+        if len(ordered_sources) > 8:
+            visible = ordered_sources[:7]
+            other_count = sum(value for _, value in ordered_sources[7:])
+            by_source = dict(visible + [("Other", other_count)])
 
     return {
         "total_leads": total,
         "total_count": total,
-        "average_score": avg_score,
-        "hot_leads_count": hot_leads,
-        "qualified_leads_count": qualified,
+        "average_score": round(float(totals_row.avg_score or 0), 1),
+        "hot_leads_count": int(totals_row.hot_leads or 0),
+        "qualified_leads_count": int(totals_row.qualified_leads or 0),
         "converted_leads_count": converted,
-        "conversion_rate_pct": conversion_rate,
+        "conversion_rate_pct": round(converted / total * 100, 1) if total else 0.0,
+        "breakdown_by": breakdown_by,
         "by_status": by_status,
         "by_source": by_source,
     }
@@ -436,10 +469,14 @@ async def get_team_performance(session: AsyncSession, ctx: RequestContext, args:
 
     users_stmt = select(User).where(
         User.organization_id == ctx.tenant_uuid,
+        User.status == "active",
         User.deleted_at.is_(None),
     )
     if visible_ids is not None:
         users_stmt = users_stmt.where(User.id.in_(visible_ids))
+    requested_reps = _user_filter_ids(_safe_text(args.get("rep"), max_length=100), ctx.tenant_uuid)
+    if requested_reps is not None:
+        users_stmt = users_stmt.where(User.id.in_(requested_reps))
     users = (await session.execute(users_stmt)).scalars().all()
     user_map = {u.id: (u.name or u.email) for u in users}
 
@@ -449,20 +486,35 @@ async def get_team_performance(session: AsyncSession, ctx: RequestContext, args:
     u_ids = list(user_map.keys())
 
     # Deals by owner
+    deal_owner_in_scope = Deal.owner_id.in_(u_ids)
+    opportunity_owner_in_scope = Opportunity.owner_id.in_(u_ids)
+    effective_owner_id = case(
+        (deal_owner_in_scope, Deal.owner_id),
+        else_=Opportunity.owner_id,
+    )
     d_stmt = select(
-        Deal.owner_id,
+        effective_owner_id.label("owner_id"),
+        Deal.currency,
         func.count(Deal.id).label("total_deals"),
         func.count(case((func.lower(Deal.status) == "won", 1))).label("won_deals"),
         func.coalesce(func.sum(case((func.lower(Deal.status) == "won", Deal.amount))), 0).label("won_rev"),
         func.coalesce(func.sum(case((func.lower(Deal.status) == "open", Deal.amount))), 0).label("pipe_val"),
+    ).outerjoin(
+        Opportunity,
+        and_(Opportunity.id == Deal.opportunity_id,
+             Opportunity.organization_id == ctx.tenant_uuid,
+             Opportunity.deleted_at.is_(None)),
     ).where(
         Deal.organization_id == ctx.tenant_uuid,
         Deal.deleted_at.is_(None),
-        Deal.owner_id.in_(u_ids),
+        or_(deal_owner_in_scope, opportunity_owner_in_scope),
     )
     d_stmt = _apply_created_at(d_stmt, Deal.created_at, bounds)
-    deal_rows = (await session.execute(d_stmt.group_by(Deal.owner_id))).all()
-    deals_by_user = {row[0]: row for row in deal_rows}
+    deal_rows = (await session.execute(d_stmt.group_by(effective_owner_id, Deal.currency))).all()
+    deals_by_user: dict[uuid.UUID, list[Any]] = {}
+    for row in deal_rows:
+        deals_by_user.setdefault(row[0], []).append(row)
+    all_currencies = sorted({str(row[1]) for row in deal_rows if row[1]})
 
     # Leads by assignee
     l_stmt = select(
@@ -479,34 +531,62 @@ async def get_team_performance(session: AsyncSession, ctx: RequestContext, args:
     leads_by_user = {row[0]: row for row in lead_rows}
 
     performers = []
-    total_won_revenue = 0.0
+    team_won_by_currency = {currency: 0.0 for currency in all_currencies}
+    team_pipeline_by_currency = {currency: 0.0 for currency in all_currencies}
     for uid, name in user_map.items():
-        d_row = deals_by_user.get(uid)
+        rep_deal_rows = deals_by_user.get(uid, [])
+        tot_d = sum(int(row[2] or 0) for row in rep_deal_rows)
+        won_d = sum(int(row[3] or 0) for row in rep_deal_rows)
+        won_by_currency = {str(row[1]): float(row[4] or 0) for row in rep_deal_rows if row[1]}
+        pipeline_by_currency = {str(row[1]): float(row[5] or 0) for row in rep_deal_rows if row[1]}
+        for currency, value in won_by_currency.items():
+            team_won_by_currency[currency] = team_won_by_currency.get(currency, 0.0) + value
+        for currency, value in pipeline_by_currency.items():
+            team_pipeline_by_currency[currency] = team_pipeline_by_currency.get(currency, 0.0) + value
+
         l_row = leads_by_user.get(uid)
-        tot_d = int(d_row[1]) if d_row else 0
-        won_d = int(d_row[2]) if d_row else 0
-        won_val = float(d_row[3]) if d_row else 0.0
-        pipe_val = float(d_row[4]) if d_row else 0.0
         tot_l = int(l_row[1]) if l_row else 0
         qual_l = int(l_row[2]) if l_row else 0
         win_rate = round(won_d / max(1, tot_d) * 100, 1) if tot_d else 0.0
-        total_won_revenue += won_val
-
+        single_currency = len(all_currencies) <= 1
         performers.append({
             "name": name,
-            "won_revenue": won_val,
+            "won_revenue": round(won_by_currency.get(all_currencies[0], 0.0), 2) if single_currency and all_currencies else (0.0 if single_currency else None),
+            "won_revenue_by_currency": [
+                {"currency": currency, "amount": round(won_by_currency.get(currency, 0.0), 2)}
+                for currency in all_currencies
+            ],
             "won_deals": won_d,
-            "pipeline_value": pipe_val,
+            "pipeline_value": round(pipeline_by_currency.get(all_currencies[0], 0.0), 2) if single_currency and all_currencies else (0.0 if single_currency else None),
+            "pipeline_value_by_currency": [
+                {"currency": currency, "amount": round(pipeline_by_currency.get(currency, 0.0), 2)}
+                for currency in all_currencies
+            ],
             "total_deals": tot_d,
             "assigned_leads": tot_l,
             "qualified_leads": qual_l,
             "win_rate_pct": win_rate,
         })
 
-    performers.sort(key=lambda x: (x["won_revenue"], x["pipeline_value"], x["won_deals"]), reverse=True)
+    if len(all_currencies) <= 1:
+        performers.sort(key=lambda x: (x["won_revenue"] or 0, x["pipeline_value"] or 0, x["won_deals"]), reverse=True)
+    else:
+        # Amounts in different currencies cannot be ranked without FX conversion.
+        performers.sort(key=lambda x: (x["won_deals"], x["total_deals"], x["qualified_leads"]), reverse=True)
+
+    single_currency = len(all_currencies) <= 1
     return {
         "total_reps": len(performers),
-        "total_team_won_revenue": round(total_won_revenue, 2),
+        "total_team_won_revenue": round(team_won_by_currency.get(all_currencies[0], 0.0), 2) if single_currency and all_currencies else (0.0 if single_currency else None),
+        "total_team_won_revenue_by_currency": [
+            {"currency": currency, "amount": round(team_won_by_currency.get(currency, 0.0), 2)}
+            for currency in all_currencies
+        ],
+        "total_team_pipeline_by_currency": [
+            {"currency": currency, "amount": round(team_pipeline_by_currency.get(currency, 0.0), 2)}
+            for currency in all_currencies
+        ],
+        "currency_note": None if single_currency else "Amounts are kept separate by currency; no FX conversion was applied.",
         "performers": performers[:15],
     }
 
@@ -517,6 +597,7 @@ async def get_crm_overview(session: AsyncSession, ctx: RequestContext, args: dic
     visible_ids = await _visible_user_ids(session, ctx)
 
     d_base = select(
+        Deal.currency,
         func.count(Deal.id).label("total_deals"),
         func.count(case((func.lower(Deal.status) == "open", 1))).label("open_deals"),
         func.count(case((func.lower(Deal.status) == "won", 1))).label("won_deals"),
@@ -528,7 +609,22 @@ async def get_crm_overview(session: AsyncSession, ctx: RequestContext, args: dic
         *_deal_scope(visible_ids),
     )
     d_base = _apply_created_at(d_base, Deal.created_at, bounds)
-    d_row = (await session.execute(d_base)).one()
+    deal_currency_rows = (await session.execute(d_base.group_by(Deal.currency))).all()
+    deal_currencies = sorted({str(row.currency) for row in deal_currency_rows if row.currency})
+    total_deals = sum(int(row.total_deals or 0) for row in deal_currency_rows)
+    open_deals = sum(int(row.open_deals or 0) for row in deal_currency_rows)
+    won_deals = sum(int(row.won_deals or 0) for row in deal_currency_rows)
+    active_pipeline_by_currency = [
+        {"currency": str(row.currency), "amount": float(row.pipeline_value or 0)}
+        for row in deal_currency_rows if row.currency
+    ]
+    won_revenue_by_currency = [
+        {"currency": str(row.currency), "amount": float(row.won_revenue or 0)}
+        for row in deal_currency_rows if row.currency
+    ]
+    single_currency = len(deal_currencies) <= 1
+    active_pipeline_value = float(deal_currency_rows[0].pipeline_value or 0) if single_currency and deal_currency_rows else (0.0 if single_currency else None)
+    total_won_revenue = float(deal_currency_rows[0].won_revenue or 0) if single_currency and deal_currency_rows else (0.0 if single_currency else None)
 
     l_base = select(
         func.count(Lead.id).label("total_leads"),
@@ -545,13 +641,13 @@ async def get_crm_overview(session: AsyncSession, ctx: RequestContext, args: dic
 
     total_leads = int(l_row.total_leads or 0)
     converted_leads = int(l_row.conv_leads or 0)
-    total_deals = int(d_row.total_deals or 0)
-    won_deals = int(d_row.won_deals or 0)
-
     return {
-        "active_pipeline_value": float(d_row.pipeline_value or 0),
-        "total_won_revenue": float(d_row.won_revenue or 0),
-        "open_deals_count": int(d_row.open_deals or 0),
+        "active_pipeline_value": active_pipeline_value,
+        "active_pipeline_value_by_currency": active_pipeline_by_currency,
+        "total_won_revenue": total_won_revenue,
+        "total_won_revenue_by_currency": won_revenue_by_currency,
+        "currency_note": None if single_currency else "Amounts are kept separate by currency; no FX conversion was applied.",
+        "open_deals_count": open_deals,
         "won_deals_count": won_deals,
         "total_deals_count": total_deals,
         "deal_win_rate_pct": round(won_deals / max(1, total_deals) * 100, 1) if total_deals else 0.0,
@@ -585,7 +681,14 @@ async def get_pipeline_summary(session: AsyncSession, ctx: RequestContext, args:
     weighted_stmt = select(
         Deal.currency,
         func.coalesce(func.sum(Deal.amount * weighted_probability / 100.0), 0),
-    ).outerjoin(Opportunity, Opportunity.id == Deal.opportunity_id).join(
+    ).outerjoin(
+        Opportunity,
+        and_(
+            Opportunity.id == Deal.opportunity_id,
+            Opportunity.organization_id == ctx.tenant_uuid,
+            Opportunity.deleted_at.is_(None),
+        ),
+    ).join(
         Account, Account.id == Deal.account_id
     ).where(
         Deal.organization_id == ctx.tenant_uuid,
@@ -605,28 +708,60 @@ async def get_pipeline_summary(session: AsyncSession, ctx: RequestContext, args:
 async def get_campaign_performance(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
     bounds = _date_bounds(args)
     visible_ids = await _visible_user_ids(session, ctx)
-    stmt = select(
-        Campaign.name, Campaign.type, Campaign.status, Campaign.budget,
-        func.count(func.distinct(Lead.id)).label("lead_count"),
-    ).join(Lead, Lead.campaign_id == Campaign.id).where(
-        Campaign.organization_id == ctx.tenant_uuid,
-        Campaign.deleted_at.is_(None),
+    lead_join_conditions = [
+        Lead.campaign_id == Campaign.id,
         Lead.organization_id == ctx.tenant_uuid,
         Lead.deleted_at.is_(None),
         *_lead_scope(visible_ids),
+    ]
+    start, end = bounds
+    if start:
+        lead_join_conditions.append(Lead.created_at >= start)
+    if end:
+        lead_join_conditions.append(Lead.created_at <= end)
+
+    campaign_scope = []
+    if visible_ids is not None:
+        # Non-owner roles can see campaign metadata only for campaigns connected
+        # to at least one lead they are allowed to view. Owners retain tenant-wide
+        # visibility, including campaigns that currently have zero leads.
+        visible_campaign_ids = select(Lead.campaign_id).where(
+            Lead.organization_id == ctx.tenant_uuid,
+            Lead.deleted_at.is_(None),
+            Lead.campaign_id.is_not(None),
+            *_lead_scope(visible_ids),
+        )
+        campaign_scope.append(Campaign.id.in_(visible_campaign_ids))
+
+    stmt = select(
+        Campaign.name, Campaign.type, Campaign.status, Campaign.budget,
+        func.count(func.distinct(Lead.id)).label("lead_count"),
+    ).outerjoin(Lead, and_(*lead_join_conditions)).where(
+        Campaign.organization_id == ctx.tenant_uuid,
+        Campaign.deleted_at.is_(None),
+        *campaign_scope,
     )
-    campaign_name = _safe_text(args.get("campaign"))
+    campaign_name = _safe_text(args.get("campaign"), max_length=100)
     if campaign_name:
         stmt = stmt.where(Campaign.name.ilike(f"%{campaign_name}%"))
     status = _safe_text(args.get("status"), max_length=30)
     if status:
         stmt = stmt.where(func.lower(Campaign.status) == status.lower())
-    stmt = _apply_created_at(stmt, Lead.created_at, bounds)
-    stmt = stmt.group_by(Campaign.name, Campaign.type, Campaign.status, Campaign.budget).order_by(
-        func.count(func.distinct(Lead.id)).desc()
+    count_stmt = select(func.count(func.distinct(Campaign.id))).select_from(Campaign).where(
+        Campaign.organization_id == ctx.tenant_uuid,
+        Campaign.deleted_at.is_(None),
+        *campaign_scope,
+    )
+    if campaign_name:
+        count_stmt = count_stmt.where(Campaign.name.ilike(f"%{campaign_name}%"))
+    if status:
+        count_stmt = count_stmt.where(func.lower(Campaign.status) == status.lower())
+    total_campaigns = int((await session.execute(count_stmt)).scalar_one())
+    stmt = stmt.group_by(Campaign.id, Campaign.name, Campaign.type, Campaign.status, Campaign.budget).order_by(
+        func.count(func.distinct(Lead.id)).desc(), Campaign.name.asc()
     ).limit(_limit(args))
     rows = (await session.execute(stmt)).all()
-    return {"total_returned": len(rows), "campaigns": [{
+    return {"total_campaigns": total_campaigns, "total_returned": len(rows), "campaigns": [{
         "campaign": name, "type": kind, "status": campaign_status,
         "budget": float(budget or 0), "lead_count": int(lead_count or 0),
     } for name, kind, campaign_status, budget, lead_count in rows]}
@@ -642,10 +777,17 @@ async def get_product_performance(session: AsyncSession, ctx: RequestContext, ar
     )
     if product_name:
         product_query = product_query.where(Product.name.ilike(f"%{product_name}%"))
+    total_products_stmt = select(func.count(Product.id)).where(
+        Product.organization_id == ctx.tenant_uuid,
+        Product.deleted_at.is_(None),
+    )
+    if product_name:
+        total_products_stmt = total_products_stmt.where(Product.name.ilike(f"%{product_name}%"))
+    total_products = int((await session.execute(total_products_stmt)).scalar_one())
     product_rows = (await session.execute(product_query.order_by(Product.name.asc()).limit(_limit(args)))).all()
-    products = {row.id: {"product": row.name, "category": row.category, "list_price": float(row.price or 0), "currency": row.currency, "lead_count": 0, "deal_count": 0, "deal_value": 0.0} for row in product_rows}
+    products = {row.id: {"product": row.name, "category": row.category, "list_price": float(row.price or 0), "currency": row.currency, "lead_count": 0, "deal_count": 0} for row in product_rows}
     if not products:
-        return {"products": []}
+        return {"total_products": total_products, "total_returned": 0, "products": []}
 
     lead_stmt = select(Lead.product_id, func.count(Lead.id)).where(
         Lead.organization_id == ctx.tenant_uuid,
@@ -659,9 +801,13 @@ async def get_product_performance(session: AsyncSession, ctx: RequestContext, ar
         if product_id in products:
             products[product_id]["lead_count"] = int(count or 0)
 
+    line_value = (
+        DealProduct.quantity * DealProduct.unit_price
+        * (1 - (DealProduct.discount / 100.0))
+    )
     deal_stmt = select(
         DealProduct.product_id, Deal.currency, func.count(func.distinct(Deal.id)),
-        func.coalesce(func.sum(Deal.amount), 0),
+        func.coalesce(func.sum(line_value), 0),
     ).join(Deal, Deal.id == DealProduct.deal_id).where(
         Deal.organization_id == ctx.tenant_uuid,
         Deal.deleted_at.is_(None),
@@ -681,7 +827,7 @@ async def get_product_performance(session: AsyncSession, ctx: RequestContext, ar
     for product_id, product_info in products.items():
         product_info["deal_totals_by_currency"] = currency_totals.get(product_id, [])
         product_info["deal_count"] = sum(item["deal_count"] for item in product_info["deal_totals_by_currency"])
-    return {"products": list(products.values())}
+    return {"total_products": total_products, "total_returned": len(products), "products": list(products.values())}
 
 
 async def get_account_summary(session: AsyncSession, ctx: RequestContext, args: dict[str, Any]) -> dict[str, Any]:
@@ -701,11 +847,15 @@ async def get_account_summary(session: AsyncSession, ctx: RequestContext, args: 
     if account_name:
         stmt = stmt.where(Account.name.ilike(f"%{account_name}%"))
     stmt = _apply_created_at(stmt, Deal.created_at, bounds)
+    count_stmt = stmt.with_only_columns(
+        func.count(func.distinct(Account.id)), maintain_column_froms=True
+    ).order_by(None)
+    total_accounts = int((await session.execute(count_stmt)).scalar_one())
     stmt = stmt.group_by(Account.name, Account.industry, Deal.currency).order_by(
         func.sum(Deal.amount).desc()
     ).limit(_limit(args))
     rows = (await session.execute(stmt)).all()
-    return {"accounts": [{
+    return {"total_accounts": total_accounts, "total_returned": len(rows), "accounts": [{
         "account": name, "industry": industry, "currency": currency,
         "deal_count": int(count), "deal_value": float(value or 0),
     } for name, industry, currency, count, value in rows]}
@@ -725,26 +875,40 @@ async def search_contacts(session: AsyncSession, ctx: RequestContext, args: dict
     # For non-owner roles, only expose contacts linked to accounts that have
     # at least one visible deal or lead. This prevents tenant-wide contact leakage.
     if visible_ids is not None:
-        visible_account_ids = select(Deal.account_id).where(
+        visible_deal_account_ids = select(Deal.account_id).where(
             Deal.organization_id == ctx.tenant_uuid,
             Deal.deleted_at.is_(None),
             *_deal_scope(visible_ids),
         )
-        stmt = stmt.where(Contact.account_id.in_(visible_account_ids))
+        visible_lead_account_ids = select(LeadConversion.account_id).join(
+            Lead, Lead.id == LeadConversion.lead_id
+        ).where(
+            Lead.organization_id == ctx.tenant_uuid,
+            Lead.deleted_at.is_(None),
+            *_lead_scope(visible_ids),
+        )
+        stmt = stmt.where(or_(
+            Contact.account_id.in_(visible_deal_account_ids),
+            Contact.account_id.in_(visible_lead_account_ids),
+        ))
+    stmt = stmt.where(Contact.deleted_at.is_(None))
     if search:
         pattern = f"%{search}%"
         stmt = stmt.where(or_(
             Contact.first_name.ilike(pattern),
             Contact.last_name.ilike(pattern),
             Contact.email.ilike(pattern),
+            Contact.phone.ilike(pattern),
             Contact.title.ilike(pattern),
         ))
     if account_name:
         stmt = stmt.where(Account.name.ilike(f"%{account_name}%"))
+    count_stmt = stmt.with_only_columns(func.count(Contact.id), maintain_column_froms=True).order_by(None)
+    total_contacts = int((await session.execute(count_stmt)).scalar_one())
     rows = (await session.execute(
         stmt.order_by(Contact.first_name.asc(), Contact.last_name.asc()).limit(_limit(args))
     )).all()
-    return {"returned": len(rows), "contacts": [{
+    return {"total_contacts": total_contacts, "returned": len(rows), "contacts": [{
         "name": f"{contact.first_name} {contact.last_name}".strip(),
         "account": account, "title": contact.title, "department": contact.department,
         "email": contact.email, "phone": contact.phone,
@@ -777,10 +941,12 @@ async def search_activities(session: AsyncSession, ctx: RequestContext, args: di
         pattern = f"%{search}%"
         stmt = stmt.where(or_(Activity.subject.ilike(pattern), Activity.description.ilike(pattern)))
     stmt = _apply_created_at(stmt, Activity.start_at, bounds)
+    count_stmt = stmt.with_only_columns(func.count(Activity.id), maintain_column_froms=True).order_by(None)
+    total_activities = int((await session.execute(count_stmt)).scalar_one())
     rows = (await session.execute(
         stmt.order_by(Activity.start_at.asc().nullslast()).limit(_limit(args))
     )).scalars().all()
-    return {"returned": len(rows), "activities": [{
+    return {"total_activities": total_activities, "returned": len(rows), "activities": [{
         "subject": activity.subject, "type": activity.type, "status": activity.status,
         "priority": activity.priority,
         "start_at": activity.start_at.isoformat() if activity.start_at else None,
@@ -814,22 +980,26 @@ async def execute_crm_tool(session: AsyncSession, ctx: RequestContext, name: str
         return await function(session, ctx, arguments)
     except ValueError as exc:
         return {"error": str(exc)}
-    except SQLAlchemyError as exc:
+    except SQLAlchemyError:
         import logging
-        logging.getLogger(__name__).exception("SQLAlchemyError in execute_crm_tool '%s': %s", name, exc)
-        return {"error": f"CRM data could not be retrieved: {str(exc.__cause__ or exc)}"}
+        logging.getLogger(__name__).exception("Database query failed in CRM tool '%s'", name)
+        return {"error": "CRM data could not be retrieved because the database query failed. Please retry.", "error_code": "database_query_failed"}
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Unexpected failure in CRM tool '%s'", name)
+        return {"error": "The CRM data operation failed unexpectedly. Please retry.", "error_code": "tool_execution_failed"}
 
 
 CRM_TOOL_DEFINITIONS = [
     {"type": "function", "function": {"name": "get_crm_overview", "description": "Calculate high-level executive CRM business health KPIs: total active pipeline value, closed won revenue, open vs won deal counts, total leads, qualified leads, and conversion rate in one fast call. Use when user asks for overall CRM performance, executive summary, or business health.", "parameters": {"type": "object", "properties": {"date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
-    {"type": "function", "function": {"name": "get_leads_summary", "description": "Calculate aggregate lead counts, conversion rate, breakdown by status, breakdown by source, and average lead scores. ALWAYS prefer this tool over search_leads for questions about lead counts, status breakdowns, sources, or overall lead health.", "parameters": {"type": "object", "properties": {"status": {"type": "string"}, "source": {"type": "string"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
-    {"type": "function", "function": {"name": "get_team_performance", "description": "Summarize sales team and sales rep performance: deals won, total closed revenue, active open pipeline, win rates, and assigned lead counts per rep. Use whenever the user asks about top sales reps, team performance, rep rankings, or sales quotas.", "parameters": {"type": "object", "properties": {"date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "get_leads_summary", "description": "Retrieve aggregate lead counts, conversion rate, and average lead scores. ALWAYS use for questions such as 'How many leads do we have?'. For a simple count, omit breakdown_by (the fast default). Set breakdown_by to source, status, or all only when the user explicitly asks for a breakdown.", "parameters": {"type": "object", "properties": {"status": {"type": "string"}, "source": {"type": "string"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "assigned_to": {"type": "string", "description": "Assignee name or UUID"}, "min_score": {"type": "integer"}, "max_score": {"type": "integer"}, "search": {"type": "string"}, "breakdown_by": {"type": "string", "enum": ["none", "source", "status", "all"]}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "get_team_performance", "description": "Summarize sales team and sales rep performance: deals won, revenue and active pipeline values grouped by currency, win rates, and assigned lead counts per rep. Accepts an optional rep name or UUID filter. Use whenever the user asks about top sales reps, team performance, rep rankings, or sales quotas.", "parameters": {"type": "object", "properties": {"rep": {"type": "string", "description": "Optional sales representative name or UUID"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_pipeline_summary", "description": "Calculate CRM pipeline deal counts and values grouped by stage and currency, including weighted pipeline values. Accepts the same deal filters as search_deals except account and search.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}, "status": {"type": "string"}, "owner": {"type": "string", "description": "Deal owner name or UUID; results remain role-scoped"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "currency": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "search_leads", "description": "Search CRM leads using optional status, source, score, campaign, product, text, and created-date filters. Only return leads visible to the authenticated user's role.", "parameters": {"type": "object", "properties": {"status": {"type": "string"}, "source": {"type": "string"}, "assigned_to": {"type": "string", "description": "Assignee name or UUID; results remain role-scoped"}, "min_score": {"type": "integer"}, "max_score": {"type": "integer"}, "campaign": {"type": "string", "description": "Campaign name or UUID"}, "product": {"type": "string", "description": "Product name or UUID"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string", "description": "ISO date or datetime"}, "created_before": {"type": "string", "description": "ISO date or datetime"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "search_deals", "description": "Search CRM deals with optional stage, status, account, campaign, product, currency, amount, text, and created-date filters. Only return deals visible to the authenticated user's role.", "parameters": {"type": "object", "properties": {"stage": {"type": "string"}, "status": {"type": "string"}, "account": {"type": "string"}, "owner": {"type": "string", "description": "Deal owner name or UUID; results remain role-scoped"}, "campaign": {"type": "string"}, "product": {"type": "string"}, "currency": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_campaign_performance", "description": "Summarize campaigns by type, status, budget, and lead count visible to the authenticated user, with optional campaign, status, and date filters.", "parameters": {"type": "object", "properties": {"campaign": {"type": "string"}, "status": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_product_performance", "description": "Summarize products with visible lead counts and deal counts and values, with optional product and date filters.", "parameters": {"type": "object", "properties": {"product": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
     {"type": "function", "function": {"name": "get_account_summary", "description": "Summarize accounts by visible associated deals, deal counts and deal values, with optional account and created-date filters.", "parameters": {"type": "object", "properties": {"account": {"type": "string"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
-    {"type": "function", "function": {"name": "search_contacts", "description": "Search CRM contacts by name, email, title or account. Results are tenant- and role-scoped.", "parameters": {"type": "object", "properties": {"search": {"type": "string"}, "account": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
-    {"type": "function", "function": {"name": "search_activities", "description": "Search CRM tasks, calls, meetings and emails by type, status, priority, text and date range. Results are tenant- and role-scoped.", "parameters": {"type": "object", "properties": {"type": {"type": "string", "enum": ["task", "call", "meeting", "email"]}, "status": {"type": "string"}, "priority": {"type": "string"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "search_contacts", "description": "Search CRM contacts by name, email, phone, title or account. Returns total matching count separately from the limited page. Results are tenant- and role-scoped.", "parameters": {"type": "object", "properties": {"search": {"type": "string"}, "account": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "search_activities", "description": "Search CRM tasks, calls, meetings and emails by type, status, priority, text and date range. Returns total matching count separately from the limited page. Results are tenant- and role-scoped.", "parameters": {"type": "object", "properties": {"type": {"type": "string", "enum": ["task", "call", "meeting", "email"]}, "status": {"type": "string"}, "priority": {"type": "string"}, "search": {"type": "string"}, "date_range": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "last_7_days", "last_30_days", "last_90_days", "this_month", "this_quarter", "this_year", "all_time"]}, "created_after": {"type": "string"}, "created_before": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": False}}},
 ]

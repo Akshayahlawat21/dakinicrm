@@ -28,7 +28,7 @@ def test_invalid_period_returns_422(client):
         return_value="test-org",
     ):
         response = client.get(
-            "/v1/reports/overview?period=all_time",
+            "/v1/reports/overview?period=next_century",
             headers={"X-Tenant-Id": "test-tenant"},
         )
 

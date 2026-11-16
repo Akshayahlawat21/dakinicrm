@@ -111,12 +111,12 @@ class TelephonyService:
         lead_id: Optional[str] = None,
         contact_name: Optional[str] = None,
         room: Optional[str] = None,
-        record: bool = True,
+        record: Optional[bool] = None,
         user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Initiates outbound PSTN call bridged into a LiveKit room.
-        Uses configured mode (HUMAN_ONLY).
+        Uses configured mode (HUMAN_ONLY) and matches the official documentation payload.
         """
         normalized_to = normalize_phone_number(to_number)
         actual_room = room or f"crm_room_{uuid.uuid4().hex[:12]}"
@@ -134,8 +134,10 @@ class TelephonyService:
             "from_number": settings.TELEPHONY_FROM_NUMBER,
             "room": actual_room,
             "mode": settings.TELEPHONY_OUTBOUND_MODE,
-            "record": record,
         }
+        # Only attach record if explicitly provided (new API contract omits record)
+        if record is not None:
+            payload["record"] = record
 
         async with httpx.AsyncClient(timeout=settings.TELEPHONY_TIMEOUT_SECONDS) as client:
             try:
@@ -167,8 +169,11 @@ class TelephonyService:
         }
         self._registry[actual_room] = record_entry
         self._registry[call_id] = record_entry
+        if call_uuid:
+            self._registry[call_uuid] = record_entry
 
         return {
+            "ok": True,
             "success": True,
             "call_id": call_id,
             "call_uuid": call_uuid,
@@ -192,6 +197,7 @@ class TelephonyService:
     ) -> Dict[str, Any]:
         """
         Hang up active call via POST /api/dialer/hangup.
+        Matches official API contract: {room, call_id} -> {ok, status, room_deleted}
         """
         url = f"{settings.TELEPHONY_BASE_URL.rstrip('/')}/api/dialer/hangup"
         payload = {
@@ -205,7 +211,7 @@ class TelephonyService:
                 data = resp.json() if resp.status_code < 500 else {}
             except Exception as e:
                 logger.warning(f"Hangup request failed on telephony backend: {e}")
-                data = {"success": True, "status": "terminated", "message": str(e)}
+                data = {"ok": True, "status": "terminated", "room_deleted": True, "message": str(e)}
 
         duration_sec = data.get("duration_seconds")
         # Update and clean registry
@@ -216,8 +222,10 @@ class TelephonyService:
                 self._registry[room]["duration_sec"] = duration_sec
 
         return {
-            "success": True,
+            "ok": bool(data.get("ok", data.get("success", True))),
+            "success": bool(data.get("ok", data.get("success", True))),
             "status": "terminated",
+            "room_deleted": bool(data.get("room_deleted", True)),
             "room": room,
             "call_id": call_id,
             "duration_seconds": duration_sec,
@@ -231,11 +239,23 @@ class TelephonyService:
                 resp = await client.get(url, params={"room": room})
                 if resp.status_code == 200:
                     data = resp.json()
+                    raw_room = data.get("room")
+                    room_exists = bool(raw_room or data.get("success", False))
+                    participants = data.get("participants", [])
+                    sip_status = data.get("sip_status", "idle")
+                    pstn_active = (
+                        sip_status in ("active", "connected", "in-progress", "dialing")
+                        or any(isinstance(p, dict) and str(p.get("identity", "")).startswith("pstn-") for p in participants)
+                    )
+                    agent_active = any(
+                        isinstance(p, dict) and not str(p.get("identity", "")).startswith("pstn-") for p in participants
+                    )
                     return {
-                        "exists": bool(data.get("exists", False)),
-                        "pstn_connected": bool(data.get("pstn_connected", False)),
-                        "agent_connected": bool(data.get("agent_connected", False)),
-                        "participants": data.get("participants", []),
+                        "exists": room_exists,
+                        "pstn_connected": pstn_active,
+                        "agent_connected": agent_active,
+                        "participants": participants,
+                        "sip_status": sip_status,
                         "room": room,
                     }
             except Exception as e:
@@ -248,6 +268,7 @@ class TelephonyService:
             "pstn_connected": reg.get("status") == "connected" if reg else False,
             "agent_connected": bool(reg),
             "participants": [],
+            "sip_status": "idle",
             "room": room,
         }
 

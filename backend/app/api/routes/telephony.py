@@ -128,9 +128,11 @@ async def hangup_call(
         lead_id=payload.lead_id,
     )
     dto = TelephonyHangupResponse(
-        success=res["success"],
-        status=res["status"],
-        room=res["room"],
+        ok=res.get("ok", True),
+        status=res.get("status", "terminated"),
+        room_deleted=res.get("room_deleted", True),
+        success=res.get("success", True),
+        room=res.get("room"),
         call_id=res.get("call_id"),
         duration_seconds=res.get("duration_seconds"),
         message=res.get("message"),
@@ -150,6 +152,7 @@ async def get_room_status(
         pstn_connected=res.get("pstn_connected", False),
         agent_connected=res.get("agent_connected", False),
         participants=res.get("participants", []),
+        sip_status=res.get("sip_status"),
         room=res.get("room", room),
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
@@ -232,26 +235,6 @@ async def merge_call(
         lead_id=res.get("lead_id"),
         contact_name=res.get("contact_name"),
         message=res.get("message"),
-    )
-    return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
-
-
-@router.post("/headless-call", response_model=StandardResponse[TelephonyHeadlessCallResponse])
-async def initiate_headless_call(
-    payload: TelephonyHeadlessCallRequest,
-    ctx: RequestContext = Depends(get_request_context),
-):
-    service = TelephonyService()
-    res = await service.initiate_headless_call(
-        to_number=payload.to,
-        from_number=payload.from_number,
-        mode=payload.mode or "auto",
-    )
-    dto = TelephonyHeadlessCallResponse(
-        ok=res.get("ok", True),
-        call_id=res["call_id"],
-        room_name=res.get("room_name"),
-        status=res["status"],
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
 

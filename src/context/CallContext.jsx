@@ -380,7 +380,6 @@ export function CallProvider({ children }) {
             leadId,
             contactName,
             room: callRoom,
-            record: true,
           });
           callResult = rawResult?.data || rawResult;
         } catch (callErr) {

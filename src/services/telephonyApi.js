@@ -7,7 +7,7 @@ import { gatewayFetch } from './api';
 
 function unwrapResponse(res, defaultErrMsg = 'Telephony request failed') {
   if (!res) throw new Error(defaultErrMsg);
-  if (res.success === false) {
+  if (res.success === false || res.ok === false) {
     const msg = res.error?.message || res.message || defaultErrMsg;
     throw new Error(msg);
   }
@@ -40,17 +40,20 @@ export async function initiateOutboundCall({
   leadId = null,
   contactName = null,
   room = null,
-  record = true,
+  record = null,
 }) {
+  const body = {
+    to_number: toNumber,
+    lead_id: leadId,
+    contact_name: contactName,
+    room,
+  };
+  if (record !== null) {
+    body.record = record;
+  }
   const res = await gatewayFetch('/telephony/call', {
     method: 'POST',
-    body: JSON.stringify({
-      to_number: toNumber,
-      lead_id: leadId,
-      contact_name: contactName,
-      room,
-      record,
-    }),
+    body: JSON.stringify(body),
   });
   return unwrapResponse(res, 'Call initiation failed on telephony backend');
 }

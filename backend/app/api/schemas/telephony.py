@@ -21,23 +21,24 @@ class TelephonyCallRequest(BaseModel):
     lead_id: Optional[str] = Field(None, description="Associated CRM lead ID")
     contact_name: Optional[str] = Field(None, description="Lead or contact display name")
     room: Optional[str] = Field(None, description="Pre-allocated room ID or None to auto-generate")
-    record: bool = Field(True, description="Whether to record the call")
+    record: Optional[bool] = Field(None, description="Optional call recording flag (omitted by default per new API spec)")
 
 
 class TelephonyCallResponse(BaseModel):
-    success: bool = True
-    call_id: str
-    call_uuid: Optional[str] = None
-    room: str
+    status: str = Field(..., description="Call status, e.g. dialing")
+    call_id: str = Field(..., description="Primary call identifier for call tracking and hangup")
+    call_uuid: Optional[str] = Field(None, description="UUID identifier from SIP carrier")
+    room: str = Field(..., description="LiveKit room name")
     to_number: str
     from_number: str
-    status: str
     mode: str
     token: Optional[str] = None
     server_url: Optional[str] = None
     lead_id: Optional[str] = None
     contact_name: Optional[str] = None
     message: Optional[str] = None
+    ok: bool = True
+    success: bool = True
 
 
 class TelephonyHangupRequest(BaseModel):
@@ -47,12 +48,14 @@ class TelephonyHangupRequest(BaseModel):
 
 
 class TelephonyHangupResponse(BaseModel):
-    success: bool = True
-    status: str
-    room: str
+    ok: bool = True
+    status: str = "terminated"
+    room_deleted: bool = True
+    room: Optional[str] = None
     call_id: Optional[str] = None
     duration_seconds: Optional[int] = None
     message: Optional[str] = None
+    success: bool = True
 
 
 class TelephonyRoomStatusResponse(BaseModel):
@@ -60,6 +63,7 @@ class TelephonyRoomStatusResponse(BaseModel):
     pstn_connected: bool = False
     agent_connected: bool = False
     participants: List[Any] = []
+    sip_status: Optional[str] = None
     room: Optional[str] = None
 
 

@@ -96,8 +96,25 @@ async def test_telephony_service_methods():
         assert call_res["call_id"] == "call-123"
         assert call_res["mode"] == "HUMAN_ONLY"
 
-    # 3. Test hangup with mock
-    mock_hangup = {
+    # 3. Test hangup with new documented contract {"ok": True, "status": "terminated", "room_deleted": True}
+    mock_hangup_doc = {
+        "ok": True,
+        "status": "terminated",
+        "room_deleted": True,
+    }
+    with patch("httpx.AsyncClient.post") as mock_post:
+        mock_post.return_value = AsyncMock(
+            status_code=200,
+            json=lambda: mock_hangup_doc,
+            raise_for_status=lambda: None,
+        )
+        h_res = await service.hangup(room="test-room-svc", call_id="call-123")
+        assert h_res["ok"] is True
+        assert h_res["status"] == "terminated"
+        assert h_res["room_deleted"] is True
+
+    # 4. Test hangup with legacy response {"success": True, "status": "completed"}
+    mock_hangup_legacy = {
         "success": True,
         "status": "completed",
         "room": "test-room-svc",
@@ -106,12 +123,13 @@ async def test_telephony_service_methods():
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_post.return_value = AsyncMock(
             status_code=200,
-            json=lambda: mock_hangup,
+            json=lambda: mock_hangup_legacy,
             raise_for_status=lambda: None,
         )
-        h_res = await service.hangup(room="test-room-svc", call_id="call-123")
-        assert h_res["success"] is True
-        assert h_res["status"] == "terminated"
+        h_res_legacy = await service.hangup(room="test-room-svc", call_id="call-123")
+        assert h_res_legacy["ok"] is True
+        assert h_res_legacy["status"] == "terminated"
+        assert h_res_legacy["room_deleted"] is True
 
 
 @pytest.mark.asyncio

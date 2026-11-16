@@ -76,12 +76,17 @@ class GatewaySettings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB upload routes
     ALLOWED_HTTP_METHODS: List[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
     CORS_ALLOWED_ORIGINS: List[str] = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://10.192.195.108:3000",  # Add this
-]
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://10.192.195.108:3000",
+        "http://10.192.195.108:3001",
+    ]
     CORS_ALLOW_CREDENTIALS: bool = True
 
     # E4: Token Validation (JWT / JWKS)

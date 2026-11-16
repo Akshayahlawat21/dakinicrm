@@ -114,3 +114,15 @@ export async function mergeCallApi({ room, toNumber, contactName = null, leadId 
   });
   return unwrapResponse(res, 'Failed to merge call into room conference');
 }
+
+export async function initiateHeadlessCall({ to, from = null, mode = 'auto' }) {
+  const res = await gatewayFetch('/telephony/headless-call', {
+    method: 'POST',
+    body: JSON.stringify({
+      to,
+      from,
+      mode,
+    }),
+  });
+  return unwrapResponse(res, 'Headless outbound call initiation failed');
+}

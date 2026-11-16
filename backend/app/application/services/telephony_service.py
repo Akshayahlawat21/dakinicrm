@@ -364,3 +364,41 @@ class TelephonyService:
             record=True,
         )
 
+    async def initiate_headless_call(
+        self,
+        to_number: str,
+        from_number: Optional[str] = None,
+        mode: str = "auto",
+    ) -> Dict[str, Any]:
+        """
+        Trigger an outbound call directly from external backend/CRM (POST /api/telephony/call)
+        without requiring a human browser softphone to pre-join the room.
+        """
+        normalized_to = normalize_phone_number(to_number)
+        url = f"{settings.TELEPHONY_BASE_URL.rstrip('/')}/api/telephony/call"
+        payload = {
+            "to": normalized_to,
+            "from": from_number or settings.TELEPHONY_FROM_NUMBER,
+            "mode": mode,
+        }
+
+        async with httpx.AsyncClient(timeout=settings.TELEPHONY_TIMEOUT_SECONDS) as client:
+            try:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                logger.error(f"Failed to initiate headless call via {url}: {e}")
+                raise ApplicationError(f"Headless outbound call failed: {e}")
+
+        call_id = data.get("call_id") or data.get("sip_call_id") or "unknown_call_id"
+        room_name = data.get("room_name") or data.get("room") or call_id
+        status = data.get("status") or "initiated"
+
+        return {
+            "ok": data.get("ok", data.get("success", True)),
+            "call_id": call_id,
+            "room_name": room_name,
+            "status": status,
+        }
+

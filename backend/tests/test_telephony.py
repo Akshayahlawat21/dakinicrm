@@ -149,3 +149,23 @@ async def test_telephony_api_endpoints_integration():
             resp = await client.get("/v1/telephony/room-status?room=room-abc", headers=headers)
             assert resp.status_code == 200
             assert resp.json()["data"]["pstn_connected"] is True
+
+    # Test Headless Call endpoint
+    with patch.object(TelephonyService, "initiate_headless_call", new_callable=AsyncMock) as mock_hl:
+        mock_hl.return_value = {
+            "ok": True,
+            "call_id": "call-_09025996477_qqst9B7Fxv7H",
+            "room_name": "call-_09025996477_qqst9B7Fxv7H",
+            "status": "initiated",
+        }
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/v1/telephony/headless-call",
+                json={"to": "+919025996477", "mode": "auto"},
+                headers=headers,
+            )
+            assert resp.status_code == 200
+            data = resp.json()["data"]
+            assert data["ok"] is True
+            assert "call-" in data["call_id"]
+            assert data["status"] == "initiated"

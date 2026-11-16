@@ -20,6 +20,8 @@ from backend.app.api.schemas.telephony import (
     TelephonyControlRequest,
     TelephonyControlResponse,
     TelephonyMergeRequest,
+    TelephonyHeadlessCallRequest,
+    TelephonyHeadlessCallResponse,
 )
 from backend.app.api.schemas.common import StandardResponse
 
@@ -91,6 +93,27 @@ async def initiate_outbound_call(
         message=res.get("message"),
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
+
+
+@router.post("/headless-call", response_model=StandardResponse[TelephonyHeadlessCallResponse])
+async def initiate_headless_call(
+    payload: TelephonyHeadlessCallRequest,
+    ctx: RequestContext = Depends(get_request_context),
+):
+    service = TelephonyService()
+    res = await service.initiate_headless_call(
+        to_number=payload.to,
+        from_number=payload.from_number,
+        mode=payload.mode or "auto",
+    )
+    dto = TelephonyHeadlessCallResponse(
+        ok=res.get("ok", True),
+        call_id=res["call_id"],
+        room_name=res.get("room_name"),
+        status=res["status"],
+    )
+    return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
+
 
 
 @router.post("/hangup", response_model=StandardResponse[TelephonyHangupResponse])
@@ -211,5 +234,26 @@ async def merge_call(
         message=res.get("message"),
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
+
+
+@router.post("/headless-call", response_model=StandardResponse[TelephonyHeadlessCallResponse])
+async def initiate_headless_call(
+    payload: TelephonyHeadlessCallRequest,
+    ctx: RequestContext = Depends(get_request_context),
+):
+    service = TelephonyService()
+    res = await service.initiate_headless_call(
+        to_number=payload.to,
+        from_number=payload.from_number,
+        mode=payload.mode or "auto",
+    )
+    dto = TelephonyHeadlessCallResponse(
+        ok=res.get("ok", True),
+        call_id=res["call_id"],
+        room_name=res.get("room_name"),
+        status=res["status"],
+    )
+    return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
+
 
 

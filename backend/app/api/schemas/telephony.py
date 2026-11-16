@@ -102,3 +102,17 @@ class TelephonyMergeRequest(BaseModel):
     lead_id: Optional[str] = Field(None, description="Associated CRM lead ID")
 
 
+class TelephonyHeadlessCallRequest(BaseModel):
+    to: str = Field(..., description="Destination E.164 phone number")
+    from_number: Optional[str] = Field(None, description="Caller DID", alias="from")
+    mode: Optional[str] = Field("auto", description="Telephony mode: auto, pstn, etc.")
+
+
+class TelephonyHeadlessCallResponse(BaseModel):
+    ok: bool = True
+    call_id: str
+    room_name: Optional[str] = None
+    status: str
+
+
+

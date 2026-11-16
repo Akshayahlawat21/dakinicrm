@@ -43,7 +43,7 @@ async def test_telephony_config_endpoint():
         resp = await client.get("/v1/telephony/config", headers=headers)
         assert resp.status_code == 200
         data = resp.json()["data"]
-        assert data["from_number"] == "+917971443119"
+        assert data["from_number"] == "+918064264223"
         assert data["outbound_mode"] == "HUMAN_ONLY"
         assert "wss://" in data["signaling_url"]
 

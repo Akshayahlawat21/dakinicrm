@@ -373,7 +373,7 @@ export default function CallHistoryPage() {
 
                       {/* Caller ID */}
                       <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-body)', fontFamily: 'monospace' }}>
-                        {item.from_did || '+917971443119'}
+                        {item.from_did || item.from_number || '+918064264223'}
                       </td>
 
                       {/* Status */}

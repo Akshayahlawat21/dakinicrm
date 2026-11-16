@@ -75,7 +75,7 @@ class AppSettings(BaseSettings):
 
     # Dakini Telephony & AI Backend Integration
     TELEPHONY_BASE_URL: str = "http://16.178.70.165:8080"
-    TELEPHONY_FROM_NUMBER: str = "+917971443119"
+    TELEPHONY_FROM_NUMBER: str = "+918064264223"
     TELEPHONY_OUTBOUND_MODE: str = "HUMAN_ONLY"
     LIVEKIT_SIGNALING_URL: str = "wss://telephony-z5x8uya8.livekit.cloud"
     TELEPHONY_TIMEOUT_SECONDS: float = 15.0

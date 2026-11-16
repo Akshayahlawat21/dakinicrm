@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
+    "start": "start_all.bat",
+    "start:all": "powershell -ExecutionPolicy Bypass -File ./start_all.ps1",
     "build": "vite build",
     "preview": "vite preview",
     "gateway": "python -m uvicorn gateway.main:app --host 0.0.0.0 --port 8080 --reload",

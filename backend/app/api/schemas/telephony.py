@@ -1,4 +1,4 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, Field
 
 
@@ -32,13 +32,17 @@ class TelephonyCallResponse(BaseModel):
     to_number: str
     from_number: str
     mode: str
-    token: Optional[str] = None
     server_url: Optional[str] = None
     lead_id: Optional[str] = None
     contact_name: Optional[str] = None
     message: Optional[str] = None
     ok: bool = True
     success: bool = True
+    # Additive fields for accurate simulated-call handling
+    api_accepted: bool = Field(True, description="True if upstream returned HTTP 2xx, False on non-2xx or network failure")
+    carrier_status: str = Field("dispatched_unverified", description="'simulated' | 'dispatched_unverified' | 'failed'")
+    carrier_warning: Optional[str] = Field(None, description="Warning if carrier gateway is in simulation mode")
+    upstream_raw: Optional[Dict[str, Any]] = Field(None, description="Unmodified upstream response except redacted tokens")
 
 
 class TelephonyHangupRequest(BaseModel):

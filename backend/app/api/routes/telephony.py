@@ -86,11 +86,15 @@ async def initiate_outbound_call(
         from_number=res["from_number"],
         status=res["status"],
         mode=res["mode"],
-        token=res.get("token"),
         server_url=res.get("server_url"),
         lead_id=res.get("lead_id"),
         contact_name=res.get("contact_name"),
         message=res.get("message"),
+        ok=res.get("ok", True),
+        api_accepted=res.get("api_accepted", True),
+        carrier_status=res.get("carrier_status", "dispatched_unverified"),
+        carrier_warning=res.get("carrier_warning"),
+        upstream_raw=res.get("upstream_raw"),
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
 
@@ -230,11 +234,15 @@ async def merge_call(
         from_number=res["from_number"],
         status=res["status"],
         mode=res["mode"],
-        token=res.get("token"),
         server_url=res.get("server_url"),
         lead_id=res.get("lead_id"),
         contact_name=res.get("contact_name"),
         message=res.get("message"),
+        ok=res.get("ok", True),
+        api_accepted=res.get("api_accepted", True),
+        carrier_status=res.get("carrier_status", "dispatched_unverified"),
+        carrier_warning=res.get("carrier_warning"),
+        upstream_raw=res.get("upstream_raw"),
     )
     return StandardResponse(data=dto, correlation_id=ctx.correlation_id)
 

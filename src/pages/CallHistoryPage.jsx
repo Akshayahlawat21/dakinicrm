@@ -329,8 +329,9 @@ export default function CallHistoryPage() {
                 </tr>
               ) : (
                 filteredCalls.map((item) => {
-                  const isCompleted = item.status === 'completed';
-                  const isActive = ['dialing', 'ringing', 'connected'].includes(item.status);
+                  const isSimulated = item.carrier_status === 'simulated' || item.mode_used === 'carrier_simulated' || String(item.call_id || '').toLowerCase().startsWith('sim-');
+                  const isCompleted = item.status === 'completed' && !isSimulated;
+                  const isActive = ['dialing', 'ringing', 'connected'].includes(item.status) && !isSimulated;
 
                   return (
                     <tr
@@ -387,9 +388,13 @@ export default function CallHistoryPage() {
                             borderRadius: 12,
                             fontSize: '0.725rem',
                             fontWeight: 700,
-                            background: isCompleted ? 'var(--success-bg)' : isActive ? 'var(--primary-light)' : 'var(--surface-soft)',
-                            color: isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-muted)',
-                            border: `1px solid ${isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--border-default)'}`,
+                            background: isSimulated
+                              ? 'rgba(234, 179, 8, 0.15)'
+                              : isCompleted ? 'var(--success-bg)' : isActive ? 'var(--primary-light)' : 'var(--surface-soft)',
+                            color: isSimulated
+                              ? '#eab308'
+                              : isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-muted)',
+                            border: `1px solid ${isSimulated ? '#eab308' : isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--border-default)'}`,
                           }}
                         >
                           <span
@@ -397,10 +402,10 @@ export default function CallHistoryPage() {
                               width: 6,
                               height: 6,
                               borderRadius: '50%',
-                              background: isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-muted)',
+                              background: isSimulated ? '#eab308' : isCompleted ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-muted)',
                             }}
                           />
-                          {item.status || 'unknown'}
+                          {isSimulated ? 'Simulated' : item.status || 'unknown'}
                         </span>
                       </td>
 

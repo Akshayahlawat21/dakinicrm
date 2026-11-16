@@ -229,6 +229,8 @@ dakinicrm/
 │   ├── Dakini_CRM_Documentation_Guide.pdf
 │   └── Dakini_CRM_RBAC_and_Database_Architecture_Report.pdf
 │
+├── start_all.bat                          # 1-Click Windows batch launcher for all 5 services
+├── start_all.ps1                          # 1-Click PowerShell launcher for all 5 services
 └── screenshots/                           # UI reference captures & manifest.json
 ```
 
@@ -323,7 +325,20 @@ Public tables: ['accounts', 'activities', 'campaigns', 'contacts', 'deals', 'lea
 
 ## 💻 Running the Full Stack Locally
 
-Run all 5 services in separate terminal windows:
+### Option A: 1-Click Quick Launch (Spawns all 5 services in separate windows)
+
+On Windows, you can start the entire 5-tier architecture concurrently with a single command:
+
+```powershell
+npm start
+# or run .\start_all.ps1 / double-click start_all.bat
+```
+
+---
+
+### Option B: Individual Terminal Windows
+
+Run each of the 5 services in its own terminal window:
 
 ```text
 ┌────────────────────────┐  ┌────────────────────────┐  ┌────────────────────────┐  ┌────────────────────────┐  ┌────────────────────────┐

@@ -704,6 +704,123 @@ export default function LeadsPage() {
         <LoadingSymbol message="" />
       ) : (
         <>
+          {/* Pagination Controls on Top */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              marginBottom: '1rem',
+              padding: '0.85rem 1.25rem',
+              background: 'var(--bg-card)',
+              borderRadius: 10,
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              <span>
+                Showing <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
+                <strong style={{ color: 'var(--text-main)' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
+                <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
+              </span>
+
+              <span style={{ color: 'var(--border-strong)' }}>|</span>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  style={{
+                    fontSize: '0.8125rem',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: 6,
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--surface-soft)',
+                    color: 'var(--text-body)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+            </div>
+
+            {/* Page buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  opacity: page <= 1 ? 0.4 : 1,
+                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+
+              {getPageNumbers(page, totalPages).map((p, idx) =>
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: 'var(--text-subtle)' }}>
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={`page-${p}`}
+                    onClick={() => setPage(p)}
+                    style={{
+                      minWidth: 32,
+                      height: 32,
+                      padding: '0 0.5rem',
+                      borderRadius: 6,
+                      fontSize: '0.8125rem',
+                      fontWeight: page === p ? 700 : 500,
+                      border: '1px solid',
+                      borderColor: page === p ? 'var(--primary)' : 'var(--border-default)',
+                      background: page === p ? 'var(--primary)' : 'var(--bg-card)',
+                      color: page === p ? '#ffffff' : 'var(--text-body)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  opacity: page >= totalPages ? 0.4 : 1,
+                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
           {/* Content Area: Table or Board */}
           {viewMode === 'list' ? (
             <div className="crm-table-container">
@@ -992,123 +1109,6 @@ export default function LeadsPage() {
           })}
         </div>
       )}
-
-      {/* Pagination Controls */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginTop: '1.25rem',
-          padding: '0.85rem 1.25rem',
-          background: 'var(--bg-card)',
-          borderRadius: 10,
-          border: '1px solid var(--border-default)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-          <span>
-            Showing <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
-            <strong style={{ color: 'var(--text-main)' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
-            <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
-          </span>
-
-          <span style={{ color: 'var(--border-strong)' }}>|</span>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span>Rows per page:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-              style={{
-                fontSize: '0.8125rem',
-                padding: '0.2rem 0.5rem',
-                borderRadius: 6,
-                border: '1px solid var(--border-strong)',
-                background: 'var(--surface-soft)',
-                color: 'var(--text-body)',
-                cursor: 'pointer',
-              }}
-            >
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </label>
-        </div>
-
-        {/* Page buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            style={{
-              padding: '0.35rem 0.65rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              opacity: page <= 1 ? 0.4 : 1,
-              cursor: page <= 1 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <ChevronLeft size={14} />
-            <span>Prev</span>
-          </button>
-
-          {getPageNumbers(page, totalPages).map((p, idx) =>
-            p === '...' ? (
-              <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: 'var(--text-subtle)' }}>
-                …
-              </span>
-            ) : (
-              <button
-                key={`page-${p}`}
-                onClick={() => setPage(p)}
-                style={{
-                  minWidth: 32,
-                  height: 32,
-                  padding: '0 0.5rem',
-                  borderRadius: 6,
-                  fontSize: '0.8125rem',
-                  fontWeight: page === p ? 700 : 500,
-                  border: '1px solid',
-                  borderColor: page === p ? '#2563eb' : 'var(--border-default)',
-                  background: page === p ? '#2563eb' : 'var(--bg-card)',
-                  color: page === p ? '#ffffff' : 'var(--text-body)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {p}
-              </button>
-            )
-          )}
-
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            style={{
-              padding: '0.35rem 0.65rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              opacity: page >= totalPages ? 0.4 : 1,
-              cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <span>Next</span>
-            <ChevronRight size={14} />
-          </button>
-        </div>
-      </div>
       </>
       )}
 

@@ -80,6 +80,12 @@ class AppSettings(BaseSettings):
     LIVEKIT_SIGNALING_URL: str = "wss://telephony-z5x8uya8.livekit.cloud"
     TELEPHONY_TIMEOUT_SECONDS: float = 15.0
 
+    # Meta Ads Integration
+    META_VERIFY_TOKEN: str = "dakini_test_token_2026"
+    META_ACCESS_TOKEN: Optional[str] = None
+    META_APP_SECRET: Optional[str] = None
+    META_GRAPH_API_VERSION: str = "v21.0"
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() in ("production", "prod", "staging")

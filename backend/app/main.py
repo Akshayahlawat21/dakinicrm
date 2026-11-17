@@ -21,7 +21,7 @@ from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
 # Import routes
-from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls, pipelines, calendar, telephony
+from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls, pipelines, calendar, telephony, meta_webhook
 
 logger = get_logger("backend.main")
 
@@ -240,6 +240,7 @@ app.include_router(calls.router)
 app.include_router(pipelines.router)
 app.include_router(calendar.router)
 app.include_router(telephony.router)
+app.include_router(meta_webhook.router)
 
 if __name__ == "__main__":
     import uvicorn

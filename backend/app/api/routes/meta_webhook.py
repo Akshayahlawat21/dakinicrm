@@ -100,104 +100,116 @@ async def receive_webhook(
 
     created_leads = []
 
-    # Meta events loop
-    for entry in payload.get("entry", []):
-        for change in entry.get("changes", []):
-            if change.get("field") != "leadgen":
-                continue
+    # Collect all leadgen values from standard webhook entries or Meta Dashboard test samples
+    raw_lead_values = []
 
-            value = change.get("value", {})
-            leadgen_id = str(value.get("leadgen_id") or "")
-            form_id = str(value.get("form_id") or "")
-            page_id = str(value.get("page_id") or "")
-            ad_id = str(value.get("ad_id") or "")
+    # Format 1: Standard live webhook: {"entry": [{"changes": [{"field": "leadgen", "value": ...}]}]}
+    if "entry" in payload:
+        for entry in payload.get("entry", []):
+            for change in entry.get("changes", []):
+                if change.get("field") == "leadgen":
+                    raw_lead_values.append(change.get("value", {}))
+    # Format 2: Meta Dashboard Sample: {"sample": {"field": "leadgen", "value": ...}}
+    elif "sample" in payload and isinstance(payload.get("sample"), dict):
+        sample_obj = payload["sample"]
+        if sample_obj.get("field") == "leadgen":
+            raw_lead_values.append(sample_obj.get("value", {}))
+    # Format 3: Direct format: {"field": "leadgen", "value": ...}
+    elif payload.get("field") == "leadgen":
+        raw_lead_values.append(payload.get("value", {}))
 
-            logger.info(
-                f"[Meta Lead Capture] Processing leadgen_id='{leadgen_id}', form_id='{form_id}', page_id='{page_id}'"
-            )
+    for value in raw_lead_values:
+        leadgen_id = str(value.get("leadgen_id") or "")
+        form_id = str(value.get("form_id") or "")
+        page_id = str(value.get("page_id") or "")
+        ad_id = str(value.get("ad_id") or "")
 
-            # Default values (especially useful for test submissions via Lead Ads Testing Tool)
-            lead_name = "Meta Instant Form Lead"
-            lead_email = f"lead_{leadgen_id or 'test'}@meta.ads"
-            lead_phone = "+1 (555) 019-2834"
-            lead_company = "Meta Inbound Prospect"
-            form_answers: dict[str, Any] = {}
+        logger.info(
+            f"[Meta Lead Capture] Processing leadgen_id='{leadgen_id}', form_id='{form_id}', page_id='{page_id}'"
+        )
 
-            # If META_ACCESS_TOKEN is configured and leadgen_id is real, fetch full data via Graph API
-            if settings.META_ACCESS_TOKEN and leadgen_id and leadgen_id != "444444444444":
-                try:
-                    graph_url = f"https://graph.facebook.com/{settings.META_GRAPH_API_VERSION}/{leadgen_id}"
-                    async with httpx.AsyncClient(timeout=10.0) as client:
-                        resp = await client.get(
-                            graph_url,
-                            params={"access_token": settings.META_ACCESS_TOKEN}
-                        )
-                        if resp.status_code == 200:
-                            lead_details = resp.json()
-                            field_data = lead_details.get("field_data", [])
-                            for field in field_data:
-                                fname = field.get("name", "").lower()
-                                fvals = field.get("values", [])
-                                val = fvals[0] if fvals else None
-                                if not val:
-                                    continue
-                                form_answers[fname] = val
-                                if "name" in fname:
-                                    lead_name = str(val)
-                                elif "email" in fname:
-                                    lead_email = str(val)
-                                elif "phone" in fname:
-                                    lead_phone = str(val)
-                                elif "company" in fname:
-                                    lead_company = str(val)
-                            logger.info(f"[Meta Lead Retrieved via Graph API] Name='{lead_name}', Phone='{lead_phone}', Email='{lead_email}'")
-                        else:
-                            logger.warning(f"[Meta Graph API Warning] {resp.status_code}: {resp.text}")
-                except Exception as graph_err:
-                    logger.error(f"[Meta Graph API Error] Failed fetching lead {leadgen_id}: {graph_err}")
+        # Default values (especially useful for test submissions via Lead Ads Testing Tool)
+        lead_name = "Meta Instant Form Lead"
+        lead_email = f"lead_{leadgen_id or 'test'}@meta.ads"
+        lead_phone = "+1 (555) 019-2834"
+        lead_company = "Meta Inbound Prospect"
+        form_answers: dict[str, Any] = {}
 
-            # Check if a campaign matches the form_id or page_id
-            campaign_id = None
-            if form_id:
-                camp_stmt = select(Campaign.id).where(
-                    Campaign.organization_id == resolved_org_id,
-                    Campaign.deleted_at.is_(None)
-                ).limit(1)
-                camp_res = await session.execute(camp_stmt)
-                campaign_id = camp_res.scalar()
-
-            # Insert lead into Dakini CRM database
-            new_lead = Lead(
-                id=uuid.uuid4(),
-                organization_id=resolved_org_id,
-                name=lead_name,
-                company=lead_company,
-                email=lead_email,
-                phone=lead_phone,
-                source="Meta Lead Ads",
-                status="New",
-                score=85,
-                industry="Digital Marketing",
-                interested_product="Voice AI Inbound",
-                campaign_id=campaign_id,
-            )
-            session.add(new_lead)
-            await session.flush()
-
-            # Store any custom questions/answers as LeadSignals
-            for question, answer in form_answers.items():
-                if question not in ("full_name", "email", "phone_number"):
-                    signal = LeadSignal(
-                        id=uuid.uuid4(),
-                        lead_id=new_lead.id,
-                        signal_type="form_response",
-                        signal_value=f"{question}: {answer}",
-                        score=5,
+        # If META_ACCESS_TOKEN is configured and leadgen_id is real, fetch full data via Graph API
+        if settings.META_ACCESS_TOKEN and leadgen_id and leadgen_id != "444444444444":
+            try:
+                graph_url = f"https://graph.facebook.com/{settings.META_GRAPH_API_VERSION}/{leadgen_id}"
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(
+                        graph_url,
+                        params={"access_token": settings.META_ACCESS_TOKEN}
                     )
-                    session.add(signal)
+                    if resp.status_code == 200:
+                        lead_details = resp.json()
+                        field_data = lead_details.get("field_data", [])
+                        for field in field_data:
+                            fname = field.get("name", "").lower()
+                            fvals = field.get("values", [])
+                            val = fvals[0] if fvals else None
+                            if not val:
+                                continue
+                            form_answers[fname] = val
+                            if "name" in fname:
+                                lead_name = str(val)
+                            elif "email" in fname:
+                                lead_email = str(val)
+                            elif "phone" in fname:
+                                lead_phone = str(val)
+                            elif "company" in fname:
+                                lead_company = str(val)
+                        logger.info(f"[Meta Lead Retrieved via Graph API] Name='{lead_name}', Phone='{lead_phone}', Email='{lead_email}'")
+                    else:
+                        logger.warning(f"[Meta Graph API Warning] {resp.status_code}: {resp.text}")
+            except Exception as graph_err:
+                logger.error(f"[Meta Graph API Error] Failed fetching lead {leadgen_id}: {graph_err}")
 
-            created_leads.append(str(new_lead.id))
-            logger.info(f"[Meta Lead Created] Successfully created lead ID={new_lead.id} ({lead_name})")
+        # Check if a campaign matches the form_id or page_id
+        campaign_id = None
+        if form_id:
+            camp_stmt = select(Campaign.id).where(
+                Campaign.organization_id == resolved_org_id,
+                Campaign.deleted_at.is_(None)
+            ).limit(1)
+            camp_res = await session.execute(camp_stmt)
+            campaign_id = camp_res.scalar()
+
+        # Insert lead into Dakini CRM database
+        new_lead = Lead(
+            id=uuid.uuid4(),
+            organization_id=resolved_org_id,
+            name=lead_name,
+            company=lead_company,
+            email=lead_email,
+            phone=lead_phone,
+            source="Meta Lead Ads",
+            status="New",
+            score=85,
+            industry="Digital Marketing",
+            interested_product="Voice AI Inbound",
+            campaign_id=campaign_id,
+        )
+        session.add(new_lead)
+        await session.flush()
+
+        # Store any custom questions/answers as LeadSignals
+        for question, answer in form_answers.items():
+            if question not in ("full_name", "email", "phone_number"):
+                signal = LeadSignal(
+                    id=uuid.uuid4(),
+                    lead_id=new_lead.id,
+                    signal_type="form_response",
+                    signal_value=f"{question}: {answer}",
+                    score=5,
+                )
+                session.add(signal)
+
+        created_leads.append(str(new_lead.id))
+        logger.info(f"[Meta Lead Created] Successfully created lead ID={new_lead.id} ({lead_name})")
 
     await session.commit()
 
@@ -206,3 +218,4 @@ async def receive_webhook(
         "processed_leads": created_leads,
         "count": len(created_leads),
     }
+

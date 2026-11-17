@@ -45,3 +45,27 @@ async def test_meta_webhook_verification_invalid_token():
         )
         assert resp.status_code == 403
         assert "mismatch" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_meta_webhook_sample_event():
+    sample_payload = {
+        "sample": {
+            "field": "leadgen",
+            "value": {
+                "ad_id": "444444444",
+                "form_id": "444444444444",
+                "leadgen_id": "444444444444",
+                "created_time": 1794904262,
+                "page_id": "444444444444",
+                "adgroup_id": "444444444444",
+            },
+        }
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post("/v1/meta-ads/webhook", json=sample_payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "EVENT_RECEIVED"
+        assert data["count"] == 1
+

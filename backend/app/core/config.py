@@ -85,6 +85,8 @@ class AppSettings(BaseSettings):
     META_ACCESS_TOKEN: Optional[str] = None
     META_APP_SECRET: Optional[str] = None
     META_GRAPH_API_VERSION: str = "v21.0"
+    META_PAGE_ID: str = "576519452217111"
+    META_POLLER_ENABLED: bool = True
 
     @property
     def is_production(self) -> bool:

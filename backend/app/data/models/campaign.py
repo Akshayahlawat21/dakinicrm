@@ -16,6 +16,7 @@ class Campaign(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     budget: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0, nullable=False)
+    manager_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 
 
 class CampaignMember(Base, UUIDMixin, TimestampMixin):

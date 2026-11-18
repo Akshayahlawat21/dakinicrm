@@ -502,6 +502,10 @@ export const gatewayApi = {
     return gatewayFetch('/campaigns?limit=1000', { method: 'GET' });
   },
 
+  async getCampaignLeads(campaignId) {
+    return gatewayFetch(`/campaigns/${campaignId}/leads`, { method: 'GET' });
+  },
+
   async createCampaign(campaignData) {
     return gatewayFetch('/campaigns', {
       method: 'POST',
@@ -511,6 +515,13 @@ export const gatewayApi = {
 
   async deleteCampaign(campaignId) {
     return gatewayFetch(`/campaigns/${campaignId}`, { method: 'DELETE' });
+  },
+
+  async assignCampaignManager(campaignId, managerId) {
+    return gatewayFetch(`/campaigns/${campaignId}/assign-manager`, {
+      method: 'PATCH',
+      body: JSON.stringify({ manager_id: managerId }),
+    });
   },
 
   /**

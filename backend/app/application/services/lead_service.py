@@ -48,6 +48,11 @@ class LeadService:
             # 1. Unassigned lead check
             if not lead.assigned_to:
                 is_auth_mgr = getattr(ctx, "can_access_unassigned", False)
+                if not is_auth_mgr and ctx.is_manager and lead.campaign_id:
+                    from backend.app.data.models.campaign import Campaign
+                    camp = await self.session.get(Campaign, lead.campaign_id)
+                    if camp and camp.manager_id and str(camp.manager_id) == str(ctx.user_uuid):
+                        is_auth_mgr = True
                 PermissionService.check_can_access_unassigned_leads(ctx, is_authorized_manager=is_auth_mgr)
                 return lead
 
@@ -59,6 +64,11 @@ class LeadService:
                     is_team_record = await self.team_repo.is_user_in_team(
                         lead.assigned_to, mgr_team.id, ctx.tenant_id
                     )
+                if not is_team_record and lead.campaign_id:
+                    from backend.app.data.models.campaign import Campaign
+                    camp = await self.session.get(Campaign, lead.campaign_id)
+                    if camp and camp.manager_id and str(camp.manager_id) == str(ctx.user_uuid):
+                        is_team_record = True
 
             PermissionService.check_record_access(
                 ctx=ctx,
@@ -985,17 +995,25 @@ class LeadService:
         # 2. Scope verification for Managers
         if ctx.is_manager:
             mgr_team = await self.team_repo.get_active_manager_team(ctx.user_id, ctx.tenant_id)
-            team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id)
+            team_users = await self.user_repo.list_by_team(mgr_team.id, ctx.tenant_id) if mgr_team else []
             team_user_uuids = {u.id for u in team_users}
             team_user_uuids.add(ctx.user_uuid)
             is_auth_mgr = getattr(ctx, "can_access_unassigned", False)
 
+            from backend.app.data.models.campaign import Campaign
             for l in leads:
+                lead_camp_managed = False
+                if l.campaign_id:
+                    camp = await self.session.get(Campaign, l.campaign_id)
+                    if camp and camp.manager_id and str(camp.manager_id) == str(ctx.user_uuid):
+                        lead_camp_managed = True
+
                 if not l.assigned_to:
-                    if not is_auth_mgr:
+                    if not is_auth_mgr and not lead_camp_managed:
                         raise ForbiddenError("Manager is not authorized to access unassigned leads")
                 elif l.assigned_to not in team_user_uuids:
-                    raise ForbiddenError(f"Lead '{l.name}' is outside of manager's active team scope")
+                    if not lead_camp_managed:
+                        raise ForbiddenError(f"Lead '{l.name}' is outside of manager's active team scope")
 
         # 3. Check "already assigned" condition
         already_assigned = [l for l in leads if l.assigned_to and str(l.assigned_to) == str(assignee.id)]

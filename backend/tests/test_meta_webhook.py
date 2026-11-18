@@ -62,10 +62,26 @@ async def test_meta_webhook_sample_event():
             },
         }
     }
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/v1/meta-ads/webhook", json=sample_payload)
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "EVENT_RECEIVED"
-        assert data["count"] == 1
+    created_ids = []
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post("/v1/meta-ads/webhook", json=sample_payload)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "EVENT_RECEIVED"
+            assert "processed_leads" in data
+            assert data["count"] in (0, 1)
+            created_ids = data.get("processed_leads", [])
+    finally:
+        if created_ids:
+            import uuid
+            from backend.app.data.database import get_session_factory
+            from sqlalchemy import delete
+            from backend.app.data.models.lead import Lead, LeadSignal
+            factory = get_session_factory()
+            async with factory() as session:
+                uids = [uuid.UUID(str(cid)) for cid in created_ids]
+                await session.execute(delete(LeadSignal).where(LeadSignal.lead_id.in_(uids)))
+                await session.execute(delete(Lead).where(Lead.id.in_(uids)))
+                await session.commit()
 

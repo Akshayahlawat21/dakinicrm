@@ -20,7 +20,7 @@ from backend.app.data.models.base import Base
 from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
-# Import routes
+# Import routes (reloaded)
 from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls, pipelines, calendar, telephony, meta_webhook
 
 logger = get_logger("backend.main")
@@ -54,7 +54,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     #             ...
     #     logger.info("Auto-seeded development organizations and users (owner, manager, salespersons).")
 
+    # Start background auto-poller for Meta Ads leads if token is configured
+    polling_task = None
+    if settings.META_ACCESS_TOKEN:
+        from backend.app.api.routes.meta_webhook import start_meta_lead_poller
+        polling_task = asyncio.create_task(start_meta_lead_poller(interval_seconds=15))
+
     yield
+
+    if polling_task:
+        polling_task.cancel()
 
     logger.info("Shutting down Dakini CRM - Layer 3 Application API.")
     await close_db()

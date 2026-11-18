@@ -4,6 +4,7 @@ import { gatewayApi } from '../services/api';
 import LoadingSymbol from '../components/common/LoadingSymbol';
 import AssignOwnerModal from '../components/modals/AssignOwnerModal';
 import CallButton from '../components/telephony/CallButton';
+import { createDakiniCallBatch, getDakiniCallStatus, getDakiniBatchStatus, getDakiniLeadsCallStatuses, initiateDakiniLeadCall } from '../services/dakiniCallingApi';
 import { matchesLeadFilters } from '../utils/dealAnalyticsFilters';
 import { fetchAllPaginatedLeads } from '../utils/fetchAllPaginatedLeads';
 import {
@@ -24,7 +25,9 @@ import {
   UserPlus,
   Eye,
   ArrowRight,
-  Package
+  Package,
+  PhoneCall,
+  RefreshCw
 } from 'lucide-react';
 
 function getPageNumbers(current, total) {
@@ -145,6 +148,12 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [isCreatingDakiniBatch, setIsCreatingDakiniBatch] = useState(false);
+  const [dakiniBatchId, setDakiniBatchId] = useState('');
+  const [dakiniBatchMessage, setDakiniBatchMessage] = useState('');
+  const [dakiniBatchComplete, setDakiniBatchComplete] = useState(false);
+  const [dakiniLeadCalls, setDakiniLeadCalls] = useState({});
+  const [dakiniLeadCallLoading, setDakiniLeadCallLoading] = useState({});
   const [isAssignOwnerOpen, setIsAssignOwnerOpen] = useState(false);
   const [leadIdToAssign, setLeadIdToAssign] = useState(null);
   const [importNotification, setImportNotification] = useState(null);
@@ -340,6 +349,146 @@ export default function LeadsPage() {
     setSelectedLeadIds([]);
   };
 
+  const handleDakiniBatchCall = async () => {
+    if (!selectedLeadIds.length || isCreatingDakiniBatch) return;
+    const previouslyCalled = selectedLeadIds
+      .map((id) => dakiniLeadCalls[String(id)])
+      .filter((info) => info?.hasReceivedCall);
+    if (previouslyCalled.length) {
+      const proceed = window.confirm(`${previouslyCalled.length} selected lead(s) have already received Dakini calls. Create another batch for them?`);
+      if (!proceed) return;
+    }
+    setIsCreatingDakiniBatch(true);
+    setDakiniBatchMessage('');
+    setDakiniBatchComplete(false);
+    try {
+      const result = await createDakiniCallBatch(selectedLeadIds);
+      setDakiniBatchId(result.batch_id || '');
+      setDakiniBatchMessage(`Batch accepted: ${result.total_contacts || selectedLeadIds.length} leads queued. Call status and transcripts will sync automatically; AI analysis is manual.`);
+    } catch (error) {
+      setDakiniBatchMessage(error.message || 'Unable to create Dakini batch.');
+    } finally {
+      setIsCreatingDakiniBatch(false);
+    }
+  };
+
+  const handleDakiniLeadCall = async (lead) => {
+    const leadId = String(lead?.id || '');
+    if (!leadId || dakiniLeadCallLoading[leadId]) return;
+    const existing = dakiniLeadCalls[leadId] || {};
+    if (existing.isActive) {
+      setImportNotification({ type: 'error', message: 'A Dakini AI call is already pending or in progress for this lead. Wait for it to finish.' });
+      return;
+    }
+    if (existing.hasReceivedCall || Number(existing.attemptCount || 0) > 0) {
+      const proceed = window.confirm(`${lead.name || 'This lead'} has already received ${Number(existing.attemptCount || 1)} Dakini call attempt(s). Start another call?`);
+      if (!proceed) return;
+    }
+    setDakiniLeadCallLoading((current) => ({ ...current, [leadId]: true }));
+    setDakiniLeadCalls((current) => ({ ...current, [leadId]: { ...(current[leadId] || {}), message: 'Starting Dakini AI call…', error: false } }));
+    try {
+      const result = await initiateDakiniLeadCall(lead.id);
+      setDakiniLeadCalls((current) => ({
+        ...current,
+        [leadId]: {
+          callId: result.call_id || '',
+          status: result.status || 'initiated',
+          transcriptSaved: false,
+          analysisSaved: false,
+          hasAiCall: true,
+          hasReceivedCall: Boolean(result.call_id),
+          isActive: true,
+          message: `AI call ${result.status || 'initiated'}. Transcript will be saved when received; analyse it manually.`,
+          error: false,
+        },
+      }));
+    } catch (error) {
+      setDakiniLeadCalls((current) => ({ ...current, [leadId]: { message: error.message || 'Unable to start Dakini AI call.', error: true } }));
+    } finally {
+      setDakiniLeadCallLoading((current) => ({ ...current, [leadId]: false }));
+    }
+  };
+
+  // Batch results are retrieved by the backend worker; this UI timer only reads local CRM state.
+  useEffect(() => {
+    if (!dakiniBatchId || dakiniBatchComplete) return undefined;
+    let cancelled = false;
+    let inFlight = false;
+    let timer = null;
+    const refreshStatus = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const result = await getDakiniBatchStatus(dakiniBatchId);
+        if (cancelled) return;
+        const total = Number(result.total_contacts || 0);
+        const triggered = Number(result.triggered_count ?? result.calls_tracked ?? 0);
+        const transcripts = Number(result.transcripts_saved || 0);
+        const analyzed = Number(result.analyses_completed || 0);
+        const batchStatus = String(result.status || 'processing').toLowerCase();
+        setDakiniBatchMessage(`Batch ${batchStatus} · ${triggered}/${total} calls triggered · ${transcripts} transcripts · ${analyzed} AI analyses completed.`);
+        if (['completed', 'stopped', 'failed'].includes(batchStatus)) {
+          setDakiniBatchComplete(true);
+          if (timer) clearInterval(timer);
+        }
+      } catch (error) {
+        if (!cancelled) setDakiniBatchMessage(`Batch submitted. Automatic processing is running; status refresh will retry. ${error.message || ''}`);
+      } finally {
+        inFlight = false;
+      }
+    };
+    refreshStatus();
+    timer = setInterval(refreshStatus, 15000);
+    return () => { cancelled = true; if (timer) clearInterval(timer); };
+  }, [dakiniBatchId, dakiniBatchComplete]);
+
+  // Poll the CRM's own call record for display updates. Dakini polling and transcript ingestion
+  // happen server-side; the browser never calls Dakini's API or triggers a sync operation.
+  const activeDakiniCallPollKey = JSON.stringify(
+    Object.entries(dakiniLeadCalls)
+      .filter(([, call]) => call?.callId && !call?.analysisSaved)
+      .map(([leadId, call]) => ({ leadId, callId: call.callId }))
+  );
+  useEffect(() => {
+    const activeCalls = JSON.parse(activeDakiniCallPollKey || '[]');
+    if (!activeCalls.length) return undefined;
+    let cancelled = false;
+    let inFlight = false;
+    const refreshStatuses = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const statuses = await Promise.all(activeCalls.map(async ({ leadId, callId }) => {
+          try { return { leadId, result: await getDakiniCallStatus(callId) }; }
+          catch (error) { return { leadId, error }; }
+        }));
+        if (cancelled) return;
+        setDakiniLeadCalls((current) => {
+          const next = { ...current };
+          for (const { leadId, result, error } of statuses) {
+            const previous = next[leadId] || {};
+            if (error) {
+              next[leadId] = { ...previous, message: 'Call started. CRM will keep refreshing the provider call status.', error: false };
+              continue;
+            }
+            const transcriptSaved = Boolean(result.transcript_saved);
+            const analysisSaved = Boolean(result.analysis_saved);
+            let message = `Call status: ${result.status || 'processing'}. CRM status refreshes automatically.`;
+            if (analysisSaved) message = 'Call completed · Transcript and AI analysis saved.';
+            else if (transcriptSaved) message = 'Transcript saved · Click AI Analyse on the lead page when ready.';
+            next[leadId] = { ...previous, status: result.status, transcriptSaved, analysisSaved, message, error: false };
+          }
+          return next;
+        });
+      } finally {
+        inFlight = false;
+      }
+    };
+    refreshStatuses();
+    const timer = setInterval(refreshStatuses, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [activeDakiniCallPollKey]);
+
   // Filtered Leads
   const filteredLeads = useMemo(() => {
     const sourceLeads = dashboardLeads || leads;
@@ -371,6 +520,65 @@ export default function LeadsPage() {
     const start = leadPage * LEADS_PAGE_SIZE;
     return filteredLeads.slice(start, start + LEADS_PAGE_SIZE);
   }, [filteredLeads, leadPage]);
+
+  const visibleLeadIds = useMemo(() => visibleLeads.map((lead) => String(lead.id)).filter(Boolean), [visibleLeads]);
+
+  // Persistent call status from CRM DB (covers both single calls and batch calls).
+  useEffect(() => {
+    if (!visibleLeadIds.length) return undefined;
+    let cancelled = false;
+    let inFlight = false;
+    const refreshCallStatuses = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const rows = await getDakiniLeadsCallStatuses(visibleLeadIds);
+        if (cancelled || !Array.isArray(rows)) return;
+        setDakiniLeadCalls((current) => {
+          const next = { ...current };
+          const seen = new Set();
+          for (const row of rows) {
+            const key = String(row.lead_id || '');
+            if (!key) continue;
+            seen.add(key);
+            const previous = next[key] || {};
+            next[key] = {
+              ...previous,
+              callId: row.call_id || row.latest_received_call_id || previous.callId || '',
+              batchId: row.batch_id || '',
+              status: row.status || previous.status || 'unknown',
+              hasAiCall: Boolean(row.has_ai_call),
+              hasReceivedCall: Boolean(row.has_received_call),
+              attemptCount: Number(row.call_attempt_count || 0),
+              isActive: Boolean(row.is_active),
+              isQueuedWithoutCallId: Boolean(row.is_queued_without_call_id),
+              transcriptSaved: Boolean(row.transcript_saved),
+              analysisSaved: Boolean(row.analysis_saved),
+              message: row.is_queued_without_call_id
+                ? `Batch ${row.status || 'pending'} · waiting for Dakini call ID`
+                : row.is_active
+                  ? `Call ${row.status || 'pending'} · ${Number(row.call_attempt_count || 0)} call attempt(s)`
+                : row.has_received_call
+                  ? `Received ${Number(row.call_attempt_count || 0)} call attempt(s) · ${row.transcript_saved ? 'Transcript saved' : 'Transcript pending'}`
+                  : 'Batch submitted · Waiting for a call ID',
+              error: false,
+            };
+          }
+          for (const key of visibleLeadIds) {
+            if (!seen.has(key) && !next[key]?.callId) delete next[key];
+          }
+          return next;
+        });
+      } catch (error) {
+        console.warn('Unable to refresh persistent Dakini lead call statuses:', error);
+      } finally {
+        inFlight = false;
+      }
+    };
+    refreshCallStatuses();
+    const timer = setInterval(refreshCallStatuses, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [visibleLeadIds]);
 
   useEffect(() => { setLeadPage(0); }, [searchQuery, statusFilter, activeTab]);
 
@@ -656,6 +864,7 @@ export default function LeadsPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem', fontWeight: 600 }}>
             <span>{selectedLeadIds.length} leads selected</span>
+            {dakiniBatchMessage && <span role="status" style={{ fontWeight: 500, opacity: 0.95 }}>{dakiniBatchMessage}</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button
@@ -669,6 +878,16 @@ export default function LeadsPage() {
             >
               <UserCheck size={13} />
               <span>Assign Owner</span>
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}
+              onClick={handleDakiniBatchCall}
+              disabled={isCreatingDakiniBatch}
+              title="Start Dakini AI calls for all selected leads"
+            >
+              {isCreatingDakiniBatch ? <RefreshCw size={13} className="animate-spin" /> : <PhoneCall size={13} />}
+              <span>{isCreatingDakiniBatch ? 'Creating batch…' : 'Dakini AI Call'}</span>
             </button>
             <button className="btn btn-secondary btn-sm" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
               <Mail size={13} />
@@ -704,123 +923,6 @@ export default function LeadsPage() {
         <LoadingSymbol message="" />
       ) : (
         <>
-          {/* Pagination Controls on Top */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              marginBottom: '1rem',
-              padding: '0.85rem 1.25rem',
-              background: 'var(--bg-card)',
-              borderRadius: 10,
-              border: '1px solid var(--border-default)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-              <span>
-                Showing <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
-                <strong style={{ color: 'var(--text-main)' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
-                <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
-              </span>
-
-              <span style={{ color: 'var(--border-strong)' }}>|</span>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span>Rows per page:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  style={{
-                    fontSize: '0.8125rem',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: 6,
-                    border: '1px solid var(--border-strong)',
-                    background: 'var(--surface-soft)',
-                    color: 'var(--text-body)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </label>
-            </div>
-
-            {/* Page buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  opacity: page <= 1 ? 0.4 : 1,
-                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <ChevronLeft size={14} />
-                <span>Prev</span>
-              </button>
-
-              {getPageNumbers(page, totalPages).map((p, idx) =>
-                p === '...' ? (
-                  <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: 'var(--text-subtle)' }}>
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={`page-${p}`}
-                    onClick={() => setPage(p)}
-                    style={{
-                      minWidth: 32,
-                      height: 32,
-                      padding: '0 0.5rem',
-                      borderRadius: 6,
-                      fontSize: '0.8125rem',
-                      fontWeight: page === p ? 700 : 500,
-                      border: '1px solid',
-                      borderColor: page === p ? 'var(--primary)' : 'var(--border-default)',
-                      background: page === p ? 'var(--primary)' : 'var(--bg-card)',
-                      color: page === p ? '#ffffff' : 'var(--text-body)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  opacity: page >= totalPages ? 0.4 : 1,
-                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <span>Next</span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-
           {/* Content Area: Table or Board */}
           {viewMode === 'list' ? (
             <div className="crm-table-container">
@@ -836,6 +938,7 @@ export default function LeadsPage() {
                   />
                 </th>
                 <th>Name & Title</th>
+                <th style={{ minWidth: 112, textAlign: 'center' }}>DAKINI AI</th>
                 <th>Interested Product</th>
                 <th>Source</th>
                 <th>Company</th>
@@ -844,12 +947,13 @@ export default function LeadsPage() {
                 <th>Owner</th>
                 <th>Last Touched</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
-                <th style={{ width: 64, textAlign: 'center' }}>CALL</th>
+                <th style={{ width: 64, textAlign: 'center' }}>PHONE</th>
               </tr>
             </thead>
             <tbody>
               {visibleLeads.map((lead) => {
                 const isSelected = selectedLeadIds.includes(lead.id);
+                const dakiniCallInfo = dakiniLeadCalls[String(lead.id)] || {};
 
                 return (
                   <tr
@@ -892,6 +996,51 @@ export default function LeadsPage() {
                           <div style={{ fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none' }} className="lead-name-link">{lead.name}</div>
                           {lead.title ? <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lead.title}</div> : null}
                         </div>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center', minWidth: 112 }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => handleDakiniLeadCall(lead)}
+                        disabled={Boolean(dakiniLeadCallLoading[String(lead.id)]) || Boolean(dakiniCallInfo.isActive)}
+                        title={dakiniCallInfo.isQueuedWithoutCallId ? 'This lead is queued in a Dakini batch and has not received a call ID yet' : dakiniCallInfo.isActive ? 'A Dakini call is already pending or in progress' : dakiniCallInfo.hasReceivedCall ? 'Start another call (confirmation required)' : `Start a Dakini AI call to ${lead.name}`}
+                        aria-label={`Start Dakini AI call for ${lead.name}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 5,
+                          whiteSpace: 'nowrap',
+                          padding: '0.42rem 0.62rem',
+                          borderRadius: 8,
+                          border: '1px solid rgba(109, 40, 217, 0.24)',
+                          background: 'linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%)',
+                          color: '#ffffff',
+                          fontWeight: 650,
+                          boxShadow: '0 2px 5px rgba(79, 70, 229, 0.16)',
+                          cursor: dakiniLeadCallLoading[String(lead.id)] ? 'wait' : 'pointer',
+                          opacity: dakiniLeadCallLoading[String(lead.id)] ? 0.72 : 1,
+                        }}
+                      >
+                        {dakiniLeadCallLoading[String(lead.id)] ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        <span>{dakiniCallInfo.isQueuedWithoutCallId ? 'Batch queued' : dakiniCallInfo.isActive ? 'Call active' : dakiniCallInfo.hasReceivedCall ? 'Call again' : 'AI Call'}</span>
+                      </button>
+                      <div
+                          role="status"
+                          aria-live="polite"
+                          title={dakiniCallInfo.message}
+                          style={{
+                            margin: '5px auto 0',
+                            maxWidth: 116,
+                            color: dakiniCallInfo.error ? 'var(--danger-text-dark)' : 'var(--text-muted)',
+                            fontSize: '0.64rem',
+                            lineHeight: 1.25,
+                            whiteSpace: 'normal',
+                            overflowWrap: 'anywhere',
+                          }}
+                        >
+                          {dakiniCallInfo.error ? 'Call failed' : dakiniCallInfo.isQueuedWithoutCallId ? `Submitted to batch · no call ID yet${dakiniCallInfo.attemptCount ? ` · ${dakiniCallInfo.attemptCount} previous attempt(s)` : ''}` : dakiniCallInfo.isActive ? `${dakiniCallInfo.status || 'Active'} · ${dakiniCallInfo.attemptCount || 0} call ID(s)` : dakiniCallInfo.hasReceivedCall ? `${dakiniCallInfo.attemptCount || 1} call(s) received · ${dakiniCallInfo.transcriptSaved ? (dakiniCallInfo.analysisSaved ? 'AI analysed' : 'Transcript saved') : 'Transcript pending'}` : dakiniCallInfo.hasAiCall ? (['stopped', 'not_triggered', 'failed'].includes(String(dakiniCallInfo.status || '').toLowerCase()) ? 'Batch ended · no call received' : 'Batch queued · not called yet') : 'Not called'}
                       </div>
                     </td>
                     <td>
@@ -1109,6 +1258,123 @@ export default function LeadsPage() {
           })}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          marginTop: '1.25rem',
+          padding: '0.85rem 1.25rem',
+          background: 'var(--bg-card)',
+          borderRadius: 10,
+          border: '1px solid var(--border-default)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+          <span>
+            Showing <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount === 0 ? 0 : (page - 1) * pageSize + 1}</strong> to{' '}
+            <strong style={{ color: 'var(--text-main)' }}>{Math.min(page * pageSize, totalEffectiveCount)}</strong> of{' '}
+            <strong style={{ color: 'var(--text-main)' }}>{totalEffectiveCount.toLocaleString()}</strong> leads
+          </span>
+
+          <span style={{ color: 'var(--border-strong)' }}>|</span>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              style={{
+                fontSize: '0.8125rem',
+                padding: '0.2rem 0.5rem',
+                borderRadius: 6,
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-soft)',
+                color: 'var(--text-body)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Page buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: '0.35rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              opacity: page <= 1 ? 0.4 : 1,
+              cursor: page <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronLeft size={14} />
+            <span>Prev</span>
+          </button>
+
+          {getPageNumbers(page, totalPages).map((p, idx) =>
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} style={{ padding: '0 0.35rem', color: 'var(--text-subtle)' }}>
+                …
+              </span>
+            ) : (
+              <button
+                key={`page-${p}`}
+                onClick={() => setPage(p)}
+                style={{
+                  minWidth: 32,
+                  height: 32,
+                  padding: '0 0.5rem',
+                  borderRadius: 6,
+                  fontSize: '0.8125rem',
+                  fontWeight: page === p ? 700 : 500,
+                  border: '1px solid',
+                  borderColor: page === p ? '#2563eb' : 'var(--border-default)',
+                  background: page === p ? '#2563eb' : 'var(--bg-card)',
+                  color: page === p ? '#ffffff' : 'var(--text-body)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {p}
+              </button>
+            )
+          )}
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: '0.35rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              opacity: page >= totalPages ? 0.4 : 1,
+              cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <span>Next</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
       </>
       )}
 

@@ -13,7 +13,10 @@ def test_parse_transcript_analysis_normalizes_both_outputs():
         "positive_feedback": ["Easy to use"],
         "negative_feedback": ["SSO is missing"],
         "customer_needs": ["Single sign-on"],
-        "buying_signals": ["Will evaluate after SSO is added"]
+        "buying_signals": ["Will evaluate after SSO is added"],
+        "product_interest": "CRM Software",
+        "product_interest_evidence": "I am looking for CRM software",
+        "product_interest_confidence": "high"
       },
       "improvements": {
         "conversion_blockers": ["SSO integration"],
@@ -26,6 +29,8 @@ def test_parse_transcript_analysis_normalizes_both_outputs():
 
     assert outputs["summary"]["call_summary"] == "Customer likes the product but needs SSO."
     assert outputs["summary"]["positive_feedback"] == ["Easy to use"]
+    assert outputs["summary"]["product_interest"] == "CRM Software"
+    assert outputs["summary"]["product_interest_confidence"] == "high"
     assert outputs["improvements"]["conversion_blockers"] == ["SSO integration"]
     assert outputs["improvements"]["next_steps"] == ["Share requirements with product team"]
 
@@ -42,7 +47,7 @@ async def test_analyze_call_transcript_returns_outputs_without_database(monkeypa
             return {
                 "choices": [{
                     "message": {
-                        "content": '{"summary":{"call_summary":"Needs SSO.","positive_feedback":[],"negative_feedback":["No SSO"],"customer_needs":["SSO"],"buying_signals":[]},"improvements":{"conversion_blockers":["No SSO"],"product_improvements":["Add SSO"],"sales_recommendations":["Confirm requirements"],"next_steps":[]}}'
+                        "content": '{"summary":{"call_summary":"Needs SSO.","positive_feedback":[],"negative_feedback":["No SSO"],"customer_needs":["SSO"],"buying_signals":[],"product_interest":"CRM Software","product_interest_evidence":"We need CRM software","product_interest_confidence":"high"},"improvements":{"conversion_blockers":["No SSO"],"product_improvements":["Add SSO"],"sales_recommendations":["Confirm requirements"],"next_steps":[]}}'
                     }
                 }]
             }
@@ -77,8 +82,10 @@ async def test_analyze_call_transcript_returns_outputs_without_database(monkeypa
 
     assert set(output.keys()) == {"summary", "improvements"}
     assert output["summary"]["call_summary"] == "Needs SSO."
+    assert output["summary"]["product_interest"] == "CRM Software"
     assert output["improvements"]["product_improvements"] == ["Add SSO"]
     assert "We like the CRM but need SSO" in captured["request"]["messages"][1]["content"]
+    assert "Never assume the customer wants Dakini Voice Agent" in captured["request"]["messages"][0]["content"]
     assert captured["url"] == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     assert captured["request"]["model"] == "gemini-3.8-flash"
     assert "temperature" not in captured["request"]
@@ -91,3 +98,41 @@ def test_parse_transcript_analysis_rejects_non_json_response():
     with pytest.raises(HTTPException) as exc:
         transcript_analysis.parse_transcript_analysis("No valid JSON returned")
     assert exc.value.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_provider_429_is_returned_without_retry(monkeypatch):
+    import httpx
+    from fastapi import HTTPException
+
+    calls = {"count": 0}
+    request = httpx.Request("POST", "https://example.test/chat/completions")
+    response = httpx.Response(429, request=request, json={"error": {"message": "quota exceeded"}})
+
+    class FakeClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, headers, json):
+            calls["count"] += 1
+            return response
+
+    monkeypatch.setattr(transcript_analysis, "get_settings", lambda: SimpleNamespace(
+        gemini_api_key="test-gemini-key",
+        gemini_base_url="https://example.test/v1",
+        gemini_model="gemini-test",
+        gemini_timeout_seconds=8,
+    ))
+    monkeypatch.setattr(transcript_analysis.httpx, "AsyncClient", FakeClient)
+
+    with pytest.raises(HTTPException) as exc:
+        await transcript_analysis.analyze_call_transcript("Customer: I want Product B.")
+
+    assert exc.value.status_code == 429
+    assert calls["count"] == 1

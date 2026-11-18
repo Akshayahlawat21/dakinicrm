@@ -1,4 +1,4 @@
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any
 from pydantic import BaseModel, Field
 
 
@@ -21,28 +21,23 @@ class TelephonyCallRequest(BaseModel):
     lead_id: Optional[str] = Field(None, description="Associated CRM lead ID")
     contact_name: Optional[str] = Field(None, description="Lead or contact display name")
     room: Optional[str] = Field(None, description="Pre-allocated room ID or None to auto-generate")
-    record: Optional[bool] = Field(None, description="Optional call recording flag (omitted by default per new API spec)")
+    record: bool = Field(True, description="Whether to record the call")
 
 
 class TelephonyCallResponse(BaseModel):
-    status: str = Field(..., description="Call status, e.g. dialing")
-    call_id: str = Field(..., description="Primary call identifier for call tracking and hangup")
-    call_uuid: Optional[str] = Field(None, description="UUID identifier from SIP carrier")
-    room: str = Field(..., description="LiveKit room name")
+    success: bool = True
+    call_id: str
+    call_uuid: Optional[str] = None
+    room: str
     to_number: str
     from_number: str
+    status: str
     mode: str
+    token: Optional[str] = None
     server_url: Optional[str] = None
     lead_id: Optional[str] = None
     contact_name: Optional[str] = None
     message: Optional[str] = None
-    ok: bool = True
-    success: bool = True
-    # Additive fields for accurate simulated-call handling
-    api_accepted: bool = Field(True, description="True if upstream returned HTTP 2xx, False on non-2xx or network failure")
-    carrier_status: str = Field("dispatched_unverified", description="'simulated' | 'dispatched_unverified' | 'failed'")
-    carrier_warning: Optional[str] = Field(None, description="Warning if carrier gateway is in simulation mode")
-    upstream_raw: Optional[Dict[str, Any]] = Field(None, description="Unmodified upstream response except redacted tokens")
 
 
 class TelephonyHangupRequest(BaseModel):
@@ -52,14 +47,12 @@ class TelephonyHangupRequest(BaseModel):
 
 
 class TelephonyHangupResponse(BaseModel):
-    ok: bool = True
-    status: str = "terminated"
-    room_deleted: bool = True
-    room: Optional[str] = None
+    success: bool = True
+    status: str
+    room: str
     call_id: Optional[str] = None
     duration_seconds: Optional[int] = None
     message: Optional[str] = None
-    success: bool = True
 
 
 class TelephonyRoomStatusResponse(BaseModel):
@@ -67,7 +60,6 @@ class TelephonyRoomStatusResponse(BaseModel):
     pstn_connected: bool = False
     agent_connected: bool = False
     participants: List[Any] = []
-    sip_status: Optional[str] = None
     room: Optional[str] = None
 
 
@@ -108,19 +100,5 @@ class TelephonyMergeRequest(BaseModel):
     to_number: str = Field(..., description="Destination E.164 phone number to merge")
     contact_name: Optional[str] = Field(None, description="Contact or lead display name")
     lead_id: Optional[str] = Field(None, description="Associated CRM lead ID")
-
-
-class TelephonyHeadlessCallRequest(BaseModel):
-    to: str = Field(..., description="Destination E.164 phone number")
-    from_number: Optional[str] = Field(None, description="Caller DID", alias="from")
-    mode: Optional[str] = Field("auto", description="Telephony mode: auto, pstn, etc.")
-
-
-class TelephonyHeadlessCallResponse(BaseModel):
-    ok: bool = True
-    call_id: str
-    room_name: Optional[str] = None
-    status: str
-
 
 

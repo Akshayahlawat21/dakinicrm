@@ -50,92 +50,14 @@ export function setStoredToken(token, user = null) {
   }
 }
 
-export function isTokenExpired(token) {
-  if (!token) return true;
-  if (token.startsWith('mock_')) return false;
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    const payload = JSON.parse(jsonPayload);
-    if (!payload.exp) return false;
-    // Expired or within 60s of expiring
-    return Date.now() / 1000 >= payload.exp - 60;
-  } catch {
-    return true;
-  }
-}
-
-let _silentRefreshPromise = null;
-
-export async function ensureValidToken() {
-  const currentToken = getStoredToken();
-  if (currentToken && !isTokenExpired(currentToken)) {
-    return currentToken;
-  }
-
-  // If user explicitly signed out, do not auto-login
-  if (localStorage.getItem('dakini_signed_out') === 'true') {
-    return null;
-  }
-
-  if (_silentRefreshPromise) {
-    return _silentRefreshPromise;
-  }
-
-  _silentRefreshPromise = (async () => {
-    try {
-      const res = await fetch(`${GATEWAY_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Correlation-ID': generateCorrelationId(),
-        },
-        body: JSON.stringify({
-          email: 'elena.rostova@dakini.ai',
-          password: 'dakini_secure_2026',
-          tenant_id: 'b4b76cde-a5e0-5ffb-9670-2df601cd5eef',
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          setStoredToken(data.access_token, data.user);
-          return data.access_token;
-        }
-      }
-    } catch (err) {
-      console.warn('[Dakini Auth] Silent token renewal error:', err);
-    } finally {
-      _silentRefreshPromise = null;
-    }
-    return null;
-  })();
-
-  return _silentRefreshPromise;
-}
-
 /**
  * Universal fetch wrapper for Layer 2 API Gateway requests.
  * Automatically injects Correlation IDs, Bearer tokens, and handles E8 error envelopes.
  */
-export async function gatewayFetch(endpoint, options = {}, isRetry = false) {
+export async function gatewayFetch(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${GATEWAY_BASE_URL}${cleanEndpoint}`;
   const correlationId = options.correlationId || generateCorrelationId();
-
-  // If calling an authenticated endpoint, proactively ensure token is valid and not expired
-  if (!cleanEndpoint.startsWith('/auth/')) {
-    await ensureValidToken();
-  }
 
   const headers = {
     'Content-Type': 'application/json',
@@ -171,15 +93,6 @@ export async function gatewayFetch(endpoint, options = {}, isRetry = false) {
     }
 
     if (!response.ok) {
-      // If token expired (401) and we haven't retried yet, seamlessly refresh and retry once
-      if (response.status === 401 && !isRetry && !cleanEndpoint.startsWith('/auth/')) {
-        setStoredToken(null);
-        const refreshedToken = await ensureValidToken();
-        if (refreshedToken) {
-          return gatewayFetch(endpoint, options, true);
-        }
-      }
-
       // Handle E8 normalized error schema or FastAPI detail schema
       let errorPayload;
       if (typeof responseData === 'object' && responseData?.error) {

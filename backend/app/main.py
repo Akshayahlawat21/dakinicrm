@@ -21,7 +21,7 @@ from backend.app.application.exceptions import ApplicationError
 from backend.app.data.exceptions import DataLayerError, RecordNotFoundError, UniqueViolationError, ForeignKeyViolationError
 
 # Import routes
-from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls, pipelines, calendar, telephony
+from backend.app.api.routes import health, auth, users, teams, leads, deals, accounts, contacts, tasks, targets, dashboard, agent, campaigns, products, calls, pipelines, calendar, telephony, dakini_calling
 
 logger = get_logger("backend.main")
 
@@ -37,6 +37,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize Supabase PostgreSQL database connection
     engine = init_db()
+
+    # Automatic Dakini call-log retrieval and transcript analysis run in the background.
+    # PostgreSQL advisory locking prevents duplicate workers across API replicas.
+    dakini_worker_task = None
+    if settings.DAKINI_BACKGROUND_WORKER_ENABLED:
+        from backend.app.workers.dakini_call_worker import run_with_singleton_lock
+        dakini_worker_task = asyncio.create_task(run_with_singleton_lock(), name="dakini-call-worker")
 
     # NOTE: SQLite local mock auto-seeding is commented out per user request.
     # The application connects exclusively to live Supabase PostgreSQL.
@@ -57,6 +64,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     logger.info("Shutting down Dakini CRM - Layer 3 Application API.")
+    if dakini_worker_task is not None:
+        dakini_worker_task.cancel()
+        await asyncio.gather(dakini_worker_task, return_exceptions=True)
     await close_db()
 
 
@@ -212,7 +222,6 @@ async def catchall_exception_handler(request: Request, exc: Exception):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ALLOWED_ORIGINS,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -240,6 +249,7 @@ app.include_router(calls.router)
 app.include_router(pipelines.router)
 app.include_router(calendar.router)
 app.include_router(telephony.router)
+app.include_router(dakini_calling.router)
 
 if __name__ == "__main__":
     import uvicorn

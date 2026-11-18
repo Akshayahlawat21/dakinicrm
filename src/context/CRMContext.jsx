@@ -12,7 +12,7 @@ import {
   aiAgentsConfig,
   automationsList
 } from '../data/mockData';
-import gatewayApi, { getStoredToken, setStoredToken, ensureValidToken } from '../services/api';
+import gatewayApi, { getStoredToken, setStoredToken } from '../services/api';
 
 const TRANSCRIPT_ANALYSES_STORAGE_KEY = 'dakini_transcript_analyses_v1';
 
@@ -341,7 +341,9 @@ export function CRMProvider({ children }) {
           productName: c.product_name || 'Unassigned',
           sentiment: c.sentiment || 'neutral',
           callOutcome: c.call_outcome,
-          transcript: c.summary?.transcript || '',
+          transcript: c.transcript || c.summary?.transcript || '',
+          recordingUrl: c.recording_url || null,
+          durationSeconds: c.duration_seconds || 0,
           outputs: {
             ...c.summary,
             improvements: c.improvements,
@@ -553,12 +555,19 @@ export function CRMProvider({ children }) {
             details: health.data,
           });
 
-          // Proactively ensure valid token before requesting live data
-          const validToken = await ensureValidToken();
-          if (validToken && isMounted) {
-            setIsAuthenticated(true);
+          // Fetch all live entities from Supabase via Gateway if authenticated
+          if (getStoredToken()) {
             await fetchSupabaseData();
-          } else if (isMounted && localStorage.getItem('dakini_signed_out') !== 'true') {
+            // If token expired during server restart (401 cleared the token), seamlessly re-authenticate
+            if (!getStoredToken() && localStorage.getItem('dakini_signed_out') !== 'true') {
+              const loginRes = await gatewayApi.login('elena.rostova@dakini.ai', 'dakini_secure_2026', 'b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
+              if (loginRes.success && isMounted) {
+                setCurrentUser(loginRes.data.user);
+                setIsAuthenticated(true);
+                await fetchSupabaseData();
+              }
+            }
+          } else if (localStorage.getItem('dakini_signed_out') !== 'true') {
             const loginRes = await gatewayApi.login('elena.rostova@dakini.ai', 'dakini_secure_2026', 'b4b76cde-a5e0-5ffb-9670-2df601cd5eef');
             if (loginRes.success && isMounted) {
               setCurrentUser(loginRes.data.user);

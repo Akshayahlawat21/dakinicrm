@@ -1,7 +1,5 @@
-import { ensureValidToken } from './api';
-
 const ANALYTICS_BASE_URL = (import.meta.env.VITE_ANALYTICS_BASE_URL || '/analytics').replace(/\/$/, '');
-const GATEWAY_MODE = ANALYTICS_BASE_URL.startsWith('/v1/analytics') || /^https?:.*\/v1\/analytics$/.test(ANALYTICS_BASE_URL) || ANALYTICS_BASE_URL === '/analytics';
+const GATEWAY_MODE = ANALYTICS_BASE_URL.startsWith('/v1/analytics') || /^https?:.*\/v1\/analytics$/.test(ANALYTICS_BASE_URL);
 const DIRECT_MODE = !GATEWAY_MODE;
 
 const _analyticsCache = new Map();
@@ -25,9 +23,10 @@ function requestHeaders() {
   if (GATEWAY_MODE) {
     let token = null;
     try { token = localStorage.getItem('dakini_access_token'); } catch { /* private browsing */ }
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (!token) {
+      throw new Error('Please sign in again before opening analytics. The gateway requires a valid access token.');
     }
+    headers.Authorization = `Bearer ${token}`;
     // Do not send a client-selected tenant in gateway mode. Layer 2 derives
     // the tenant from its verified JWT and forwards that trusted context.
     return headers;
@@ -57,18 +56,13 @@ function reportPath(path) {
   return GATEWAY_MODE ? `/reports/${path}` : `/v1/reports/${path}`;
 }
 
-async function analyticsRequest(path, bypassCache = false, isRetry = false) {
+async function analyticsRequest(path, bypassCache = false) {
   const now = Date.now();
   if (!bypassCache && _analyticsCache.has(path)) {
     const entry = _analyticsCache.get(path);
     if (now - entry.timestamp < CACHE_TTL_MS) {
       return entry.data;
     }
-  }
-
-  // Ensure token is valid before sending request in gateway mode
-  if (GATEWAY_MODE) {
-    await ensureValidToken();
   }
 
   const response = await fetch(`${ANALYTICS_BASE_URL}${path}`, {
@@ -80,17 +74,7 @@ async function analyticsRequest(path, bypassCache = false, isRetry = false) {
   const payload = contentType.includes('application/json')
     ? await response.json().catch(() => ({}))
     : await response.text().catch(() => '');
-
   if (!response.ok) {
-    // If token expired (401) and hasn't retried yet, seamlessly refresh and retry
-    if (response.status === 401 && !isRetry) {
-      localStorage.removeItem('dakini_access_token');
-      const refreshedToken = await ensureValidToken();
-      if (refreshedToken) {
-        return analyticsRequest(path, true, true);
-      }
-    }
-
     const detail = typeof payload?.detail === 'string'
       ? payload.detail
       : payload?.error?.message || `Analytics request failed (${response.status})`;

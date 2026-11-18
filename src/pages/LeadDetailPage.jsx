@@ -1,11 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { analyzeTranscript } from '../services/aiApi';
 import CallButton from '../components/telephony/CallButton';
+import { analyzeDakiniCall, initiateDakiniLeadCall, getDakiniCallStatus, getLatestDakiniLeadCall } from '../services/dakiniCallingApi';
 import {
   ChevronLeft,
   Phone,
+  PhoneCall,
+  RefreshCw,
   Mail,
   CheckCircle,
   Building2,
@@ -42,6 +45,7 @@ export default function LeadDetailPage() {
     tasks = [],
     addTask,
     transcriptAnalyses = [],
+    fetchSupabaseData,
   } = useCRM();
 
   const [activeTab, setActiveTab] = useState('Overview');
@@ -49,6 +53,36 @@ export default function LeadDetailPage() {
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [dakiniCallId, setDakiniCallId] = useState('');
+  const dakiniCallIdRef = useRef('');
+  const [dakiniCallMessage, setDakiniCallMessage] = useState('');
+  const [dakiniCallAnalysisSaved, setDakiniCallAnalysisSaved] = useState(false);
+  const [dakiniTranscriptOriginal, setDakiniTranscriptOriginal] = useState('');
+  const dakiniTranscriptOriginalRef = useRef('');
+  const [dakiniTranscriptSaved, setDakiniTranscriptSaved] = useState(false);
+  const [transcriptManuallyEdited, setTranscriptManuallyEdited] = useState(false);
+  const transcriptManuallyEditedRef = useRef(false);
+  const [isDakiniCallLoading, setIsDakiniCallLoading] = useState(false);
+  const fetchSupabaseDataRef = useRef(fetchSupabaseData);
+  useEffect(() => { fetchSupabaseDataRef.current = fetchSupabaseData; }, [fetchSupabaseData]);
+
+  const handleDakiniCall = async () => {
+    if (!lead?.id || isDakiniCallLoading) return;
+    setIsDakiniCallLoading(true);
+    setDakiniCallMessage('Starting Dakini AI call…');
+    try {
+      const result = await initiateDakiniLeadCall(lead.id);
+      setDakiniCallId(result.call_id || '');
+      dakiniCallIdRef.current = result.call_id || '';
+      setAnalysis(null);
+      setDakiniCallAnalysisSaved(false);
+      setDakiniCallMessage(`Dakini AI call ${result.status || 'initiated'}. The transcript will be saved automatically; AI analysis is manual.`);
+    } catch (error) {
+      setDakiniCallMessage(error.message || 'Unable to start Dakini AI call.');
+    } finally {
+      setIsDakiniCallLoading(false);
+    }
+  };
 
   // Quick Activity Logging state
   const [showLogForm, setShowLogForm] = useState(false);
@@ -89,9 +123,142 @@ export default function LeadDetailPage() {
     setAnalysis(null);
     setAnalysisError('');
     setIsAnalyzing(false);
+    setIsDakiniCallLoading(false);
     setShowLogForm(false);
     setNewActivitySubject(`Call with ${lead?.name || "Lead"}`);
   }, [id, lead?.id, lead?.interested_product, lead?.interestedProduct, lead?.product, lead?.name]);
+
+  useEffect(() => {
+    setDakiniCallId('');
+    dakiniCallIdRef.current = '';
+    setDakiniCallMessage('');
+    setDakiniCallAnalysisSaved(false);
+    setDakiniTranscriptOriginal('');
+    dakiniTranscriptOriginalRef.current = '';
+    setDakiniTranscriptSaved(false);
+    setTranscriptManuallyEdited(false);
+    transcriptManuallyEditedRef.current = false;
+  }, [id, lead?.id]);
+
+  // Re-check persistent CRM call state so calls created by batches also appear here.
+  // The endpoint reads our database; the server worker talks to Dakini in the background.
+  useEffect(() => {
+    if (!lead?.id || String(lead.id) === 'lead-loading') return undefined;
+    let cancelled = false;
+    let inFlight = false;
+    const refreshLatestCall = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const result = await getLatestDakiniLeadCall(lead.id);
+        if (cancelled || !result) return;
+        if (result.call_id) {
+          const nextCallId = String(result.call_id);
+          const callChanged = nextCallId !== dakiniCallIdRef.current;
+          dakiniCallIdRef.current = nextCallId;
+          setDakiniCallId(nextCallId);
+          if (callChanged) {
+            setTranscriptManuallyEdited(false);
+            transcriptManuallyEditedRef.current = false;
+            if (!result.analysis_result) setAnalysis(null);
+          }
+        }
+        setDakiniCallAnalysisSaved(Boolean(result.analysis_saved));
+        if (result.transcript_saved && result.transcript_text) {
+          setTranscript((current) => (!transcriptManuallyEditedRef.current || current === dakiniTranscriptOriginalRef.current) ? result.transcript_text : current);
+          setDakiniTranscriptOriginal(result.transcript_text);
+          dakiniTranscriptOriginalRef.current = result.transcript_text;
+          setDakiniTranscriptSaved(true);
+        }
+        if (result.analysis_result) {
+          const summary = result.analysis_result.summary || {};
+          setAnalysis({ summary: { ...summary, call_summary: summary.call_summary || summary.summary || '' }, improvements: result.analysis_result.improvements || {} });
+        }
+        if (result.current_queue_active) {
+          setDakiniCallMessage(`Another Dakini batch call is ${result.current_queue_status || 'pending'} for this lead.`);
+        } else if (result.analysis_saved) {
+          setDakiniCallMessage('Latest Dakini call · Transcript saved and AI analysis completed.');
+        } else if (result.transcript_saved) {
+          setDakiniCallMessage('Transcript saved in CRM · Click AI Analyse when you are ready.');
+        } else {
+          setDakiniCallMessage(`Latest Dakini AI call status: ${result.status || 'processing'}.`);
+        }
+      } catch {
+        // Keep the current view usable when the call-history endpoint is briefly unavailable.
+      } finally {
+        inFlight = false;
+      }
+    };
+    refreshLatestCall();
+    const timer = setInterval(refreshLatestCall, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [lead?.id]);
+
+  useEffect(() => {
+    if (!dakiniCallId || dakiniCallAnalysisSaved) return undefined;
+    let cancelled = false;
+    let inFlight = false;
+    const refreshStatus = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const result = await getDakiniCallStatus(dakiniCallId);
+        if (cancelled) return;
+        const transcriptSaved = Boolean(result.transcript_saved);
+        const analysisSaved = Boolean(result.analysis_saved);
+        if (transcriptSaved && result.transcript_text) {
+          setTranscript((current) => (!current || current === dakiniTranscriptOriginalRef.current) ? result.transcript_text : current);
+          setDakiniTranscriptOriginal(result.transcript_text);
+          dakiniTranscriptOriginalRef.current = result.transcript_text;
+          setDakiniTranscriptSaved(true);
+        }
+        if (result.analysis_result) {
+          const summary = result.analysis_result.summary || {};
+          setAnalysis({ summary: { ...summary, call_summary: summary.call_summary || summary.summary || '' }, improvements: result.analysis_result.improvements || {} });
+        }
+        setDakiniCallMessage(analysisSaved
+          ? 'Call completed · Transcript saved and AI analysis completed.'
+          : transcriptSaved
+            ? 'Transcript saved in CRM · Click AI Analyse when you are ready.'
+            : `Call status: ${result.status || 'processing'}. CRM call status refreshes automatically.`);
+        if (analysisSaved) {
+          setDakiniCallAnalysisSaved(true);
+          if (typeof fetchSupabaseDataRef.current === 'function') await fetchSupabaseDataRef.current();
+        }
+      } catch {
+        // The browser reads the latest transcript and call status persisted by the CRM poller.
+      } finally {
+        inFlight = false;
+      }
+    };
+    refreshStatus();
+    const timer = setInterval(refreshStatus, 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [dakiniCallId, dakiniCallAnalysisSaved]);
+
+  // Restore the latest persisted Dakini transcript and its two Layer 5 outputs for this lead.
+  useEffect(() => {
+    const saved = (transcriptAnalyses || [])
+      .filter((item) => String(item.leadId || '') === String(lead?.id || '') && item.transcript)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0];
+    if (!saved) return;
+    // Do not restore an older cached AI result while the latest Dakini call is still unanalyzed.
+    if (dakiniCallId) return;
+    // Context hydration may arrive after a newer transcript was pulled from Dakini.
+    // Never let an older cached analysis overwrite the currently synced transcript.
+    if (!dakiniTranscriptSaved && !transcriptManuallyEdited) setTranscript((current) => current || saved.transcript);
+    const outputs = saved.outputs || {};
+    setAnalysis({
+      summary: {
+        call_summary: outputs.call_summary || outputs.summary?.call_summary || '',
+        positive_feedback: outputs.positive_feedback || outputs.summary?.positive_feedback || [],
+        negative_feedback: outputs.negative_feedback || outputs.summary?.negative_feedback || [],
+        customer_needs: outputs.customer_needs || outputs.summary?.customer_needs || [],
+        buying_signals: outputs.buying_signals || outputs.summary?.buying_signals || [],
+      },
+      improvements: outputs.improvements || {},
+    });
+  }, [lead?.id, transcriptAnalyses, dakiniTranscriptSaved, transcriptManuallyEdited, dakiniCallId, dakiniCallAnalysisSaved]);
 
   // Keep productName in sync if lead data finishes loading from Supabase DB asynchronously
   useEffect(() => {
@@ -209,14 +376,30 @@ export default function LeadDetailPage() {
     setAnalysisError('');
     setAnalysis(null);
     try {
-      const outputs = await analyzeTranscript(transcript);
-      setAnalysis(outputs);
-      await addTranscriptAnalysis(
-        lead,
-        transcript.trim(),
-        outputs,
-        productName || lead.interested_product || ''
-      );
+      if (dakiniCallId && dakiniTranscriptSaved && transcript.trim() === dakiniTranscriptOriginal.trim()) {
+        const result = await analyzeDakiniCall(dakiniCallId);
+        const summary = result.analysis_result?.summary || {};
+        const outputs = { ...result.analysis_result, summary: { ...summary, call_summary: summary.call_summary || summary.summary || '' }, improvements: result.analysis_result?.improvements || {} };
+        setAnalysis(outputs);
+        const confirmedProduct = String(summary.product_interest || '').trim();
+        const productConfidence = String(summary.product_interest_confidence || 'unknown').toLowerCase();
+        if (confirmedProduct && ['high', 'medium'].includes(productConfidence)) setProductName(confirmedProduct);
+        setDakiniCallAnalysisSaved(true);
+        setDakiniCallMessage('AI analysis completed and saved to CRM.');
+        if (typeof fetchSupabaseDataRef.current === 'function') await fetchSupabaseDataRef.current();
+      } else {
+        const outputs = await analyzeTranscript(transcript);
+        setAnalysis(outputs);
+        const detectedProduct = String(outputs?.summary?.product_interest || outputs?.product_interest || '').trim();
+        const detectedConfidence = String(outputs?.summary?.product_interest_confidence || outputs?.product_interest_confidence || 'unknown').toLowerCase();
+        if (detectedProduct && ['high', 'medium'].includes(detectedConfidence)) setProductName(detectedProduct);
+        await addTranscriptAnalysis(
+          lead,
+          transcript.trim(),
+          outputs,
+          productName || lead.interested_product || ''
+        );
+      }
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : 'Transcript analysis failed. Please try again.');
     } finally {
@@ -334,11 +517,20 @@ export default function LeadDetailPage() {
           {/* Quick Contact Action Icons */}
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <CallButton lead={lead} size="sm" />
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleDakiniCall} disabled={isDakiniCallLoading} title="Place an AI-powered call through Dakini">
+              {isDakiniCallLoading ? <RefreshCw size={14} className="animate-spin" /> : <PhoneCall size={14} />}
+              <span>Dakini AI Call</span>
+            </button>
             <a href={`mailto:${lead.email}`} className="btn btn-secondary btn-sm" title="Email">
               <Mail size={14} color="var(--primary)" />
               <span>Email</span>
             </a>
           </div>
+          {dakiniCallMessage && (
+            <div role="status" style={{ margin: '-0.7rem 0 1rem', padding: '0.6rem 0.75rem', borderRadius: 8, background: 'var(--primary-light)', color: 'var(--primary-dark)', fontSize: '0.78rem', overflowWrap: 'anywhere' }}>
+              {dakiniCallMessage}
+            </div>
+          )}
 
           {/* Record Attributes List */}
           <div className="lead-meta-list">
@@ -411,14 +603,14 @@ export default function LeadDetailPage() {
                     </div>
                     <div>
                       <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>Call Transcript</h2>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Paste the salesperson and customer conversation below.</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dakiniTranscriptSaved ? 'Dakini transcript is stored in CRM. Review it below; AI analysis runs only when you click AI Analyse.' : 'Paste a conversation here, or wait for the stored Dakini call transcript to arrive.'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Product Discussed for this lead */}
                 <label style={{ display: 'grid', gap: '0.35rem', margin: '0.9rem 0 0.65rem', color: 'var(--text-body)', fontSize: '0.82rem', fontWeight: 700 }}>
-                  <span>Product discussed</span>
+                  <span>Product discussed / detected customer interest</span>
                   <input
                     value={productName}
                     onChange={(event) => setProductName(event.target.value)}
@@ -430,7 +622,13 @@ export default function LeadDetailPage() {
 
                 <textarea
                   value={transcript}
-                  onChange={(event) => setTranscript(event.target.value)}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setTranscript(nextValue);
+                    const isEdited = nextValue !== dakiniTranscriptOriginalRef.current;
+                    setTranscriptManuallyEdited(isEdited);
+                    transcriptManuallyEditedRef.current = isEdited;
+                  }}
                   placeholder={"Salesperson: Hello, how can I help you?\nCustomer: I would like to know more about your product..."}
                   rows={8}
                   maxLength={80000}
@@ -445,12 +643,12 @@ export default function LeadDetailPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{transcript.length.toLocaleString()} / 80,000 characters</span>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary" onClick={() => { setTranscript(''); setAnalysis(null); setAnalysisError(''); }} disabled={isAnalyzing || (!transcript && !analysis)}>
+                    <button className="btn btn-secondary" onClick={() => { setTranscript(''); setTranscriptManuallyEdited(true); transcriptManuallyEditedRef.current = true; setAnalysis(null); setAnalysisError(''); }} disabled={isAnalyzing || (!transcript && !analysis)}>
                       Clear
                     </button>
                     <button className="btn btn-primary" onClick={handleAnalyzeTranscript} disabled={!transcript.trim() || isAnalyzing}>
                       {isAnalyzing ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                      {isAnalyzing ? 'Analyzing…' : 'Analyze with AI'}
+                      {isAnalyzing ? 'Analyzing…' : (dakiniTranscriptSaved && transcript.trim() === dakiniTranscriptOriginal.trim() ? 'AI Analyse' : 'Analyze with AI')}
                     </button>
                   </div>
                 </div>
@@ -500,6 +698,13 @@ export default function LeadDetailPage() {
                         <FileText size={17} /> Summary
                       </h3>
                       <p style={{ color: 'var(--text-main)', lineHeight: 1.65, fontSize: '0.9rem' }}>{analysis.summary?.call_summary || 'No summary was returned.'}</p>
+                      {analysis.summary?.product_interest && (
+                        <div style={{ marginTop: '0.8rem', padding: '0.75rem', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
+                          <strong style={{ color: 'var(--text-body)', fontSize: '0.82rem' }}>Detected customer product interest:</strong>
+                          <span style={{ color: 'var(--primary)', fontWeight: 750, marginLeft: 6 }}>{analysis.summary.product_interest}</span>
+                          {analysis.summary.product_interest_evidence && <p style={{ margin: '5px 0 0', color: 'var(--text-muted)', fontSize: '0.78rem' }}>Evidence: “{analysis.summary.product_interest_evidence}” · Confidence: {analysis.summary.product_interest_confidence || 'unknown'}</p>}
+                        </div>
+                      )}
                       {[
                         ['Positive feedback', analysis.summary?.positive_feedback],
                         ['Negative feedback / concerns', analysis.summary?.negative_feedback],

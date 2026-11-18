@@ -36,6 +36,7 @@ import TasksPage from './pages/TasksPage';
 import InboxPage from './pages/InboxPage';
 import CalendarPage from './pages/CalendarPage';
 import CallHistoryPage from './pages/CallHistoryPage';
+import AICallingPage from './pages/AICallingPage';
 import ReportsPage from './pages/ReportsPage';
 import CustomerFeedbackPage from './pages/CustomerFeedbackPage';
 import AutomationsPage from './pages/AutomationsPage';
@@ -142,6 +143,7 @@ function AppRoutes() {
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/calls" element={<CallHistoryPage />} />
+        <Route path="/ai-calling" element={<AICallingPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/customer-feedback" element={<CustomerFeedbackPage />} />
         <Route path="/automations" element={<AutomationsPage />} />

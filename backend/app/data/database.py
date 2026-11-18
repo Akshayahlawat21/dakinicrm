@@ -41,7 +41,8 @@ def get_engine_args(database_url: str) -> dict:
         args["poolclass"] = AsyncAdaptedQueuePool
         args["pool_size"] = settings.DB_POOL_SIZE
         args["max_overflow"] = settings.DB_MAX_OVERFLOW
-        args["pool_recycle"] = 60
+        args["pool_timeout"] = settings.DB_POOL_TIMEOUT
+        args["pool_recycle"] = settings.DB_POOL_RECYCLE
         args["pool_pre_ping"] = True
         
         # Statement timeout in connect_args for psycopg

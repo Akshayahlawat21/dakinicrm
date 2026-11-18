@@ -20,6 +20,9 @@ router = APIRouter(prefix="/v1/calls", tags=["Calls & AI Analysis"])
 
 
 def _serialize_analysis(analysis) -> CallAnalysisResponse:
+    # Only read the relationship when it was eagerly loaded; newly-created analysis
+    # records may not have the async relationship populated yet.
+    transcript_record = analysis.__dict__.get("transcript")
     lead_name = analysis.lead.name if analysis.lead else None
     product_name = None
     if analysis.lead:
@@ -41,6 +44,9 @@ def _serialize_analysis(analysis) -> CallAnalysisResponse:
         call_outcome=analysis.call_outcome,
         summary=analysis.summary or {},
         improvements=analysis.improvements or {},
+        transcript=transcript_record.raw_text if transcript_record else None,
+        recording_url=transcript_record.recording_url if transcript_record else None,
+        duration_seconds=transcript_record.duration_seconds if transcript_record else 0,
         status=analysis.status,
         error_message=analysis.error_message,
         model_version=analysis.model_version,

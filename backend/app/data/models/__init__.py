@@ -9,6 +9,7 @@ from backend.app.data.models.deal import Opportunity, Deal, Product, DealProduct
 from backend.app.data.models.pipeline import Pipeline, PipelineStage, UserDealColumn
 from backend.app.data.models.campaign import Campaign, CampaignMember, CampaignResponse
 from backend.app.data.models.activity import Activity, ActivityParticipant, Note, CallTranscript, CallAnalysis
+from backend.app.data.models.dakini_calling import DakiniBatch, DakiniCall
 from backend.app.data.models.target import SalesTarget
 from backend.app.data.models.audit import AuditLog, OutboxEvent, IdempotencyKey
 from backend.app.data.models.invoice import Invoice, InvoiceItem, Payment
@@ -47,6 +48,8 @@ __all__ = [
     "Note",
     "CallTranscript",
     "CallAnalysis",
+    "DakiniBatch",
+    "DakiniCall",
     "SalesTarget",
     "AuditLog",
     "OutboxEvent",

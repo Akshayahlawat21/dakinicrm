@@ -36,8 +36,8 @@ class AppSettings(BaseSettings):
 
     # Connection Pool Management (Optimized for Supabase Session Pooler limit 15)
     DB_POOL_SIZE: int = 4
-    DB_MAX_OVERFLOW: int = 3
-    DB_POOL_TIMEOUT: int = 30
+    DB_MAX_OVERFLOW: int = 0
+    DB_POOL_TIMEOUT: int = 20
     DB_POOL_RECYCLE: int = 1800
     DB_STATEMENT_TIMEOUT_MS: int = 15000
     DB_ENABLE_RLS: bool = True
@@ -56,17 +56,9 @@ class AppSettings(BaseSettings):
     CORS_ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
         "http://10.184.31.108:3000",
-        "http://10.192.195.108:3000",
-        "http://10.192.195.108:3001",
     ]
 
     # Layer 9 Analytics integration
@@ -75,7 +67,7 @@ class AppSettings(BaseSettings):
 
     # Dakini Telephony & AI Backend Integration
     TELEPHONY_BASE_URL: str = "http://16.178.70.165:8080"
-    TELEPHONY_FROM_NUMBER: str = "+918064264223"
+    TELEPHONY_FROM_NUMBER: str = "+917971443119"
     TELEPHONY_OUTBOUND_MODE: str = "HUMAN_ONLY"
     LIVEKIT_SIGNALING_URL: str = "wss://telephony-z5x8uya8.livekit.cloud"
     TELEPHONY_TIMEOUT_SECONDS: float = 15.0
@@ -87,6 +79,17 @@ class AppSettings(BaseSettings):
     META_GRAPH_API_VERSION: str = "v21.0"
     META_PAGE_ID: str = "576519452217111"
     META_POLLER_ENABLED: bool = True
+
+    # Dakini AI Calling API (separate from the existing LiveKit/softphone dialer)
+    DAKINI_API_BASE_URL: str = "https://api.dakini-ai.com"
+    DAKINI_API_KEY: str = ""
+    DAKINI_AGENT_ID: str = ""
+    DAKINI_TELEPHONY_NUMBER: str = ""
+    DAKINI_API_TIMEOUT_SECONDS: float = 30.0
+    DAKINI_CALL_LOG_SYNC_ENABLED: bool = True
+    DAKINI_BACKGROUND_WORKER_ENABLED: bool = True
+    DAKINI_CALL_POLL_INTERVAL_SECONDS: int = 20
+    DAKINI_BATCH_STATUS_POLL_INTERVAL_SECONDS: int = 30
 
     @property
     def is_production(self) -> bool:

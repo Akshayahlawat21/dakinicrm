@@ -66,6 +66,9 @@ class CallAnalysisResponse(BaseModel):
     call_outcome: Optional[str] = None
     summary: Optional[Dict[str, Any]] = None
     improvements: Optional[Any] = None
+    transcript: Optional[str] = None
+    recording_url: Optional[str] = None
+    duration_seconds: Optional[int] = 0
     status: str
     error_message: Optional[str] = None
     model_version: Optional[str] = None

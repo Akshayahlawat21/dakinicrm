@@ -206,8 +206,11 @@
   background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   box-shadow: var(--shadow-card);
+  max-width: 100%;
+  scrollbar-width: thin;
 }
 .crm-table {
   width: 100%;

@@ -19,9 +19,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     database_url: str = Field("", alias="DATABASE_URL")
-    pool_size: int = Field(5, ge=1, le=50, alias="DATABASE_POOL_SIZE")
-    max_overflow: int = Field(5, ge=0, le=50, alias="DATABASE_MAX_OVERFLOW")
-    pool_timeout: int = Field(10, ge=1, le=60, alias="DATABASE_POOL_TIMEOUT")
+    pool_size: int = Field(2, ge=1, le=10, alias="DATABASE_POOL_SIZE")
+    max_overflow: int = Field(0, ge=0, le=10, alias="DATABASE_MAX_OVERFLOW")
+    pool_timeout: int = Field(15, ge=1, le=60, alias="DATABASE_POOL_TIMEOUT")
     tenant_slug_map_json: str = Field("{}", alias="TENANT_SLUG_MAP_JSON")
     won_values_csv: str = Field("won,closed_won,closed-won", alias="WON_VALUES")
     lost_values_csv: str = Field("lost,closed_lost,closed-lost", alias="LOST_VALUES")

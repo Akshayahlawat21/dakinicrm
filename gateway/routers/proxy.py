@@ -30,6 +30,8 @@ def upstream_timeout_for_path(path: str) -> float:
             float(settings.UPSTREAM_TIMEOUT_SECONDS),
             float(settings.AI_AGENT_UPSTREAM_TIMEOUT_SECONDS),
         )
+    if normalized.startswith("dakini-calling/"):
+        return max(float(settings.UPSTREAM_TIMEOUT_SECONDS), 120.0)
     if normalized == "leads/imports" or normalized.startswith("leads/imports/"):
         return max(
             float(settings.UPSTREAM_TIMEOUT_SECONDS),
@@ -59,6 +61,7 @@ REGISTERED_RESOURCES: Set[str] = {
     "products",
     "calls",
     "telephony",
+    "dakini-calling",
     "export",
     "import",
 }

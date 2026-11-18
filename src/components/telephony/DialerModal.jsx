@@ -257,9 +257,7 @@ export default function DialerModal() {
           <div
             style={{
               padding: '0.75rem 1rem',
-              background: activeCall?.carrierStatus === 'simulated' || callState === 'simulated'
-                ? 'rgba(234, 179, 8, 0.12)'
-                : callState === 'connected' ? 'var(--success-bg)' : 'var(--primary-light)',
+              background: callState === 'connected' ? 'var(--success-bg)' : 'var(--primary-light)',
               borderBottom: '1px solid var(--border-default)',
               display: 'flex',
               alignItems: 'center',
@@ -272,16 +270,12 @@ export default function DialerModal() {
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: activeCall?.carrierStatus === 'simulated' || callState === 'simulated'
-                    ? '#eab308'
-                    : callState === 'connected' ? 'var(--success)' : 'var(--primary)',
+                  background: callState === 'connected' ? 'var(--success)' : 'var(--primary)',
                 }}
-                className={activeCall?.carrierStatus === 'simulated' || callState === 'simulated' ? '' : 'animate-ping'}
+                className="animate-ping"
               />
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {activeCall?.carrierStatus === 'simulated' || callState === 'simulated'
-                  ? 'Telephony gateway is in simulation mode. No real phone call was placed.'
-                  : callState === 'connecting'
+                {callState === 'connecting'
                   ? 'Connecting softphone...'
                   : callState === 'dialing'
                   ? 'Dialing recipient...'

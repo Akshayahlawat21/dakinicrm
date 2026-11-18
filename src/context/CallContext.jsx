@@ -202,12 +202,7 @@ export function CallProvider({ children }) {
 
   // Room status poller
   useEffect(() => {
-    // If no room or call is in an inactive state, OR if the call is simulated, stop polling!
-    if (
-      !activeCall?.room ||
-      activeCall?.carrierStatus === 'simulated' ||
-      !['connecting', 'dialing', 'ringing', 'connected'].includes(callState)
-    ) {
+    if (!activeCall?.room || !['connecting', 'dialing', 'ringing', 'connected'].includes(callState)) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -237,7 +232,7 @@ export function CallProvider({ children }) {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeCall?.room, activeCall?.carrierStatus, callState, handleRemoteDisconnect]);
+  }, [activeCall?.room, callState, handleRemoteDisconnect]);
 
   // Initiate call workflow
   const startCall = useCallback(
@@ -385,18 +380,16 @@ export function CallProvider({ children }) {
             leadId,
             contactName,
             room: callRoom,
+            record: true,
           });
           callResult = rawResult?.data || rawResult;
         } catch (callErr) {
           throw new Error(`PSTN call initiation failed: ${callErr.message}`);
         }
 
-        if (!callResult || callResult.carrier_status === 'failed') {
-          const failMsg = callResult?.message || callResult?.carrier_warning || 'Call failed on telephony carrier';
-          throw new Error(failMsg);
+        if (!callResult || (!callResult.success && !callResult.call_id)) {
+          throw new Error(callResult?.message || 'Call initiation failed on telephony backend');
         }
-
-        const isSim = callResult.carrier_status === 'simulated';
 
         // Update activeCall with real backend data
         setActiveCall((prev) => ({
@@ -409,18 +402,7 @@ export function CallProvider({ children }) {
           leadId: callResult.lead_id || leadId,
           contactName: callResult.contact_name || contactName || prev?.contactName || 'Contact',
           mode: callResult.mode || 'HUMAN_ONLY',
-          carrierStatus: callResult.carrier_status || 'dispatched_unverified',
-          carrierWarning: callResult.carrier_warning || (isSim ? 'Telephony gateway is in simulation mode. No real phone call was placed.' : null),
-          apiAccepted: callResult.api_accepted !== false,
         }));
-
-        if (isSim) {
-          // Stop dialing state; switch to simulated state
-          setCallState('simulated');
-        } else {
-          // dispatched_unverified: continue dialing state until PSTN-connected detection confirms it
-          setCallState('dialing');
-        }
       } catch (err) {
         console.error('Call setup error:', err);
         cleanupResources();

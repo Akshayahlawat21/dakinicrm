@@ -7,7 +7,7 @@ import { gatewayFetch } from './api';
 
 function unwrapResponse(res, defaultErrMsg = 'Telephony request failed') {
   if (!res) throw new Error(defaultErrMsg);
-  if (res.success === false || res.ok === false) {
+  if (res.success === false) {
     const msg = res.error?.message || res.message || defaultErrMsg;
     throw new Error(msg);
   }
@@ -40,20 +40,17 @@ export async function initiateOutboundCall({
   leadId = null,
   contactName = null,
   room = null,
-  record = null,
+  record = true,
 }) {
-  const body = {
-    to_number: toNumber,
-    lead_id: leadId,
-    contact_name: contactName,
-    room,
-  };
-  if (record !== null) {
-    body.record = record;
-  }
   const res = await gatewayFetch('/telephony/call', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      to_number: toNumber,
+      lead_id: leadId,
+      contact_name: contactName,
+      room,
+      record,
+    }),
   });
   return unwrapResponse(res, 'Call initiation failed on telephony backend');
 }
@@ -116,16 +113,4 @@ export async function mergeCallApi({ room, toNumber, contactName = null, leadId 
     }),
   });
   return unwrapResponse(res, 'Failed to merge call into room conference');
-}
-
-export async function initiateHeadlessCall({ to, from = null, mode = 'auto' }) {
-  const res = await gatewayFetch('/telephony/headless-call', {
-    method: 'POST',
-    body: JSON.stringify({
-      to,
-      from,
-      mode,
-    }),
-  });
-  return unwrapResponse(res, 'Headless outbound call initiation failed');
 }

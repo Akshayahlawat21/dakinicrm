@@ -5,6 +5,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from sqlalchemy import text
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from app.config import get_settings
 
@@ -93,16 +94,27 @@ def get_engine() -> AsyncEngine:
         normalized_url = _normalize_url(cfg.database_url)
         connect_args = _get_connect_args(normalized_url)
         engine_kwargs = {
-            "pool_pre_ping": True,
-            "pool_recycle": 60,
             "connect_args": connect_args,
         }
         if not normalized_url.startswith("sqlite"):
-            engine_kwargs.update({
-                "pool_size": cfg.pool_size,
-                "max_overflow": cfg.max_overflow,
-                "pool_timeout": cfg.pool_timeout,
-            })
+            parsed_url = make_url(normalized_url)
+            is_supabase_transaction_pooler = (
+                bool(parsed_url.host)
+                and "pooler.supabase.com" in parsed_url.host
+                and parsed_url.port == 6543
+            )
+            if is_supabase_transaction_pooler:
+                # Transaction mode multiplexes server connections; avoid holding
+                # idle client connections in a second SQLAlchemy pool.
+                engine_kwargs["poolclass"] = NullPool
+            else:
+                engine_kwargs.update({
+                    "pool_pre_ping": True,
+                    "pool_size": cfg.pool_size,
+                    "max_overflow": cfg.max_overflow,
+                    "pool_timeout": cfg.pool_timeout,
+                    "pool_recycle": 1800,
+                })
         _engine = create_async_engine(normalized_url, **engine_kwargs)
     return _engine
 

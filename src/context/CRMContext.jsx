@@ -591,6 +591,43 @@ export function CRMProvider({ children }) {
     };
   }, []);
 
+  // Live silent background refresh for Meta leads & campaigns (every 20s)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(async () => {
+      try {
+        const [campsRes, leadsRes] = await Promise.allSettled([
+          gatewayApi.getCampaigns(),
+          gatewayApi.getLeads({ skip: 0, limit: 50 }),
+        ]);
+        if (campsRes.status === 'fulfilled' && campsRes.value?.success && Array.isArray(campsRes.value.data?.data)) {
+          setCampaigns(campsRes.value.data.data.map((c) => ({
+            ...c,
+            leadsGenerated: c.leads_generated || c.leadsGenerated || 0,
+            pipelineValue: c.pipeline_value || c.pipelineValue || 0,
+          })));
+        }
+        if (leadsRes.status === 'fulfilled' && leadsRes.value?.success && Array.isArray(leadsRes.value.data?.data)) {
+          const total = leadsRes.value.data.total ?? leadsRes.value.data.data.length;
+          setTotalLeadsCount(total);
+          setOverallLeadsCount(total);
+          setLeads(leadsRes.value.data.data.map((l) => ({
+            ...l,
+            title: l.title || '',
+            website: l.website || null,
+            source: l.source || 'Website',
+            owner: l.owner || currentUser?.name || 'Sales Representative',
+            company: l.company || l.name,
+            score: l.score || 85,
+          })));
+        }
+      } catch (err) {
+        // Silent catch for background polling
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, currentUser?.name]);
+
   // Keyboard shortcut listener (Ctrl+K or / for search, C for create, G then L for Leads)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1353,6 +1390,42 @@ export function CRMProvider({ children }) {
     }
   };
 
+  const assignCampaignManager = async (campId, managerId, managerName = null) => {
+    // Optimistic update
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campId
+          ? {
+              ...c,
+              manager_id: managerId || null,
+              manager_name: managerName || (managerId ? 'Assigned Manager' : null),
+            }
+          : c
+      )
+    );
+    try {
+      const res = await gatewayApi.assignCampaignManager(campId, managerId);
+      if (res?.success && res.data?.data) {
+        setCampaigns((prev) =>
+          prev.map((c) =>
+            c.id === campId
+              ? {
+                  ...c,
+                  manager_id: res.data.data.manager_id,
+                  manager_name: res.data.data.manager_name,
+                }
+              : c
+          )
+        );
+      }
+      return res;
+    } catch (err) {
+      console.warn('Gateway assignCampaignManager failed:', err);
+      fetchSupabaseData();
+      throw err;
+    }
+  };
+
 
   const addTranscriptAnalysis = async (lead, transcript, outputs, productName = '') => {
     const tempId = `transcript-analysis-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -2052,6 +2125,7 @@ export function CRMProvider({ children }) {
         campaigns,
         addCampaign,
         deleteCampaign,
+        assignCampaignManager,
         tasks,
         addTask,
         toggleTask,

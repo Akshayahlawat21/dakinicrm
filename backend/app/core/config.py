@@ -72,6 +72,14 @@ class AppSettings(BaseSettings):
     LIVEKIT_SIGNALING_URL: str = "wss://telephony-z5x8uya8.livekit.cloud"
     TELEPHONY_TIMEOUT_SECONDS: float = 15.0
 
+    # Meta Ads Integration
+    META_VERIFY_TOKEN: str = "dakini_test_token_2026"
+    META_ACCESS_TOKEN: Optional[str] = None
+    META_APP_SECRET: Optional[str] = None
+    META_GRAPH_API_VERSION: str = "v21.0"
+    META_PAGE_ID: str = "576519452217111"
+    META_POLLER_ENABLED: bool = True
+
     # Dakini AI Calling API (separate from the existing LiveKit/softphone dialer)
     DAKINI_API_BASE_URL: str = "https://api.dakini-ai.com"
     DAKINI_API_KEY: str = ""

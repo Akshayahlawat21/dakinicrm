@@ -92,9 +92,9 @@ class UserService:
             unassigned = await self.user_repo.list_unassigned_salespersons(ctx.tenant_id)
             all_visible = {u.id: u for u in (team_users + unassigned)}
             user_list = list(all_visible.values())
-            if role:
+            if role and isinstance(role, str):
                 user_list = [u for u in user_list if u.role_name.lower() == role.lower().strip()]
-            if status:
+            if status and isinstance(status, str):
                 user_list = [u for u in user_list if u.status.lower() == status.lower().strip()]
             return user_list[skip : skip + limit], len(user_list)
 
@@ -104,13 +104,13 @@ class UserService:
             skip=skip,
             limit=limit,
         )
-        if team_id:
+        if team_id and (isinstance(team_id, (str, uuid.UUID))):
             all_users = await self.user_repo.list_by_team(team_id, ctx.tenant_id)
             total = len(all_users)
-        if role:
+        if role and isinstance(role, str):
             all_users = [u for u in all_users if u.role_name.lower() == role.lower().strip()]
             total = len(all_users)
-        if status:
+        if status and isinstance(status, str):
             all_users = [u for u in all_users if u.status.lower() == status.lower().strip()]
             total = len(all_users)
         return all_users, total
